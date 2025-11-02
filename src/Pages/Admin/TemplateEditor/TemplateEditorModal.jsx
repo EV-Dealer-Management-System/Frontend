@@ -23,6 +23,7 @@ import {
 } from '@ant-design/icons';
 import { useTemplateEditor } from './useTemplateEditor';
 import { useQuillEditor } from './useQuillEditor';
+import { useHtmlParser } from './useHtmlParser';
 import PreviewModal from './PreviewModal';
 
 const { Title, Text } = Typography;
@@ -39,28 +40,30 @@ function TemplateEditorModal({ visible, onClose, template }) {
   const [activeTab, setActiveTab] = useState('editor');
   const [previewVisible, setPreviewVisible] = useState(false);
 
-  // Hook quản lý template editor - chỉ active khi modal mở
+  // Hook quản lý HTML parsing cho template
+  const {
+    allStyles,
+    htmlHead,
+    htmlAttributes,
+    templateBody,
+    parseHtmlFromBE,
+    rebuildCompleteHtml,
+    updateParsedStructure,
+    resetStructureStates
+  } = useHtmlParser();
+
+  // Hook quản lý template editor
   const {
     selectedTemplate,
     htmlContent,
     setHtmlContent,
-    parsed,
     hasUnsavedChanges,
     setHasUnsavedChanges,
     saveTemplate,
-    rebuildCompleteHtml,
     ingestTemplate,
     fullHtml,
-    setFullHtml,
-    buildMergedBody,
-    centerBlock,
-    metaBlock,
-    signBlock
+    setFullHtml
   } = useTemplateEditor();
-
-  const allStyles = parsed?.allStyles || '';
-  const htmlHead = parsed?.headContent || '';
-  const htmlAttributes = parsed?.htmlAttrs || '';
 
   // Hook quản lý Quill editor - truyền htmlContent và onContentChange
   const {
@@ -79,23 +82,37 @@ function TemplateEditorModal({ visible, onClose, template }) {
   const lastIngestedId = useRef(null);
   const hasInitializedRef = useRef(false);
 
-  // ✅ Load template khi modal mở
+  // ✅ Load template khi modal mở với HTML parsing
   useEffect(() => {
     if (visible && template && template.id !== lastIngestedId.current) {
       console.log('📋 Loading template into modal:', template.name);
       resetPasteState();
-      ingestTemplate(template); // nạp template prop vào hook (parse + body)
+      
+      // Parse HTML thành các phần riêng biệt
+      if (template.contentHtml) {
+        const parsed = parseHtmlFromBE(template.contentHtml);
+        updateParsedStructure(parsed);
+        setFullHtml(parsed.fullHtml || template.contentHtml);
+        
+        // Chỉ nạp phần editable vào Quill
+        setHtmlContent(parsed.editableBody || '');
+      }
+      
+      ingestTemplate(template); // nạp template prop vào hook
       lastIngestedId.current = template.id;
     }
-  }, [visible, template, resetPasteState, ingestTemplate]);
+  }, [visible, template, resetPasteState, ingestTemplate, parseHtmlFromBE, updateParsedStructure, setFullHtml, setHtmlContent]);
 
   // ✅ Reset states khi đóng modal
   useEffect(() => {
     if (!visible) {
       setActiveTab('editor');
       setHasUnsavedChanges(false);
+      resetStructureStates();
+      hasInitializedRef.current = false;
+      lastIngestedId.current = null;
     }
-  }, [visible, setHasUnsavedChanges]);
+  }, [visible, setHasUnsavedChanges, resetStructureStates]);
 
   // ✅ Sync Quill khi editor sẵn sàng và body HTML đã có
   useEffect(() => {
@@ -108,22 +125,38 @@ function TemplateEditorModal({ visible, onClose, template }) {
     
 
 
-  // ✅ Handle save với getCurrentContent từ Quill
+  // ✅ Handle save với rebuildCompleteHtml
   const handleSave = async () => {
     if (!selectedTemplate) {
       return;
     }
 
-    // Lấy HTML từ Quill editor (đã có postprocess trong hook listener)
-    const currentHtml = getCurrentContent();
-    if (!currentHtml.trim()) {
+    // Lấy nội dung editable từ Quill
+    const editableContent = getCurrentContent();
+    if (!editableContent.trim()) {
       return;
     }
 
-    // Cập nhật nội dung hiện tại vào state trước khi save
-    setHtmlContent(currentHtml);
+    // Parse lại để lấy các phần non-editable từ template gốc
+    const parsed = parseHtmlFromBE(selectedTemplate.contentHtml || '');
     
-    const successObj = await saveTemplate(getCurrentContent);
+    // Rebuild HTML hoàn chỉnh với nội dung mới từ Quill
+    const completeHtml = rebuildCompleteHtml({
+      editableBody: editableContent,
+      headerBody: parsed.headerBody,
+      metaBlocks: parsed.metaBlocks,
+      signBody: parsed.signBody,
+      footerBody: parsed.footerBody,
+      subject: selectedTemplate.name || 'Template',
+      externalAllStyles: allStyles
+    });
+
+    // Cập nhật states
+    setHtmlContent(editableContent);
+    setFullHtml(completeHtml);
+    
+    // Save template với HTML hoàn chỉnh
+    const successObj = await saveTemplate(() => completeHtml);
     const success = !!successObj?.success;
     if (success) {
       console.log('✅ Template saved successfully in modal');
@@ -143,8 +176,18 @@ function TemplateEditorModal({ visible, onClose, template }) {
       okText: 'Khôi phục',
       cancelText: 'Hủy',
       onOk: () => {
-        // khôi phục lại từ template gốc (prop)
-        if (template) ingestTemplate(template);
+        // Parse lại từ template gốc và reset về nội dung ban đầu
+        if (template && template.contentHtml) {
+          const parsed = parseHtmlFromBE(template.contentHtml);
+          updateParsedStructure(parsed);
+          setHtmlContent(parsed.editableBody || '');
+          setFullHtml(parsed.fullHtml || template.contentHtml);
+          
+          // Đặt lại nội dung trong Quill
+          if (isReady) {
+            setContent(parsed.editableBody || '');
+          }
+        }
         setHasUnsavedChanges(false);
       }
     });
@@ -438,15 +481,7 @@ function TemplateEditorModal({ visible, onClose, template }) {
         visible={previewVisible}
         onClose={() => setPreviewVisible(false)}
         templateData={selectedTemplate || template}
-        htmlContent={rebuildCompleteHtml([
-          centerBlock,
-          metaBlock,
-          htmlContent,
-          signBlock
-        ].filter(Boolean).join("\n"),
-        selectedTemplate?.name || '',
-        parsed
-        )}
+        htmlContent={fullHtml}
         allStyles={allStyles}
         htmlHead={htmlHead}
         htmlAttributes={htmlAttributes}
@@ -500,6 +535,21 @@ function TemplateEditorModal({ visible, onClose, template }) {
           font-family: "Monaco", "Consolas", monospace !important;
           font-size: 12px !important;
           border: 1px solid #91d5ff !important;
+        }
+
+        /* Ẩn các phần non-editable trong Quill editor */
+        .ql-editor .non-editable-header,
+        .ql-editor .meta-block,
+        .ql-editor .sign-block,
+        .ql-editor .footer {
+          display: none !important;
+        }
+
+        /* Đảm bảo chỉ hiển thị phần editable content */
+        .ql-editor div[class*="non-editable"],
+        .ql-editor table[class*="sign-block"],
+        .ql-editor div[class*="footer"] {
+          display: none !important;
         }
       `}</style>
     </>

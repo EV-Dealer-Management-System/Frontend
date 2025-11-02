@@ -67,6 +67,13 @@ export const useTemplateEditor = () => {
 
   // ====== LIST ======
   const fetchTemplates = useCallback(async (page = 1, size = 10000) => {
+
+    if (typeof page === 'object') {
+      page = 1;
+    }
+    if (typeof size === 'object') {
+      size = 10000;
+    }
     if (loading) return;
     setLoading(true);
     try {
@@ -144,31 +151,18 @@ export const useTemplateEditor = () => {
     try {
       console.log('💾 Saving template...');
       
-      // lấy body content trực tiếp từ quill
-      const curentEditable = typeof getCurrentContent === 'function'
+      // Lấy content từ getCurrentContent (có thể là function hoặc string)
+      const finalContent = typeof getCurrentContent === 'function'
         ? getCurrentContent()
-        : htmlContent;
+        : (getCurrentContent || htmlContent);
 
-      // rebuild full HTML
-      const mergeBody = [
-        centerBlock,
-        metaBlock,
-        curentEditable,
-        signBlock
-      ]
+      console.log('📝 Final content to save:', finalContent?.substring(0, 200) + '...');
 
-      // dùng rebuildCompleteHtml để ghép các phần
-      const fullHtml = rebuildCompleteHtml(
-        mergeBody,
-        selectedTemplate.name,
-        parsed
-      );
-
-      // gọi API lưu
+      // gọi API lưu với content đã được process
       const res = await updateTemplate(
         selectedTemplate.code, 
-        selectedTemplate.name, 
-        fullHtml
+        selectedTemplate.name,
+        finalContent
       );
       
       if (res?.success) {
@@ -198,48 +192,15 @@ export const useTemplateEditor = () => {
 
   // ====== INGEST TEMPLATE (for Modal direct load) ======
   const ingestTemplate = useCallback((tpl) => {
-    console.log("===== [ingestTemplate] RAW TEMPLATE HTML =====");
-    console.log(tpl?.contentHtml);
+    console.log("===== [ingestTemplate] SIMPLIFIED =====");
     if (!tpl) return;
-    //parse html và tách các block
-    const parser = new DOMParser();
-    const doc = parser.parseFromString( tpl.contentHtml || "", "text/html");
-
-    //tách riêng các block đặc biệt
-    const signEl = doc.querySelector('.sign');
-    const centerEl = doc.querySelector('.center');
-    const metaEl = doc.querySelector('.meta');
-
-    const signBlock = signEl?.outerHTML || "";
-    const centerBlock = centerEl?.outerHTML || "";
-    const metaBlock = metaEl?.outerHTML || "";
-
-    //Xóa khỏi body
-    signEl?.remove();
-    centerEl?.remove();
-    metaEl?.remove();
-
-    //phần nội dung có thể chỉnh sửa
-    const editableBody = doc.body.innerHTML || "";
     
-    //cập nhập state
-    setHtmlContent(editableBody);
-    setFullHtml(tpl.contentHtml || "");
-    setSignBlock(signBlock);
-    setCenterBlock(centerBlock);
-    setMetaBlock(metaBlock);
-
-    //lưu các phần parse khác
-    setParsed({
-      allStyles: [...doc.querySelectorAll('style')].map(s => s.outerHTML).join("\n") || "",
-      headContent: doc.head?.innerHTML || "",
-      htmlAttrs: [...doc.documentElement.attributes].map(attr => `${attr.name}="${attr.value}"`).join(" ") || "",
-    });
-    console.log("===== [ingestTemplate] BODY PASSED TO QUILL =====");
-    console.log(editableBody);
+    // Đơn giản hóa - chỉ set selected template và basic states
     setSelectedTemplate(tpl);
     setHasUnsavedChanges(false);
     loadedTemplateIdRef.current = tpl.id ?? null;
+    
+    console.log("Template ingested:", tpl.name);
   }, []);
 
  
@@ -253,21 +214,13 @@ export const useTemplateEditor = () => {
 
     // content
     htmlContent, setHtmlContent,
-    parsed,
+    fullHtml, setFullHtml,
 
     // flags
     hasUnsavedChanges, setHasUnsavedChanges,
 
     // actions
     saveTemplate,
-    rebuildCompleteHtml,
     ingestTemplate,
-    
-    //state
-    signBlock,
-    centerBlock,
-    metaBlock,
-    fullHtml,
-    buildMergedBody,
   };
 };
