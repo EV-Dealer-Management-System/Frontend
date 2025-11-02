@@ -9,18 +9,7 @@ const LazyPDFViewer = lazy(() =>
   }))
 );
 
-// Phase 5: Lazy load PDFjs worker chỉ khi cần thiết
-const loadPDFWorker = () => {
-  return import('react-pdf').then(({ pdfjs }) => {
-    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.mjs',
-        import.meta.url
-      ).toString();
-    }
-    return pdfjs;
-  });
-};
+// Worker configuration moved to src/pdfWorker.js - import it in components that use PDF
 
 // Phase 5: Loading fallback component cho PDF viewer
 const PDFLoadingFallback = ({ message = "Đang tải PDF Viewer..." }) => (

@@ -15,12 +15,9 @@ import {
 } from '@ant-design/icons';
 import api from '../../../../../api/api';
 import { pdfCacheService } from '../../../../../App/Home/PDFconfig/PDFCacheService';
+import '../../../../../pdfWorker'; // Import worker configuration
 
-// Cấu hình worker cho pdfjs sử dụng file trong public
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
+// Worker configuration moved to src/pdfWorker.js
 
 
 function PDFViewer({ contractNo, pdfUrl: externalPdfUrl, showAllPages = false, scale: externalScale }) {

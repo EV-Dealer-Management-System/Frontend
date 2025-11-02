@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, use } from 'react';
 import { Modal, App } from 'antd';
 import { PDFUpdateService } from '../../../../../../App/Home/PDFconfig/PDFUpdate';
 
-// Hook xử lý các actions của template: save, reset, close modal
+// Hook xử lý các actions của template: save, reset, close modal  
 export const useTemplateActions = (
   contractId,
   contractNo,
@@ -19,10 +19,7 @@ export const useTemplateActions = (
   rebuildCompleteHtml,
   contractSubject,
   allStyles,
-  signContent,
-  headerContent,
-  metaContent,
-  footerContent
+  parsedStructure  // thay thế signContent và headerContent bằng parsedStructure
 ) => {
   const [modal, contextHolder] = Modal.useModal();
   const { message } = App.useApp();
@@ -132,13 +129,15 @@ export const useTemplateActions = (
         setSaveLoading(false);
         return; // ⛔ DỪNG Ở ĐÂY, KHÔNG GỬI BẢN CŨ
       }
-      const completeHtml = rebuildCompleteHtml(
-        quillBody,
-        contractSubject,
-        allStyles,
-        signContent,
-        headerContent
-      );
+      const completeHtml = rebuildCompleteHtml({
+        editableBody: quillBody,
+        headerBody: parsedStructure.headerBody,
+        metaBlocks: parsedStructure.metaBlocks,
+        signBody: parsedStructure.signBody,
+        footerBody: parsedStructure.footerBody,
+        subject: contractSubject,
+        externalAllStyles: allStyles
+      });
       const subject = contractSubject || `Hợp đồng Đại lý ${contractNo}`;
       const currentBodyContent = quillBody || htmlContent || '';
 

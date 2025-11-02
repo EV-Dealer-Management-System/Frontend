@@ -37,7 +37,7 @@ function PDFEditMain({
   onCancel
 }) {
   // States cơ bản
-  const [htmlContent, setHtmlContent] = useState('');
+  const [htmlContent, setHtmlContent] = useState(''); // chỉ chứa editableBody cho Quill
   const [originalContent, setOriginalContent] = useState('');
   const [contractSubject, setContractSubject] = useState('');
   const [activeTab, setActiveTab] = useState('editor');
@@ -45,6 +45,15 @@ function PDFEditMain({
   const [isUpdatingFromCode, setIsUpdatingFromCode] = useState(false);
   const [signContent, setSignContent] = useState('');
   const [headerContent, setHeaderContent] = useState('');
+  const [fullPreviewHtml, setFullPreviewHtml] = useState(''); // full HTML cho Preview và HTML tab
+  
+  // States mới cho cấu trúc phân tách
+  const [parsedStructure, setParsedStructure] = useState({
+    headerBody: '',
+    metaBlocks: '',
+    signBody: '',
+    footerBody: ''
+  });
 
 
   // Custom hooks
@@ -97,8 +106,7 @@ function PDFEditMain({
     rebuildCompleteHtml,
     contractSubject,
     allStyles,
-    signContent,
-    headerContent
+    parsedStructure  // truyền parsedStructure thay vì signContent và headerContent
   );
 
   useEffect(() => {
@@ -116,12 +124,24 @@ function PDFEditMain({
       if (visible && contractId && !templateLoaded) {
         const template = await loadTemplate();
         if (template) {
-          // ✅ Parse HTML từ BE - tách TẤT CẢ style và structure
+          // ✅ Parse HTML từ BE - tách các phần rõ ràng
           const rawHtml = template.htmlTemplate || '';
           const parsedResult = parseHtmlFromBE(rawHtml);
+          
+          // Set editableBody cho Quill Editor
           setHtmlContent(parsedResult.editableBody || '');
-          setSignContent(parsedResult.signBody || '');
-          setHeaderContent?.(parsedResult.headerBody || '');
+          setOriginalContent(parsedResult.editableBody || '');
+          
+          // Set fullHtml cho Preview và HTML tab
+          setFullPreviewHtml(parsedResult.fullHtml || rawHtml);
+          
+          // Lưu cấu trúc phân tách
+          setParsedStructure({
+            headerBody: parsedResult.headerBody || '',
+            metaBlocks: parsedResult.metaBlocks || '',
+            signBody: parsedResult.signBody || '',
+            footerBody: parsedResult.footerBody || ''
+          });
           
           // Lưu structure vào state
           updateParsedStructure(parsedResult);
@@ -132,9 +152,6 @@ function PDFEditMain({
             htmlAttributes: parsedResult.htmlAttributes
           }
           
-          // 🧩 DÙNG editableBody (thay bodyContent)
-          setHtmlContent(parsedResult.editableBody || '');
-          setOriginalContent(parsedResult.editableBody || '');
           setContractSubject(template.name);
 
           // ✅ Ghi log an toàn
@@ -168,6 +185,13 @@ function PDFEditMain({
       setHtmlContent('');
       setOriginalContent('');
       setContractSubject('');
+      setFullPreviewHtml('');
+      setParsedStructure({
+        headerBody: '',
+        metaBlocks: '',
+        signBody: '',
+        footerBody: ''
+      });
       setTemplateData(null);
       setTemplateLoaded(false); // ✅ Reset flag để cho phép load lại template
       
@@ -176,7 +200,6 @@ function PDFEditMain({
       
       // Clear Quill content
       resetQuillContent();
-      
     }
   };
 
@@ -192,18 +215,32 @@ function PDFEditMain({
     }
   }, [visible]);
 
-  // Thêm TailwindCSS styles cho react-quilljs
+  // CSS để ẩn các phần không cần thiết trong Quill Editor
   useEffect(() => {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
-      .ql-editor .sign { display: none !important; }
-      .ql-editor [data-signature-block] { display: none !important; }
-      .ql-editor [data-preserve-idx][data-type="sign"] { display: none !important; }
-      .ql-editor .__ph_holder[data-type="sign"] { display: none !important; }
-      .ql-editor .__ph_holder[data-type="center"] { display: none !important; }  
-      .ql-editor h1, .ql-editor h2, .ql-editor h3, .ql-editor h4, .ql-editor h5, .ql-editor h6 {
-        display: none !important;  
+      /* Ẩn phần header với class non-editable-header */
+      .ql-editor .non-editable-header { 
+        display: none !important; 
       }
+      
+      /* Ẩn phần meta blocks (Bên A, Bên B) */
+      .ql-editor .meta-block { 
+        display: none !important; 
+      }
+      
+      /* Ẩn phần sign block */
+      .ql-editor .sign-block,
+      .ql-editor table.sign-block { 
+        display: none !important; 
+      }
+      
+      /* Ẩn phần footer */
+      .ql-editor .footer { 
+        display: none !important; 
+      }
+      
+
       .ql-editor {
         font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif !important;
         font-size: 12pt !important;
@@ -496,11 +533,18 @@ function PDFEditMain({
                         lineHeight: '1.4'
                       }}
                     >
-                      {/* ✅ Preview với styles được inject */}
-                      {allStyles && (
-                        <style dangerouslySetInnerHTML={{ __html: allStyles.replace(/<\/?style[^>]*>/g, '') }} />
-                      )}
-                      <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                      {/* ✅ Preview hiển thị full HTML đầy đủ */}
+                      <div dangerouslySetInnerHTML={{ 
+                        __html: fullPreviewHtml || rebuildCompleteHtml({
+                          editableBody: getCurrentContent(),
+                          headerBody: parsedStructure.headerBody,
+                          metaBlocks: parsedStructure.metaBlocks,
+                          signBody: parsedStructure.signBody,
+                          footerBody: parsedStructure.footerBody,
+                          subject: contractSubject,
+                          externalAllStyles: allStyles
+                        })
+                      }} />
                     </div>
                   )
                 },
@@ -515,12 +559,12 @@ function PDFEditMain({
                   children: (
                     <div className="h-full overflow-hidden">
                       <TextArea
-                        value={htmlContent} // ghi/đọc RAW
+                        value={fullPreviewHtml} // hiển thị full HTML
                         onChange={(e) => {
-                          setHtmlContent(e.target.value); // lưu RAW
+                          setFullPreviewHtml(e.target.value); // lưu full HTML
                           setHasUnsavedChanges(true);
                         }}
-                        placeholder="Chỉnh sửa HTML trực tiếp (dành cho kỹ thuật viên)..."
+                        placeholder="Chỉnh sửa HTML đầy đủ (bao gồm header, meta, content, sign, footer)..."
                         className="h-full resize-none border-gray-300 focus:border-blue-500"
                         disabled={false}
                         style={{ 
@@ -536,61 +580,6 @@ function PDFEditMain({
                     </div>
                   )
                 },
-                {
-                  key: 'debug',
-                  label: (
-                    <span>
-                      <FileTextOutlined />
-                      Debug Styles
-                    </span>
-                  ),
-                  children: (
-                    <div className="h-full overflow-auto p-4 bg-gray-50">
-                      <div className="grid grid-cols-1 gap-4">
-                        <Card size="small" title="📊 Style Preservation Status">
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span>All Styles Length:</span>
-                              <span className="font-mono">{allStyles?.length || 0} chars</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Style Blocks Count:</span>
-                              <span className="font-mono">{(allStyles?.match(/<style/g) || []).length}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>HTML Head Length:</span>
-                              <span className="font-mono">{htmlHead?.length || 0} chars</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>HTML Attributes:</span>
-                              <span className="font-mono">{htmlAttributes || 'none'}</span>
-                            </div>
-                          </div>
-                        </Card>
-                        
-                        <Card size="small" title="🎨 Preserved Styles">
-                          <TextArea
-                            value={allStyles}
-                            readOnly
-                            rows={10}
-                            placeholder="Không có styles được lưu trữ"
-                            className="font-mono text-xs"
-                          />
-                        </Card>
-                        
-                        <Card size="small" title="📄 Body Content (for Quill)">
-                          <TextArea
-                            value={htmlContent}
-                            readOnly
-                            rows={8}
-                            placeholder="Không có nội dung body"
-                            className="font-mono text-xs"
-                          />
-                        </Card>
-                      </div>
-                    </div>
-                  )
-                }
               ]}
             />
           </div>

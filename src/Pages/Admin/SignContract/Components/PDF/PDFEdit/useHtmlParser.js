@@ -1,18 +1,7 @@
 // useHtmlParser.js
 import { useState, useMemo } from "react";
 
-/**
- * Parse HTML từ BE:
- *  - Tách style/head/attr/body
- *  - Freeze wrappers (.center/.meta/.section-title/.muted/.sign)
- *  - Xuất ra 2 phiên bản:
- *    + templateBody: có marker cố định để ráp lại đúng cấu trúc
- *    + editableBody: thân thiện với Quill (holder bằng class ph-<idx>)
- * Rebuild:
- *  - Lấy quillHtml (người dùng chỉnh) + templateBody (giữ marker)
- *  - Bơm innerHTML của từng holder ph-<idx> vào đúng wrapper gốc
- *  - Ghép lại head/styles/attrs/title hoàn chỉnh
- */
+
 export const useHtmlParser = () => {
   const [allStyles, setAllStyles] = useState("");
   const [htmlHead, setHtmlHead] = useState("");
@@ -25,7 +14,7 @@ export const useHtmlParser = () => {
   const parseHtmlFromBE = (rawHtml) => {
     if (!rawHtml) return {};
 
-    console.group("=== PARSING HTML FROM BE (BẢO TOÀN TẤT CẢ STYLE) ===");
+    console.group("=== PARSING HTML FROM BE (TÁCH CÁC PHẦN RÕ RÀNG) ===");
     console.log("Raw HTML length:", rawHtml.length);
 
     // 1) Tách <style> và lấy head/body/attrs
@@ -43,146 +32,100 @@ export const useHtmlParser = () => {
     const _htmlAttributes = (rawHtml.match(/<html([^>]*)>/i)?.[1] || "").trim();
     let bodyContent = bodyMatch ? bodyMatch[1].trim() : "";
 
-    // 👉 Dùng DOM để bóc tách chính xác, không sợ nested <div>
+    // 2) Tách các phần theo HTML mẫu của bạn
     const dom = document.createElement('div');
     dom.innerHTML = bodyContent;
 
-    const signEl = dom.querySelector('.sign');
-    const centerEl = dom.querySelector('.center');
+    // Tách Header chỉ phần non-editable-header (không bao gồm các paragraph Căn cứ và Hôm nay)
+    const headerRegex = /<div class="non-editable-header">[\s\S]*?<\/div>/i;
+    const headerBody = bodyContent.match(headerRegex)?.[0] || '';
 
-    const signSection = signEl ? signEl.outerHTML : '';
-    const centerSection = centerEl ? centerEl.outerHTML : '';
+    // Tách Meta blocks (Bên A, Bên B)
+    const metaBlockRegex = /<div class="meta-block">[\s\S]*?<\/div>/gi;
+    const metaBlocks = bodyContent.match(metaBlockRegex)?.join('') || '';
 
-    if (signEl) signEl.remove();
-    if (centerEl) centerEl.remove();
+    // Tách Sign block
+    const signBlockRegex = /<table[^>]*class="sign-block"[\s\S]*?<\/table>/i;
+    const signBody = bodyContent.match(signBlockRegex)?.[0] || '';
 
-    const editableSection = dom.innerHTML; // phần còn lại đưa vào Quill
+    // Tách Footer
+    const footerRegex = /<div class="footer">[\s\S]*?<\/div>/i;
+    const footerBody = bodyContent.match(footerRegex)?.[0] || '';
+
+    // Phần editable body (chỉ Điều 1 -> Điều N)
+    let editableBody = bodyContent
+      .replace(headerRegex, '')  // bỏ header
+      .replace(metaBlockRegex, '') // bỏ meta blocks
+      .replace(signBlockRegex, '') // bỏ sign block
+      .replace(footerRegex, '')    // bỏ footer
+      .trim();
+
+    // Lấy full HTML để dùng cho Preview và HTML tab
+    const fullHtml = rawHtml;
     console.log("Head length:", _htmlHead.length);
     console.log("Body length (before):", bodyContent.length);
 
-    // 2) Đóng băng wrappers → tạo song song:
-    //    - templateDOM: giữ marker cố định
-    //    - editableDOM: thay wrapper bằng holder .ph-<idx>
-    const templateDOM = document.createElement("div");
-    templateDOM.innerHTML = bodyContent;
-
-    let editableHtml = editableSection;
-
-    const preserved = [];
-
-    // Lặp qua editable trước để xác định index theo thứ tự xuất hiện
-    const toFreeze = templateDOM.querySelectorAll(PRESERVE_SELECTORS.join(", "));
-    Array.from(toFreeze).forEach((el, idx) => {
-      const type =
-        el.classList.contains("sign") ? "sign" :
-        el.classList.contains("center") ? "center" :
-        el.classList.contains("meta") ? "meta" :
-        el.classList.contains("section-title") ? "section-title" :
-        el.classList.contains("muted") ? "muted" : "unknown";
-
-      preserved.push({
-        type,
-        outerHTML: el.outerHTML,
-        innerHTML: el.innerHTML
-      });
-
-     const holderHTML = 
-     `<div class="__ph_holder ph-${idx}" data-type="${type}">` + 
-     (type === "sign" ? "&#8203;" : el.innerHTML) + '</div>'; // &#8203; = zero-width space
-
-     editableHtml = editableHtml.replace(el.outerHTML, holderHTML);
-    });
-
-    // template: thay wrapper bằng marker + holder-template (không cho vào Quill)
-    const toFreezeTemplate = templateDOM.querySelectorAll(PRESERVE_SELECTORS.join(", "));
-    Array.from(toFreezeTemplate).forEach((el, idx) => {
-      const marker = document.createElement("span");
-      marker.className = "__ph_marker";
-      marker.setAttribute("data-idx", String(idx));
-      marker.setAttribute("style", "display:none");
-
-      const tHolder = document.createElement("div");
-      tHolder.className = "__ph_template_holder";
-      tHolder.setAttribute("data-idx", String(idx));
-      tHolder.innerHTML = ""; // sẽ bơm nội dung khi rebuild
-
-      el.replaceWith(marker, tHolder);
-    });
-
-    const editableBody = editableHtml;
-    const _templateBody = templateDOM.innerHTML;
+    // 3) Tạo template body để rebuild (giữ cấu trúc ban đầu)
+    const _templateBody = bodyContent;
 
     console.log("Parsed results:");
-    console.log(" - Preserved wrappers:", preserved.length);
+    console.log(" - Header body length:", headerBody.length);
+    console.log(" - Meta blocks length:", metaBlocks.length);
     console.log(" - Editable body length:", editableBody.length);
-    console.log(" - Template body length:", _templateBody.length);
+    console.log(" - Sign body length:", signBody.length);
+    console.log(" - Footer body length:", footerBody.length);
     console.groupEnd();
 
     return {
-      editableBody,
-      templateBody: _templateBody,
-      allStyles: styles,
+      fullHtml,           // toàn bộ HTML cho Preview và HTML tab
       htmlHead: _htmlHead,
+      allStyles: styles,
       htmlAttributes: _htmlAttributes,
-      preservedWrappers: preserved,
-      signBody: signSection,
-      headerBody: centerSection
+      headerBody,         // phần header (quốc hiệu, tiêu đề)
+      metaBlocks,         // Bên A / B  
+      editableBody,       // phần nội dung chính (Điều 1 → Điều 10)
+      signBody,           // block chữ ký
+      footerBody,         // footer (Trang n / n)
+      templateBody: _templateBody,
+      preservedWrappers: [] // giữ để tương thích
     };
   };
 
   /**
-   * Rebuild hoàn chỉnh:
-   *  - quillHtml: HTML hiện tại người dùng chỉnh (editable)
+   * Rebuild hoàn chỉnh với cấu trúc mới:
+   *  - editableBody: nội dung Điều 1 -> Điều N từ Quill
+   *  - headerBody, metaBlocks, signBody, footerBody: các phần cố định
    *  - subject: tiêu đề
    *  - externalAllStyles: styles lưu cache (nếu có)
    */
-  const rebuildCompleteHtml = (quillHtml, subject, externalAllStyles, signHtml = '', headerHtml = '') => {
-    if (!quillHtml || !templateBody) return "";
+  const rebuildCompleteHtml = ({ 
+    editableBody, 
+    headerBody = '', 
+    metaBlocks = '', 
+    signBody = '', 
+    footerBody = '', 
+    subject = 'Hợp đồng điện tử',
+    externalAllStyles
+  }) => {
+    if (!editableBody) return "";
 
-    // 1) Lấy inner của từng holder từ quillHtml
-    const quillDOM = document.createElement("div");
-    quillDOM.innerHTML = quillHtml;
+    // Ghép lại body theo thứ tự: header + meta + editable + sign + footer
+    const finalBody = [
+      headerBody,
+      metaBlocks, 
+      editableBody,
+      signBody,
+      footerBody
+    ].filter(Boolean).join('\n\n');
 
-    const wrap = quillDOM;
-
-    preservedWrappers.forEach((meta, idx) => {
-      const editHolder = wrap.querySelector(`.ph-${idx}`);
-      if (!editHolder && !["sign","center","meta"].includes(meta.type)) return;
-
-      // Lấy wrapper gốc rồi gắn lại inner
-      const tmp = document.createElement("div");
-      tmp.innerHTML = meta.outerHTML;
-      const newEl = tmp.firstElementChild;
-      if (newEl) {
-        if (meta.type === "sign" || meta.type === "center" || meta.type === "meta" || meta.type === "section-title" || meta.type === "muted") {
-          // Giữ nguyên nội dung gốc của các block cố định
-          newEl.innerHTML = meta.innerHTML || newEl.innerHTML;
-        } else {
-          // Các block bình thường có thể được Quill chỉnh
-          newEl.innerHTML = editHolder ? editHolder.innerHTML : newEl.innerHTML;
-        }
-      }
-
-      if(editHolder){
-        editHolder.replaceWith(newEl);
-      } 
-    });
-
-    
-    let finalBodyWithSign = wrap.innerHTML;
-    if (!/<div[^>]*class=["'][^"']*sign[^"']*["'][^>]*>[\s\S]*?<\/div>/i.test(finalBodyWithSign) && signHtml) {
-      finalBodyWithSign += '\n' + signHtml;
-    }
-    if (!/<div[^>]*class=["'][^"']*center[^"']*["'][^>]*>[\s\S]*?<\/div>/i.test(finalBodyWithSign) && headerHtml) {
-      finalBodyWithSign = headerHtml + '\n' + finalBodyWithSign;
-    }
+    // Merge styles
     let mergedStyles = (externalAllStyles || allStyles || "").trim();
-  if (!/\.center\s*\{[^}]*text-align\s*:\s*center[^}]*\}/i.test(mergedStyles)) {
-    mergedStyles += "\n.center { text-align: center; }";
-  }
+    if (!/\.center\s*\{[^}]*text-align\s*:\s*center[^}]*\}/i.test(mergedStyles)) {
+      mergedStyles += "\n.center { text-align: center; }";
+    }
 
-  // ✅ Luôn wrap lại toàn bộ style block (ngay cả khi có <style> cũ)
-  const styleWrapped = `<style>\n${mergedStyles.replace(/<\/?style[^>]*>/g, '')}\n</style>`;
+    // Luôn wrap lại toàn bộ style block
+    const styleWrapped = `<style>\n${mergedStyles.replace(/<\/?style[^>]*>/g, '')}\n</style>`;
 
     const finalHtml = `<!doctype html>
 <html${htmlAttributes ? " " + htmlAttributes : ""}>
@@ -194,12 +137,12 @@ ${htmlHead}
 ${styleWrapped}
 </head>
 <body>
-${finalBodyWithSign}
+${finalBody}
 </body>
 </html>`;
 
     console.group("=== REBUILT HTML STRUCTURE ===");
-    console.log("Final body length:", finalBodyWithSign.length);
+    console.log("Final body length:", finalBody.length);
     console.log("Styles length:", (mergedStyles || "").length);
     console.groupEnd();
 

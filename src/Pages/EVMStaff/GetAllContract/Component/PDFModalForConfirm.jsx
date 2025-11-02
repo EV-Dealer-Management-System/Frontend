@@ -11,12 +11,9 @@ import {
 } from '@ant-design/icons';
 import { Document, Page, pdfjs } from 'react-pdf';
 import useConfirmContract from '../../../../App/EVMStaff/Contract/ConfirmContract';
+import '../../../../pdfWorker'; // Import worker configuration
 
-// Cấu hình worker cho pdfjs
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.mjs',
-  import.meta.url
-).toString();
+// Worker configuration moved to src/pdfWorker.js
 
 function PDFModalForConfirm ({ visible, onClose, contractId, contractNo, pdfUrl, title, onSuccess}) {
   const [numPages, setNumPages] = useState(null);
