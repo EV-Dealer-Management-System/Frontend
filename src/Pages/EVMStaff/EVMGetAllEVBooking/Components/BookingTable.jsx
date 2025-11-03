@@ -150,9 +150,8 @@ function BookingTable({
             title: "STT",
             dataIndex: "index",
             valueType: "indexBorder",
-            width: 60,
+            width: 50,
             align: "center",
-            fixed: "left",
             render: (text, record, index) => (
                 <span style={{ fontWeight: 600, color: "#595959" }}>{index + 1}</span>
             ),
@@ -161,66 +160,25 @@ function BookingTable({
             title: "Người Tạo",
             dataIndex: "createdBy",
             key: "createdBy",
-            width: 150,
+            width: 120,
             ellipsis: true,
             render: (text) => (
                 <div style={{ fontSize: 13, color: "#595959" }}>{text || "N/A"}</div>
             ),
         },
-        // {
-        //     title: "Mã Booking",
-        //     dataIndex: "id",
-        //     key: "id",
-        //     width: 220,
-        //     copyable: true,
-        //     ellipsis: true,
-        //     fixed: "left",
-        //     render: (text) => {
-        //         const displayId =
-        //             text && typeof text === "string" ? text.split("-")[0] : text || "N/A";
-
-        //         return (
-        //             <Tooltip title={text || "N/A"}>
-        //                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        //                     <Tag
-        //                         color="blue"
-        //                         style={{
-        //                             margin: 0,
-        //                             fontSize: 11,
-        //                             padding: "2px 8px",
-        //                             borderRadius: 4,
-        //                         }}
-        //                     >
-        //                         ID
-        //                     </Tag>
-        //                     <span
-        //                         style={{
-        //                             fontFamily: "monospace",
-        //                             fontSize: 12,
-        //                             color: "#1890ff",
-        //                             fontWeight: 600,
-        //                         }}
-        //                     >
-        //                         {displayId}
-        //                     </span>
-        //                 </div>
-        //             </Tooltip>
-        //         );
-        //     },
-        // },
         {
             title: "Trạng Thái",
             dataIndex: "status",
             key: "status",
-            width: 140,
+            width: 130,
             align: "center",
             render: (status) => getStatusTag(status),
         },
         {
-            title: "Số Lượng Xe",
+            title: "Số Lượng",
             dataIndex: "totalQuantity",
             key: "totalQuantity",
-            width: 110,
+            width: 100,
             align: "center",
             sorter: (a, b) => (a.totalQuantity || 0) - (b.totalQuantity || 0),
             render: (text) => (
@@ -246,7 +204,7 @@ function BookingTable({
             title: "Ngày Đặt",
             dataIndex: "bookingDate",
             key: "bookingDate",
-            width: 150,
+            width: 140,
             sorter: (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
             render: (text) => (
                 <div style={{ fontSize: 13, color: "#595959" }}>
@@ -260,16 +218,17 @@ function BookingTable({
             key: "eContract",
             width: 200,
             ellipsis: true,
-            render: (eContract) => {
-                if (!eContract) {
+            render: (eContract, record) => {
+                const contract = record.eContract;
+
+                if (!contract) {
                     return (
-                        <Tag color="default" style={{ borderRadius: 6 }}>
-                            Chưa có hợp đồng
+                        <Tag color="default" style={{ borderRadius: 6, fontSize: 11 }}>
+                            Chưa có
                         </Tag>
                     );
                 }
 
-                // Mapping trạng thái hợp đồng: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4
                 const contractStatusMap = {
                     0: { color: "default", text: "Bản Nháp" },
                     1: { color: "gold", text: "Chờ Dealer Ký" },
@@ -278,42 +237,37 @@ function BookingTable({
                     4: { color: "red", text: "Từ Chối" },
                 };
 
-                const statusInfo = contractStatusMap[eContract.status] || {
+                const statusInfo = contractStatusMap[contract.status] || {
                     color: "default",
-                    text: "Không xác định",
+                    text: "N/A",
                 };
+
+                const fileName = contract.name || "N/A";
 
                 return (
                     <Tooltip
                         title={
                             <div className="space-y-1">
-                                <div><strong>Tên file:</strong> {eContract.name}</div>
+                                <div><strong>Tên file:</strong> {fileName}</div>
                                 <div><strong>Trạng thái:</strong> {statusInfo.text}</div>
-                                <div><strong>Người tạo:</strong> {eContract.createdName || "N/A"}</div>
-                                <div><strong>Chủ sở hữu:</strong> {eContract.ownerName || "N/A"}</div>
-                                <div><strong>Ngày tạo:</strong> {formatDateTime(eContract.createdAt)}</div>
+                                <div><strong>Người tạo:</strong> {contract.createdName || "System"}</div>
+                                <div><strong>Chủ sở hữu:</strong> {contract.ownerName || "N/A"}</div>
+                                <div><strong>Ngày tạo:</strong> {formatDateTime(contract.createdAt)}</div>
                             </div>
                         }
                     >
-                        <div className="flex flex-col gap-1">
-                            <Tag
-                                color={statusInfo.color}
-                                icon={<AuditOutlined />}
-                                style={{
-                                    borderRadius: 6,
-                                    fontSize: 12,
-                                    padding: "4px 10px",
-                                    fontWeight: 500,
-                                }}
-                            >
-                                {statusInfo.text}
-                            </Tag>
-                            <div
-                                className="text-xs text-gray-500 truncate"
-                                style={{ maxWidth: 180 }}
-                            >
-                                {eContract.name}
-                            </div>
+                        <div
+                            style={{
+                                fontSize: 12,
+                                fontWeight: 500,
+                                color: "#1890ff",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                cursor: "pointer",
+                            }}
+                        >
+                            {fileName}
                         </div>
                     </Tooltip>
                 );
@@ -322,13 +276,12 @@ function BookingTable({
         {
             title: "Thao Tác",
             key: "actions",
-            width: 280,
+            width: 260,
             align: "center",
-            fixed: "right",
             render: (_, record) => {
                 const isUpdating = updatingStatus[record.id];
-                const isPending = record.status === 2; // Status Pending = 2
-                const isSignedByAdmin = record.status === 6; // Status SignedByAdmin = 6
+                const isPending = record.status === 2;
+                const isSignedByAdmin = record.status === 6;
 
                 return (
                     <Space size={8}>

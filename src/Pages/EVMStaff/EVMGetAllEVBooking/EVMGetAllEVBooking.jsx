@@ -75,28 +75,29 @@ function EVMGetAllEVBooking() {
                 const enhancedBookings = bookingsList.map((booking) => {
                     // Tính tổng số lượng xe từ bookingEVDetails
                     const totalQuantity =
+                        booking.totalQuantity ||
                         booking.bookingEVDetails?.reduce(
                             (sum, detail) => sum + (detail.quantity || 0),
                             0
                         ) ||
-                        booking.totalQuantity ||
                         0;
 
                     // Tính tổng giá trị
                     const totalAmount =
+                        booking.totalAmount ||
                         booking.bookingEVDetails?.reduce(
                             (sum, detail) => sum + (detail.totalPrice || 0),
                             0
                         ) ||
-                        booking.totalAmount ||
                         0;
 
                     return {
                         ...booking,
                         totalQuantity,
                         totalAmount,
-                        // Giữ nguyên bookingEVDetails để hiển thị chi tiết
+                        // Đảm bảo giữ nguyên bookingEVDetails và eContract
                         bookingEVDetails: booking.bookingEVDetails || [],
+                        eContract: booking.eContract || null,
                     };
                 });
 
