@@ -130,7 +130,14 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             name: "Hiệu suất đại lý",
             icon: <BarChartOutlined />,
             component: "./DealerPerformance",
-          },
+          }, 
+          {
+            path: "/evm-staff/ev/ev-delivery",
+            name: "Theo Dõi Giao Hàng",
+            icon: <CarOutlined />,
+            component: "./EVDeliveries",
+             
+          }
           // {
           //     path: "/evm-staff/dealers/audit",
           //     name: "Kiểm tra tuân thủ",

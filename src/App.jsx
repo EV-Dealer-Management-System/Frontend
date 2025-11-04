@@ -62,6 +62,7 @@ import FeedbackDealerStaff from "./Pages/DealerManager/StaffFeedback/FeedbackDea
 import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedback/UpdateStatusCustomerFeedback";
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
 import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
+import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
 function App() {
   return (
     <BrowserRouter>
@@ -259,7 +260,8 @@ function App() {
                 <Route
                   path="dealer-feedback/all"
                   element={<UpdateStatusStaffFeedback />}
-                />
+                /> 
+                <Route path="ev/ev-delivery" element={<EVDelivery />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ EVM Staff */}
                 <Route
                   path="*"
