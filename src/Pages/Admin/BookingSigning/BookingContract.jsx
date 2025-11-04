@@ -91,28 +91,32 @@ function BookingContract() {
 
   // Lấy EVC AccessToken khi mở trang
   useEffect(() => {
-  if (hasFetchedToken.current) return;
-  hasFetchedToken.current = true;
+    if (hasFetchedToken.current) return;
+    hasFetchedToken.current = true;
 
-  const fetchEVCUser = async () => {
-    try {
-      const res = await contractService.getAccessTokenForEVC();
-      setEvcUser(res);
-    } catch (err) {
-      console.error('Lỗi lấy EVC token:', err);
-    }
-  };
-  fetchEVCUser();
-}, []);
+    const fetchEVCUser = async () => {
+      try {
+        const res = await contractService.getAccessTokenForEVC();
+        setEvcUser(res);
+      } catch (err) {
+        console.error('Lỗi lấy EVC token:', err);
+      }
+    };
+    fetchEVCUser();
+  }, []);
 
-  // Tự động search khi có bookingId từ URL
+  // Tự động search khi có bookingId hoặc search từ URL
   useEffect(() => {
     const bookingId = searchParams.get('bookingId');
-    if (bookingId) {
+    const searchQuery = searchParams.get('search');
+
+    if (searchQuery) {
+      console.log('Auto-searching for contract name:', searchQuery);
+      updateFilter('search', searchQuery);
+      message.info(`Đang tìm kiếm hợp đồng: ${searchQuery}`);
+    } else if (bookingId) {
       console.log('Auto-searching for booking ID:', bookingId);
       updateFilter('search', bookingId);
-
-      // Hiển thị thông báo cho user
       message.info(`Đang tìm kiếm hợp đồng cho Booking ID: ${bookingId.substring(0, 8)}...`);
     }
   }, [searchParams, updateFilter]);
@@ -222,7 +226,7 @@ function BookingContract() {
         detail.downloadUrl,
         positionToSign,
         pageToSign,
-        
+
       );
 
       // Reload contract detail sau khi ký thành công
@@ -315,18 +319,18 @@ function BookingContract() {
   };
 
   // Render trạng thái hợp đồng
- const renderStatus = (status) => {
-  const statusConfig = {
-    1: { color: 'blue', text: 'Nháp' },
-    2: { color: 'processing', text: 'Sẵn sàng' },
-    3: { color: 'gold', text: 'Đang thực hiện' },
-    4: { color: 'success', text: 'Hoàn tất' },
-    5: { color: 'purple', text: 'Đang chỉnh sửa' },
-    6: { color: 'green', text: 'Đã chấp nhận' },
-    [-1]: { color: 'error', text: 'Từ chối' },
-    [-2]: { color: 'default', text: 'Đã xóa' },
-    [-3]: { color: 'volcano', text: 'Đã hủy' },
-  };
+  const renderStatus = (status) => {
+    const statusConfig = {
+      1: { color: 'blue', text: 'Nháp' },
+      2: { color: 'processing', text: 'Sẵn sàng' },
+      3: { color: 'gold', text: 'Đang thực hiện' },
+      4: { color: 'success', text: 'Hoàn tất' },
+      5: { color: 'purple', text: 'Đang chỉnh sửa' },
+      6: { color: 'green', text: 'Đã chấp nhận' },
+      [-1]: { color: 'error', text: 'Từ chối' },
+      [-2]: { color: 'default', text: 'Đã xóa' },
+      [-3]: { color: 'volcano', text: 'Đã hủy' },
+    };
 
     const config = statusConfig[status] || { color: 'default', text: 'Không xác định' };
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -338,17 +342,21 @@ function BookingContract() {
       title: 'Tên hợp đồng',
       dataIndex: 'name',
       key: 'name',
+      width: 300,
       ellipsis: true,
     },
     {
       title: 'Chủ sở hữu',
       dataIndex: 'ownerName',
       key: 'ownerName',
+      width: 150,
+      ellipsis: true,
     },
     {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      width: 150,
       sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
       defaultSortOrder: 'descend',
       render: (date) => dayjs(date).format('DD/MM/YYYY HH:mm'),
@@ -357,22 +365,24 @@ function BookingContract() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
+      width: 120,
+      align: 'center',
       render: (_, record) => <SafeStatus value={record.status} />,
     },
     {
       title: 'Thao tác',
       key: 'action',
+      width: 100,
+      align: 'center',
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="primary"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleViewContract(record)}
-          >
-            Xem
-          </Button>
-        </Space>
+        <Button
+          type="primary"
+          icon={<EyeOutlined />}
+          size="small"
+          onClick={() => handleViewContract(record)}
+        >
+          Xem
+        </Button>
       ),
     },
   ];
@@ -607,7 +617,7 @@ function BookingContract() {
                   Ký hợp đồng
                 </Button>
               )}
-              
+
               <Button
                 type="text"
                 icon={<DownloadOutlined />}
@@ -620,7 +630,7 @@ function BookingContract() {
                   border: '1px solid #e2e8f0'
                 }}
               />
-              
+
               <Button
                 type="text"
                 icon={<FullscreenOutlined />}
@@ -637,10 +647,10 @@ function BookingContract() {
               />
             </Space>
           }
-          >
+        >
           {detail && (
-            <div style={{ 
-              padding: '32px', 
+            <div style={{
+              padding: '32px',
               minHeight: '100vh',
               paddingBottom: '80px'
             }}>
@@ -694,7 +704,7 @@ function BookingContract() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div style={{ padding: '24px' }}>
                       {[
                         { icon: FileTextOutlined, label: 'Số hợp đồng', value: detail.no, color: '#3b82f6' },
@@ -798,7 +808,7 @@ function BookingContract() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div style={{ padding: '24px' }}>
                         {!smartCAInfo && (
                           <>
@@ -902,9 +912,9 @@ function BookingContract() {
                                     </p>
                                   </div>
                                 </div>
-                                
-                                <Button 
-                                  type="primary" 
+
+                                <Button
+                                  type="primary"
                                   onClick={() => setShowAddSmartCAModal(true)}
                                   size="large"
                                   style={{
@@ -988,8 +998,8 @@ function BookingContract() {
                                       </div>
                                     </div>
                                   </div>
-                                  <Button 
-                                    size="small" 
+                                  <Button
+                                    size="small"
                                     onClick={() => setShowSmartCASelector(true)}
                                     style={{
                                       borderColor: '#10b981',
@@ -1044,9 +1054,9 @@ function BookingContract() {
                                   </div>
                                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                                     {hasValidChoices ? (
-                                      <Button 
-                                        size="small" 
-                                        type="primary" 
+                                      <Button
+                                        size="small"
+                                        type="primary"
                                         onClick={() => setShowSmartCASelector(true)}
                                         style={{
                                           background: '#3b82f6',
@@ -1058,8 +1068,8 @@ function BookingContract() {
                                       </Button>
                                     ) : (
                                       <>
-                                        <Button 
-                                          size="small" 
+                                        <Button
+                                          size="small"
                                           onClick={() => setShowSmartCASelector(true)}
                                           style={{
                                             borderRadius: '8px'
@@ -1067,9 +1077,9 @@ function BookingContract() {
                                         >
                                           Danh sách
                                         </Button>
-                                        <Button 
-                                          size="small" 
-                                          type="primary" 
+                                        <Button
+                                          size="small"
+                                          type="primary"
                                           onClick={() => setShowAddSmartCAModal(true)}
                                           style={{
                                             background: '#3b82f6',
@@ -1171,7 +1181,7 @@ function BookingContract() {
                         </Space>
                       </div>
                     </div>
-                    
+
                     <div style={{ padding: '24px' }}>
                       <div style={{
                         background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
@@ -1204,7 +1214,7 @@ function BookingContract() {
                               background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)',
                               border: '2px dashed #d1d5db',
                               borderRadius: '8px'
-                              
+
                             }}>
                               <div style={{ textAlign: 'center', color: '#6b7280' }}>
                                 <div style={{
@@ -1235,7 +1245,7 @@ function BookingContract() {
                 </Col>
               </Row>
             </div>
-        )}
+          )}
         </Drawer>
 
         {/* Custom CSS cho drawer */}

@@ -269,21 +269,22 @@ function AdminGetAllEVBooking() {
     const getStatusTag = (status) => {
         // Mapping theo BookingStatus enum: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4, Cancelled=5, SignedByAdmin=6, Completed=7
         const statusMap = {
-            0: { color: "default", text: "Bản Nháp" },
-            1: { color: "gold", text: "Chờ Dealer Ký" },
-            2: { color: "orange", text: "Chờ Duyệt" },
-            3: { color: "green", text: "Đã Duyệt" },
-            4: { color: "red", text: "Từ Chối" },
-            5: { color: "default", text: "Đã Hủy" },
-            6: { color: "cyan", text: "Admin Đã Ký" },
-            7: { color: "blue", text: "Hoàn Thành" },
+            0: { color: "default", text: "Bản Nháp", icon: <ClockCircleOutlined /> },
+            1: { color: "gold", text: "Chờ Dealer Ký", icon: <ClockCircleOutlined /> },
+            2: { color: "orange", text: "Chờ Duyệt", icon: <ClockCircleOutlined /> },
+            3: { color: "green", text: "Đã Duyệt", icon: <CheckCircleOutlined /> },
+            4: { color: "red", text: "Đã Từ Chối", icon: <CheckCircleOutlined /> },
+            5: { color: "default", text: "Đã Hủy", icon: <CheckCircleOutlined /> },
+            6: { color: "cyan", text: "Admin Đã Ký", icon: <CheckCircleOutlined /> },
+            7: { color: "blue", text: "Đã Hoàn Thành", icon: <CheckCircleOutlined /> },
         };
 
         const statusInfo = statusMap[status] || {
             color: "default",
-            text: "Unknown",
+            text: "Không xác định",
+            icon: null,
         };
-        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+        return <Tag color={statusInfo.color} icon={statusInfo.icon}>{statusInfo.text}</Tag>;
     };
 
     // Lọc dữ liệu - CHỈ HIỂN THỊ BOOKING ĐÃ DUYỆT (status = 3)
