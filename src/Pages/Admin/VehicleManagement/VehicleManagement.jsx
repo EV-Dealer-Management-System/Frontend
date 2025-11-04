@@ -202,27 +202,6 @@ function VehicleManagement() {
           className="p-6"
         >
           {/* Quick Action Buttons */}
-          <Card className="mb-4" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", border: "none", borderRadius: "12px" }}>
-            <div style={{ textAlign: "center" }}>
-              <Title level={4} style={{ margin: "8px 0 16px 0", color: "white" }}>
-                ⚡ Quản lý Hệ thống Xe Điện
-              </Title>
-              <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
-                <Button type="primary" size="large" icon={<PlusOutlined />} onClick={() => setActiveTab("create-template")} style={{ minWidth: "160px", background: "#1890ff", borderColor: "#1890ff", fontWeight: "bold" }}>
-                  Tạo Mẫu Xe Template
-                </Button>
-                <Button size="large" icon={<CarOutlined />} onClick={() => setActiveTab("manage-models")} style={{ minWidth: "160px", background: "rgba(255,255,255,0.9)", borderColor: "white", color: "#1890ff", fontWeight: "500" }}>
-                  Quản lý Model
-                </Button>
-                <Button size="large" icon={<BuildOutlined />} onClick={() => setActiveTab("manage-versions")} style={{ minWidth: "160px", background: "rgba(255,255,255,0.9)", borderColor: "white", color: "#722ed1", fontWeight: "500" }}>
-                  Quản lý Version
-                </Button>
-                <Button size="large" icon={<BgColorsOutlined />} onClick={() => setActiveTab("manage-colors")} style={{ minWidth: "160px", background: "rgba(255,255,255,0.9)", borderColor: "white", color: "#eb2f96", fontWeight: "500" }}>
-                  Quản lý Màu sắc
-                </Button>
-              </div>
-            </div>
-          </Card>
 
           <Divider />
 
