@@ -14,7 +14,7 @@ function HeaderBar({ collapsed, isMobile }) {
     const navigate = useNavigate();
     const token = localStorage.getItem("jwt_token");
     const decodedToken = token ? jwtDecode(token) : null;
-    const userFullName = decodedToken?.name || "Dealer Staff";
+    const userFullName = decodedToken?.name || localStorage.getItem("userFullName") || "Dealer Staff";
     const userDealerName = decodedToken?.DealerName || "Đại lý không xác định";
 
     const handleLogout = () => {
@@ -71,37 +71,23 @@ function HeaderBar({ collapsed, isMobile }) {
 
     return (
         <div style={headerStyle}>
-            {/* Left side - Dealer Name with Icon */}
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <ShopOutlined className="text-white text-base" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs text-gray-500 font-medium">Đại lý</span>
-                        <span className="text-sm font-bold text-gray-800">{userDealerName}</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right side - User Info */}
-            <Space size="large" align="center">
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-500">Xin chào,</span>
-                        <span className="text-sm font-semibold text-gray-800">{userFullName}</span>
-                    </div>
-                    <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
-                        <Avatar
-                            size={40}
-                            className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-md"
-                            style={{ backgroundColor: "#1890ff" }}
-                            icon={<UserOutlined />}
-                        />
-                    </Dropdown>
-                </div>
-            </Space>
-        </div>
+                   {/* Left side - Dealer Name */}
+                   <div className="flex items-center gap-2">
+                       <span className="text-base font-semibold text-gray-800">Tên đại lý: {userDealerName}</span>
+                   </div>
+       
+                   {/* Right side - User Info */}
+                   <Space size="large" align="center">
+                       <span className="text-sm text-gray-600">Xin Chào, {userFullName}</span>
+                       <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+                           <Avatar
+                               className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                               style={{ backgroundColor: "#1890ff" }}
+                               icon={<UserOutlined />}
+                           />
+                       </Dropdown>
+                   </Space>
+               </div>
     );
 }
 

@@ -5,7 +5,6 @@ import {
     UserOutlined,
     LogoutOutlined,
     SettingOutlined,
-    ShopOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -55,49 +54,35 @@ function HeaderBar({ collapsed, isMobile }) {
         top: 0,
         right: 0,
         left: isMobile ? 0 : collapsed ? 64 : 280,
-        height: '64px',
+        height: '56px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingLeft: '24px',
         paddingRight: '24px',
         backgroundColor: 'white',
-        borderBottom: '1px solid #f0f0f0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        borderBottom: '1px solid #d9d9d9',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
         transition: 'left 0.2s ease',
         zIndex: 30,
     };
     return (
         <div style={headerStyle}>
-            {/* Left side - Dealer Name with Icon */}
-            <div className="flex items-center gap-3">
-                <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                        <ShopOutlined className="text-white text-lg" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-xs text-blue-100 font-medium">Đại lý</span>
-                        <span className="text-base font-bold text-white">{userDealerName}</span>
-                    </div>
-                </div>
+            {/* Left side - Dealer Name */}
+            <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-gray-800">Tên đại lý: {userDealerName}</span>
             </div>
 
             {/* Right side - User Info */}
             <Space size="large" align="center">
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
-                    <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-500">Xin chào,</span>
-                        <span className="text-sm font-semibold text-gray-800">{userFullName}</span>
-                    </div>
-                    <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
-                        <Avatar
-                            size={40}
-                            className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all shadow-md"
-                            style={{ backgroundColor: "#1890ff" }}
-                            icon={<UserOutlined />}
-                        />
-                    </Dropdown>
-                </div>
+                <span className="text-sm text-gray-600">Xin Chào, {userFullName}</span>
+                <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+                    <Avatar
+                        className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                        style={{ backgroundColor: "#1890ff" }}
+                        icon={<UserOutlined />}
+                    />
+                </Dropdown>
             </Space>
         </div>
     );
