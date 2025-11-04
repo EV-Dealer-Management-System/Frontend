@@ -176,6 +176,7 @@ function BookingTable({
             key: "status",
             width: 120,
             align: "center",
+            render: (status) => getStatusTag(status),
         },
         {
             title: "Số Lượng",
