@@ -91,7 +91,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <FileTextOutlined />,
             component: "./DealerContracts",
           },
-
+          {
+            path: "/admin/dealer/all-dealer-tiers",
+            name: "Cấp bậc đại lý",
+            icon: <LineChartOutlined />,
+            component: "./DealerTierManagement",
+          }
           // {
           //   path: "/admin/dealer/promotions",
           //   name: "Quản lý khuyến Mãi ",

@@ -287,7 +287,6 @@ function AdminGetAllEVBooking() {
         return <Tag color={statusInfo.color} icon={statusInfo.icon}>{statusInfo.text}</Tag>;
     };
 
-    // Lọc dữ liệu - CHỈ HIỂN THỊ BOOKING ĐÃ DUYỆT (status = 3)
     const filteredBookings = useMemo(() => {
         return bookings.filter((booking) => {
             // Chỉ lấy booking có status = 3 (Đã Duyệt - Approved)

@@ -309,14 +309,6 @@ function BookingContract() {
           visible={showSmartCASelector}
           onCancel={() => setShowSmartCASelector(false)}
           onSelect={handleSelectSmartCA}
-          onReloadSmartCA={async (newData) => {
-            if (newData) setSmartCAInfo(newData);
-            else{
-              const refreshed = await contractService.handleCheckSmartCA(Number(evcUser.userId));
-              setSmartCAInfo(refreshed);
-            }
-            message.success('Đã Reload lại danh sách SmartCA')
-          }}
           smartCAData={smartCAInfo}
           loading={contractSigning.signingLoading}
           currentSelectedId={selectedSmartCA?.id}
