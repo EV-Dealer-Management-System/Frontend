@@ -202,9 +202,21 @@ function BookingContract() {
             borderRadius: '8px',
             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
           }}>
+            
             <Table
               columns={columns}
-              dataSource={contracts}
+              dataSource={contracts.filter((item) => {
+                const keyword = filters.search.trim().toLowerCase();
+                if (!keyword) return true; // Không có từ khóa thì hiển thị tất cả
+                
+                const name = item.name?.toLowerCase() || '';
+                const owner = item.ownerName?.toLowerCase() || '';
+
+                return (
+                  name.includes(keyword) ||
+                  owner.includes(keyword)
+                );
+              })}
               rowKey="id"
               loading={loading}
               scroll={false}

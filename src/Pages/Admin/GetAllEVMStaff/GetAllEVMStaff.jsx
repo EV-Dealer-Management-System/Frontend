@@ -18,6 +18,9 @@ function GetAllEVMStaff() {
         total: 0,
     });
 
+    // Search keyword state
+    const [searchKeyword, setSearchKeyword] = useState('');
+
     // Filter parameters
     const [selectedPage, setSelectedPage] = useState(1);
 
@@ -100,22 +103,6 @@ function GetAllEVMStaff() {
                         </Button>,
                     ],
                 }}
-                content={
-                    <div className="flex items-center gap-6 py-3">
-                        <Statistic
-                            title="Tổng số nhân viên"
-                            value={staffList.length}
-                            prefix={<TeamOutlined />}
-                            valueStyle={{ color: '#1890ff' }}
-                        />
-                        <Statistic
-                            title="Trang hiện tại"
-                            value={selectedPage}
-                            suffix="/ 10"
-                            valueStyle={{ color: '#52c41a' }}
-                        />
-                    </div>
-                }
             >
                 {/* Filter Bar Component */}
                 <FilterBar
@@ -123,12 +110,20 @@ function GetAllEVMStaff() {
                     onPageChange={handlePageChange}
                     onApply={() => fetchStaffList(selectedPage)}
                     loading={loading}
+                    onSearchChange={(value) => setSearchKeyword(value)}
                 />
 
                 {/* Staff Table Component */}
                 <StaffTable
-                    dataSource={staffList}
-                    loading={loading}
+                dataSource={staffList.filter((staff) => {
+                    const keyword = searchKeyword.trim().toLowerCase();
+                    if (!keyword) return true;
+                    return (
+                    staff.fullName?.toLowerCase().includes(keyword) ||
+                    staff.email?.toLowerCase().includes(keyword) 
+                    );
+                })}
+                loading={loading}
                 />
             </PageContainer>
             </ConfigProvider>

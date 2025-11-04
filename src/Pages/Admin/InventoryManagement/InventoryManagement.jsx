@@ -28,9 +28,11 @@ import {
 import { PageContainer } from "@ant-design/pro-components";
 import { Inventory } from "../../../App/EVMAdmin/VehiclesManagement/Inventory";
 import NavigationBar from "../../../Components/Admin/Components/NavigationBar";
+import { ConfigProvider } from "antd";
+import viVN from "antd/lib/locale/vi_VN";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
+const { TextArea, Search } = Input;
 
 function InventoryManagement() {
   const [collapsed, setCollapsed] = useState(false);
@@ -40,6 +42,7 @@ function InventoryManagement() {
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [form] = Form.useForm();
 
   // Load data khi component mount
@@ -243,11 +246,17 @@ function InventoryManagement() {
         <PageContainer
           header={{
             title: "Quản lý kho xe điện",
-            subTitle: "Quản lý danh sách và thông tin các kho chứa xe điện",
             breadcrumb: {
               items: [{ title: "Trang chủ" }, { title: "Quản lý kho" }],
             },
             extra: [
+              <Search
+                placeholder="Tìm kiếm kho..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                style={{ width: 300 }}
+                allowClear
+              />,
               <Button
                 key="refresh"
                 icon={<ReloadOutlined />}
@@ -266,20 +275,20 @@ function InventoryManagement() {
               </Button>,
             ],
           }}
-          content={
-            <Alert
-              message="Quản lý kho xe điện"
-              description="Tạo và quản lý các kho chứa xe điện, theo dõi trạng thái và thông tin kho."
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          }
         >
+          <ConfigProvider locale={viVN}>
           <Card>
             <Table
               columns={columns}
-              dataSource={inventories}
+              dataSource={inventories.filter((item) =>{
+                const keyword = searchKeyword.toLowerCase();
+                return (
+                  item.name.toLowerCase().includes(keyword) ||
+                  item.location.toLowerCase().includes(keyword) ||
+                  (item.description &&
+                    item.description.toLowerCase().includes(keyword))
+                );
+              })}
               rowKey="id"
               loading={loading}
               pagination={{
@@ -291,6 +300,7 @@ function InventoryManagement() {
               scroll={{ x: 800 }}
             />
           </Card>
+          </ConfigProvider>
 
           {/* Modal tạo/sửa kho */}
           <Modal

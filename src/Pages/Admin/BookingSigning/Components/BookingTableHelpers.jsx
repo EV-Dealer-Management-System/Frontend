@@ -34,6 +34,14 @@ export const SafeStatus = ({ value }) => {
 // Tạo columns cho table
 export const createBookingColumns = (handleViewContract) => [
   {
+    title: 'STT',
+    dataIndex: 'index',
+    key: 'index',
+    width: 80,
+    align: 'center',
+    render: (_, __, index) => index + 1,
+  },
+  {
     title: 'Tên hợp đồng',
     dataIndex: 'name',
     key: 'name',

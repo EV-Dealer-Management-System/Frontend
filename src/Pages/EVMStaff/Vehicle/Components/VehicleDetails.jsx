@@ -90,7 +90,7 @@ function VehicleDetails({ visible, onClose, versionId }) {
             footer={null}
             width={900}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
             {loading && (
                 <div className="flex justify-center items-center py-8">

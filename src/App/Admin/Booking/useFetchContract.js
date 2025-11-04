@@ -67,7 +67,8 @@ const useFetchContracts = () => {
         const searchTerm = filters.search.toLowerCase();
         contractList = contractList.filter(contract => 
           contract.name?.toLowerCase().includes(searchTerm) ||
-          contract.id?.toLowerCase().includes(searchTerm)
+          contract.id?.toLowerCase().includes(searchTerm) ||
+          contract.ownerName?.toLowerCase().includes(searchTerm)
         );
       }
       // Filter theo date range
