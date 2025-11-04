@@ -38,6 +38,7 @@ import EVMStaffLayout from "../../../Components/EVMStaff/EVMStaffLayout";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { Search } = Input;
 
 /** ---- Helpers: normalize API & extract error ---- */
 const normalizeApi = (res) => ({
@@ -81,6 +82,9 @@ function CreateElectricVehicle() {
   const [versions, setVersions] = useState([]);
   const [colors, setColors] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
+
+  // Search keyword state
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const [form] = Form.useForm();
   const [updateForm] = Form.useForm(); // Form cho update
@@ -806,6 +810,13 @@ const vehicleColumns = [
             <Text type="secondary">Quản lý các xe điện cụ thể (có VIN)</Text>
           </div>
           <Space>
+            <Search
+              placeholder="Tìm kiếm theo VIN hoặc Mẫu xe"
+              onSearch={(value) => console.log('Search value:', value)}
+              style={{ width: 300 }}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              allowClear
+            />
           <Button
             icon={<ReloadOutlined />}
             onClick={loadAllVehicles}
@@ -848,7 +859,18 @@ const vehicleColumns = [
               </div>
             )}
             
-            {!loading && vehiclesList.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((vehicle, index) => {
+            {!loading &&
+              vehiclesList
+                .filter((vehicle) => {
+                  const keyword = (searchKeyword || '').toLowerCase();
+                  if (!keyword) return true;
+                  const vin = vehicle.vin?.toLowerCase() || '';
+                  const model = vehicle.electricVehicleTemplate?.modelName?.toLowerCase() || '';
+                  const version = vehicle.electricVehicleTemplate?.versionName?.toLowerCase() || '';
+                  return vin.includes(keyword) || model.includes(keyword) || version.includes(keyword);
+                })
+                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                .map((vehicle, index) => {
               const actualIndex = (currentPage - 1) * pageSize + index;
               
               // ✅ Dùng data trực tiếp từ API response
@@ -897,34 +919,34 @@ const vehicleColumns = [
                     </Col>
                     
                     <Col xs={12} sm={6} className="border-r border-gray-300 pr-4">
-  {/* --- Phần Mẫu --- */}
-  <div className="mb-4">
-    <Text strong className="block mb-2" style={{ fontSize: '13px' }}>
-      Mẫu:
-    </Text>
-    <Text
-      type="secondary"
-      className="block text-[13px] text-gray-500"
-      style={{ lineHeight: '1.5' }}
-    >
-      {modelName}
-    </Text>
-  </div>
+                    {/* --- Phần Mẫu --- */}
+                    <div className="mb-4">
+                      <Text strong className="block mb-2" style={{ fontSize: '13px' }}>
+                        Mẫu:
+                      </Text>
+                      <Text
+                        type="secondary"
+                        className="block text-[13px] text-gray-500"
+                        style={{ lineHeight: '1.5' }}
+                      >
+                        {modelName}
+                      </Text>
+                    </div>
 
-  {/* --- Phần Phiên bản --- */}
-  <div>
-    <Text strong className="block mb-2" style={{ fontSize: '13px' }}>
-      Phiên bản:
-    </Text>
-    <Text
-      strong
-      className="block"
-      style={{ fontSize: '15px', color: '#262626', lineHeight: '1.6' }}
-    >
-      {versionName}
-    </Text>
-  </div>
-</Col>
+                    {/* --- Phần Phiên bản --- */}
+                    <div>
+                      <Text strong className="block mb-2" style={{ fontSize: '13px' }}>
+                        Phiên bản:
+                      </Text>
+                      <Text
+                        strong
+                        className="block"
+                        style={{ fontSize: '15px', color: '#262626', lineHeight: '1.6' }}
+                      >
+                        {versionName}
+                      </Text>
+                    </div>
+                  </Col>
 
                     <Col xs={12} sm={5} className="border-r border-gray-300 pr-4">
                       <div className="mb-2">

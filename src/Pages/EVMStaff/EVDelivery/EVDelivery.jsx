@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Card, message } from 'antd';
+import { Card, message, Input } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
 import EVMStaffLayout from '../../../Components/EVMStaff/EVMStaffLayout';
 import { getAllEVDelivery } from '../../../App/EVMStaff/EVDelivery/GetAllEVDelivery';
 import DeliveryTable from './Components/DeliveryTable';
 import StatusFilter from './Components/StatusFilter';
+
+const { Search } = Input;
+
 import DeliveryDetailModal from './Components/DeliveryDetailModal';
 
 function EVDelivery() {
@@ -76,6 +79,14 @@ function EVDelivery() {
                 title="Theo dõi giao xe"
                 subTitle="Quản lý và theo dõi tiến trình giao xe đến đại lý"
                 extra={[
+                    <Search
+                        key="search"
+                        placeholder="Tìm kiếm theo mã giao xe hoặc tên đại lý"
+                        onSearch={(value) => console.log('Search value:', value)}
+                        style={{ width: 300 }}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        allowClear
+                    />,
                     <StatusFilter
                         key="status-filter"
                         value={selectedStatus}
@@ -85,7 +96,10 @@ function EVDelivery() {
             >
                 <Card className="shadow-sm">
                     <DeliveryTable
-                        data={deliveries}
+                        data={deliveries.filter(d =>
+                            d.bookingEVId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                            d.description?.toLowerCase().includes(searchKeyword.toLowerCase())
+                        )}
                         loading={loading}
                         pagination={pagination}
                         onTableChange={handleTableChange}

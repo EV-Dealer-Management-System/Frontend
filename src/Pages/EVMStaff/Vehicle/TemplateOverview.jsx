@@ -7,6 +7,7 @@ import {
   Spin,
   message,
   Button,
+  Input
 } from "antd";
 import {
   ReloadOutlined,
@@ -19,12 +20,14 @@ import VehicleCard from "./Components/VehicleCard";
 import VehicleDetails from "./Components/VehicleDetails";
 
 const { Text } = Typography;
+const { Search } = Input;
 
 function TemplateOverview() {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   useEffect(() => {
     loadAllTemplates();
@@ -79,6 +82,14 @@ function TemplateOverview() {
         title="Tổng Quan Xe Điện"
         subTitle={`${templates.length} mẫu xe điện có sẵn`}
         extra={[
+          <Search
+            key="search"
+            placeholder="Tìm kiếm theo tên mẫu"
+            onSearch={(value) => console.log('Search value:', value)}
+            style={{ width: 300 }}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            allowClear
+          />,
           <Button
             key="refresh"
             icon={<ReloadOutlined />}
@@ -110,7 +121,16 @@ function TemplateOverview() {
         {/* Template Grid */}
         {!loading && templates.length > 0 && (
           <Row gutter={[16, 16]}>
-            {templates.map((template) => {
+           {templates
+              .filter((template) => {
+                const keyword = searchKeyword.toLowerCase();
+                return (
+                  template.version?.modelName?.toLowerCase().includes(keyword) ||
+                  template.version?.versionName?.toLowerCase().includes(keyword) ||
+                  template.color?.colorName?.toLowerCase().includes(keyword)
+                );
+              })
+              .map((template) => {
               // Chuẩn hóa data để khớp với VehicleCard
               const vehicleData = {
                 ...template,
