@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ProTable } from "@ant-design/pro-components";
-import { Tag, Button, Tooltip, Space, message } from "antd";
+import { Tag, Button, Tooltip, Space, message, Input } from "antd";
 import {
     EyeOutlined,
     CheckCircleOutlined,
@@ -16,6 +16,8 @@ import BookingReviewModal from "./BookingReviewModal";
 import { ConfigProvider } from "antd";
 import viVN from "antd/lib/locale/vi_VN";
 
+const { Search } = Input;
+
 function BookingTable({
     dataSource,
     loading,
@@ -29,6 +31,9 @@ function BookingTable({
         visible: false,
         booking: null,
     });
+
+    // Tìm kiếm theo từ khóa
+    const [searchKeyword, setSearchKeyword] = useState("");
 
     // Hiển thị modal duyệt đơn
     const showReviewModal = (booking) => {
@@ -367,7 +372,15 @@ function BookingTable({
             <>
                 <ProTable
                     columns={columns}
-                    dataSource={dataSource}
+                    dataSource={dataSource.filter((item) => {
+                        const keyword = searchKeyword.trim().toLowerCase();
+                        return (
+                            item.createdBy?.toLowerCase().includes(keyword) ||
+                            item.eContract?.name?.toLowerCase().includes(keyword) ||
+                            item.status?.toString().includes(keyword) ||
+                            item.bookingCode?.toLowerCase().includes(keyword)
+                        );
+                    })}
                     loading={loading}
                     rowKey={(record) => record.id || record.bookingCode}
                     search={false}

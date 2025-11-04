@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProTable } from "@ant-design/pro-components";
-import { Tag, Badge, message } from "antd";
+import { Tag, Badge, message, Input } from "antd";
 import AdminLayout from "../../../Components/Admin/AdminLayout";
 import { GetAllEVDealer } from "../../../App/EVMAdmin/GetAllEVDealer/GetAllEVDealer";
 import { ConfigProvider } from "antd";
@@ -19,6 +19,10 @@ function GetAllEVDealerPage() {
     sortBy: "",
     isAscending: true,
   });
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [originalDealerData, setOriginalDealerData] = useState([]);
+
+  const { Search } = Input;
 
   // Hàm load dữ liệu đại lý với params
   const loadDealerData = useCallback(
@@ -35,6 +39,7 @@ function GetAllEVDealerPage() {
         const response = await GetAllEVDealer(queryParams);
         if (response.isSuccess) {
           setDealerData(response.result.data);
+          setOriginalDealerData(response.result.data);
           setPagination((prev) => ({
             ...prev,
             total: response.result.pagination.totalItems,
@@ -205,7 +210,7 @@ function GetAllEVDealerPage() {
     <AdminLayout>
       <div className="h-screen flex flex-col">
         <div className="flex-1 bg-white overflow-hidden">
-          <ConfigProvider locale={viVN}>
+            <ConfigProvider locale={viVN}>
           <ProTable
             columns={columns}
             dataSource={dealerData}
@@ -242,11 +247,39 @@ function GetAllEVDealerPage() {
                 <span className="text-lg font-semibold text-gray-800">
                   Danh Sách Đại Lý
                 </span>
-                <Tag color="blue" className="ml-2">
+                <Tag color="blue" className="ml-1">
                   Tổng: {pagination.total}
                 </Tag>
               </div>
             }
+
+            toolBarRender={() => [
+              <Search
+                key="search"
+                placeholder="Tìm kiếm theo tên đại lý hoặc quản lý"
+                allowClear
+                style={{ width: 300 }}
+                value={searchKeyword}
+                onChange={(e) => {
+                  const value = e.target.value.toLowerCase();
+                  setSearchKeyword(value);
+
+                  if (!value) {
+                    setDealerData(originalDealerData);
+                    return;
+                  }
+
+                  const filtered = originalDealerData.filter(
+                    (item) =>
+                      item.name?.toLowerCase().includes(value) ||
+                      item.managerName?.toLowerCase().includes(value) ||
+                      item.managerEmail?.toLowerCase().includes(value)
+                  );
+                  setDealerData(filtered);
+                }}
+              />,
+            ]}
+            
             rowClassName={(record, index) =>
               index % 2 === 0 ? "bg-gray-50" : "bg-white"
             }

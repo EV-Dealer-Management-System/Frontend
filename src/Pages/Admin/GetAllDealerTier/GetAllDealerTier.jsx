@@ -5,6 +5,8 @@ import AdminLayout from "../../../Components/Admin/AdminLayout";
 import TierStatistics from "./Components/TierStatistics";
 import TierTable from "./Components/TierTable";
 import { GetAllDealerTier as GetAllDealerTierAPI } from "../../../App/EVMAdmin/DealerTierManagement/GetAllDealerTier";
+import { ConfigProvider } from "antd";
+import viVN from "antd/lib/locale/vi_VN";
 
 function AdminGetAllDealerTier() {
     const [dealerTiers, setDealerTiers] = useState([]);
@@ -68,12 +70,14 @@ function AdminGetAllDealerTier() {
                 <TierStatistics statistics={statistics} />
 
                 {/* Dealer Tiers Table */}
-                <TierTable
-                    dealerTiers={dealerTiers}
-                    loading={loading}
-                    onReload={() => fetchDealerTiers(true)}
-                    onUpdate={() => fetchDealerTiers(false)}
-                />
+                <ConfigProvider locale={viVN}>
+                    <TierTable
+                        dealerTiers={dealerTiers}
+                        loading={loading}
+                        onReload={() => fetchDealerTiers(true)}
+                        onUpdate={() => fetchDealerTiers(false)}
+                    />
+                </ConfigProvider>
             </PageContainer>
         </AdminLayout>
     );
