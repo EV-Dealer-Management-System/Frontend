@@ -1,5 +1,5 @@
 import React, { useState, useEffect, use } from 'react';
-import { Modal, Descriptions, Tag, Space, Spin, Button, message } from 'antd';
+import { Modal, Descriptions, Tag, Space, Spin, Button, message, App } from 'antd';
 import {
     FileTextOutlined,
     UserOutlined,
@@ -244,6 +244,11 @@ function ContractDetailModal({ visible, contractId, onClose }) {
         setShowSignatureModal(true);
     };
 
+    // Hàm reload SmartCA data
+    const handleReloadSmartCA = (update) => {
+        setSmartCAData(prev => (typeof update === 'function' ? update(prev) : update));
+    };
+
     // Reset signing state khi đóng modal
     useEffect(() => {
         if (!visible) {
@@ -280,6 +285,7 @@ function ContractDetailModal({ visible, contractId, onClose }) {
     const pdfUrl = pdfBlobUrl;
 
     return (
+        <App>
         <Modal
             title={
                 <Space>
@@ -546,8 +552,10 @@ function ContractDetailModal({ visible, contractId, onClose }) {
                 loading={smartCALoading}
                 isExistingSmartCA={true}
                 userId={evcUserId}
+                onReloadSmartCA={handleReloadSmartCA}
             />
         </Modal>
+        </App>
     );
 }
 

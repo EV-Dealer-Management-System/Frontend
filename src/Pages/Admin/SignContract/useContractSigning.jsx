@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { message, Modal } from 'antd';
+import { message, Modal, notification } from 'antd';
 import { CheckOutlined } from '@ant-design/icons';
 import { SignContract } from '../../../App/EVMAdmin/SignContractEVM/SignContractEVM';
 import AddSmartCA from './Components/AddSmartCA';
@@ -97,8 +97,50 @@ const useContractSigning = () => {
         setShowSmartCAModal(false);
       }
     } catch (error) {
-      console.error('Error in digital signature:', error);
-      message.error('Có lỗi không mong muốn khi ký điện tử');
+      console.error("Error signing contract:", error);
+
+      const apiResponse = error?.response?.data;
+      const serverMessage =
+        apiResponse?.message ||
+        apiResponse?.result?.messages?.[0] ||
+        "Không xác định được lỗi từ server";
+
+      // 🔎 Kiểm tra lỗi đặc biệt (Serial number changed)
+      const isSmartCASerialError = serverMessage?.includes(
+        "The serial number of the digital certificate has changed"
+      );
+
+      if (isSmartCASerialError) {
+        // ⚠️ Thông báo đặc biệt cho SmartCA serial lỗi
+        notification.warning({
+          message: "Chứng thư số SmartCA không hợp lệ",
+          description: (
+            <div>
+              <p>
+                Số serial của chứng thư số đã thay đổi (do bạn đổi thiết bị hoặc gia hạn
+                chứng thư). Hệ thống không thể ký hợp đồng.
+              </p>
+              <p style={{ marginTop: 8, fontWeight: 500 }}>
+                👉 Vui lòng <b>xóa SmartCA cũ</b> và <b>thêm lại SmartCA</b> để đồng bộ chứng thư mới.
+              </p>
+            </div>
+          ),
+          duration: 8,
+        });
+
+        // Reset SmartCA state để buộc user chọn lại
+        // Note: Các state này cần được quản lý từ component cha
+        setShowSmartCAModal(false);
+        return;
+      }
+
+      // ⚙️ Còn lại: lỗi chung
+      notification.error({
+        message: "Ký hợp đồng thất bại",
+        description: serverMessage,
+        duration: 6,
+      });
+      
       setShowSmartCAModal(false);
     } finally {
       setSigningLoading(false);

@@ -236,16 +236,71 @@ function BookingContract() {
       reload(); // Reload danh sách
 
     } catch (error) {
-      console.error('Error signing contract:', error);
-      message.error('Có lỗi khi ký hợp đồng');
+      console.error("Error signing contract:", error);
+
+      const apiResponse = error?.response?.data;
+      const serverMessage =
+        apiResponse?.message ||
+        apiResponse?.result?.messages?.[0] ||
+        "Không xác định được lỗi từ server";
+
+      // 🔎 Kiểm tra lỗi đặc biệt (Serial number changed)
+      const isSmartCASerialError = serverMessage?.includes(
+        "The serial number of the digital certificate has changed"
+      );
+
+      if (isSmartCASerialError) {
+        // ⚠️ Thông báo đặc biệt cho SmartCA serial lỗi
+        notification.warning({
+          message: "Chứng thư số SmartCA không hợp lệ",
+          description: (
+            <div>
+              <p>
+                Số serial của chứng thư số đã thay đổi (do bạn đổi thiết bị hoặc gia hạn
+                chứng thư). Hệ thống không thể ký hợp đồng.
+              </p>
+              <p style={{ marginTop: 8, fontWeight: 500 }}>
+                👉 Vui lòng <b>xóa SmartCA cũ</b> và <b>thêm lại SmartCA</b> để đồng bộ chứng thư mới.
+              </p>
+            </div>
+          ),
+          duration: 8,
+        });
+
+        // Reset SmartCA state để buộc user chọn lại
+        setSelectedSmartCA(null);
+        setSmartCAInfo(null);
+        setShowSmartCASelector(true);
+        return;
+      }
+
+      // ⚙️ Còn lại: lỗi chung
+      notification.error({
+        message: "Ký hợp đồng thất bại",
+        description: serverMessage,
+        duration: 6,
+      });
     }
   };
 
   // Hàm chọn SmartCA
   const handleSelectSmartCA = (certificate) => {
-    setSelectedSmartCA(certificate);
-    setShowSmartCASelector(false);
-    message.success(`Đã chọn chứng thư: ${certificate.commonName}`);
+     // Nếu nhận signal reload SmartCA
+      if (certificate?.refreshSmartCAInfo) {
+        setSmartCAInfo(certificate.refreshSmartCAInfo);
+        return;
+      }
+
+      if (!certificate) {
+        message.warning('Vui lòng chọn chứng thư số hợp lệ');
+        return;
+      }
+      // Trường hợp chọn certificate thật
+      if (certificate) {
+        setSelectedSmartCA(certificate);
+        setShowSmartCASelector(false);
+        message.success(`Đã chọn chứng thư: ${certificate.commonName}`);
+      }
   };
 
   // Hàm mở PDF Modal
@@ -884,9 +939,7 @@ function BookingContract() {
                                       userCertificates: [...(prev?.userCertificates || []), res.smartCAData].filter(Boolean),
                                       defaultSmartCa: (prev?.defaultSmartCa) || null,
                                     }));
-                                    if (res.hasValidSmartCA && res.smartCAData) {
-                                      setSelectedSmartCA(res.smartCAData);
-                                    }
+                                    
                                     setShowAddSmartCAModal(false);
                                     message.success('SmartCA mới đã được thêm!');
                                   }}
@@ -1261,6 +1314,14 @@ function BookingContract() {
           visible={showSmartCASelector}
           onCancel={() => setShowSmartCASelector(false)}
           onSelect={handleSelectSmartCA}
+          onReloadSmartCA={async (newData) => {
+            if (newData) setSmartCAInfo(newData);
+            else{
+              const refreshed = await contractService.handleCheckSmartCA(Number(evcUser.userId));
+              setSmartCAInfo(refreshed);
+            }
+            message.success('Đã Reload lại danh sách SmartCA')
+          }}
           smartCAData={smartCAInfo}
           loading={contractSigning.signingLoading}
           currentSelectedId={selectedSmartCA?.id}

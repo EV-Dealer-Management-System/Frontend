@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Card, Button, Tag, Typography, Space, Divider, Alert, message, Radio } from 'antd';
-import { SafetyOutlined, CheckCircleOutlined, ClockCircleOutlined, InfoCircleOutlined, CrownOutlined } from '@ant-design/icons';
+import { Modal, Card, Button, Tag, Typography, Space, Divider, Alert, Radio, Popconfirm, notification, Form, Input, App } from 'antd';
+import { SafetyOutlined, CheckCircleOutlined, ClockCircleOutlined, InfoCircleOutlined, CrownOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { SmartCAService } from '../../../../App/EVMAdmin/SignContractEVM/SmartCA';
+import AddSmartCA from './AddSmartCA';
+import { SignContract } from '../../../../App/EVMAdmin/SignContractEVM/SignContractEVM';
+
 
 const { Text, Title } = Typography;
 
@@ -9,7 +12,8 @@ const SmartCASelector = ({
   visible, 
   onCancel, 
   onSelect, 
-  smartCAData, 
+  smartCAData,
+  onReloadSmartCA,
   loading, 
   isExistingSmartCA = false, 
   currentSelectedId = null,
@@ -18,9 +22,13 @@ const SmartCASelector = ({
 }) => {
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [showAddSmartCA, setShowAddSmartCA] = useState(false);
+
+  const { message } = App.useApp();
   
   const smartCAService = SmartCAService();
-  const FIXED_USER_ID = "18858"; // ID cứng của hãng
+
+  const activeContractService = contractService || SignContract();
 
   // Tự động chọn certificate hiện tại khi mở modal
   useEffect(() => {
@@ -85,6 +93,75 @@ const SmartCASelector = ({
     return new Date(validTo) < new Date();
   }
 
+  // Xử lý xóa SmartCA - sử dụng service từ SmartCA.js
+  async function handleDeleteSmartCA(certificate) {
+    const result = await smartCAService.handleDeleteSmartCA(String(certificate.id), Number(userId));
+    
+    if (result.success) {
+     message.success(`Đã xóa SmartCA: ${certificate.commonName || certificate.name}`);
+
+      // Reset selection nếu đang chọn certificate bị xóa
+      if (selectedCertificate?.id === certificate.id) {
+        setSelectedCertificate(null);
+      }
+
+      // Callback để refresh lại danh sách SmartCA
+       // Reload lại danh sách SmartCA thay vì đóng modal
+      // 1) Cập nhật lạc quan ngay trên UI
+      if (onReloadSmartCA) {
+        onReloadSmartCA((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            userCertificates: (prev.userCertificates || []).filter(c => c.id !== certificate.id),
+            // Nếu defaultSmartCa chính là cái vừa xóa:
+            defaultSmartCa: prev.defaultSmartCa?.id === certificate.id ? null : prev.defaultSmartCa,
+          };
+        });
+      }
+      setSelectedCertificate(null);
+
+      // 2) Retry nhẹ để đồng bộ từ BE (chống rỗng do độ trễ)
+      const tryRefetch = async (attempt = 1) => {
+        const res = await activeContractService.handleCheckSmartCA(Number(userId));
+        const data = res?.data ?? res; 
+        const total = (data?.userCertificates?.length || 0) + (data?.defaultSmartCa ? 1 : 0);
+        if (total === 0 && attempt < 2) {
+          // chờ 600ms rồi thử lại
+          await new Promise(r => setTimeout(r, 600));
+          return tryRefetch(attempt + 1);
+      }
+      if (onReloadSmartCA) onReloadSmartCA(data);
+        message.info(`Danh sách SmartCA đã được cập nhật`);
+      };
+    try { await tryRefetch(); } catch (e) {
+      console.error('Refetch SmartCA failed:', e);
+    }
+  } else {
+      notification.error({
+        message: 'Xóa SmartCA thất bại',
+        description: result.error || 'Có lỗi khi xóa SmartCA',
+        duration: 6,
+      });
+    }
+  }
+
+  // Xử lý thêm SmartCA thành công
+  const handleAddSmartCASuccess = async() => {
+    setShowAddSmartCA(false);
+    
+   try {
+    const res = await activeContractService.handleCheckSmartCA(Number(userId));
+    const data = res?.data ?? res;
+    if (onReloadSmartCA) {
+      onReloadSmartCA(data);
+    }
+    } catch (e) {
+      console.error('Error adding SmartCA:', e);
+    }
+    message.success('Thêm SmartCA thành công!');
+  };
+
   // Xử lý chọn chứng chỉ với API call
   async function handleSelect() {
     if (!selectedCertificate) {
@@ -142,6 +219,7 @@ const SmartCASelector = ({
   }
 
   return (
+    <App>
     <Modal
       title={
         <div className="flex items-center">
@@ -154,6 +232,14 @@ const SmartCASelector = ({
       footer={[
         <Button key="cancel" onClick={onCancel}>
           Hủy
+        </Button>,
+        <Button 
+          key="add" 
+          icon={<PlusOutlined />}
+          onClick={() => setShowAddSmartCA(true)}
+          style={{ marginRight: 'auto' }}
+        >
+          Thêm SmartCA
         </Button>,
         <Button 
           key="select" 
@@ -324,14 +410,40 @@ const SmartCASelector = ({
                                   </div>
                                 </div>
                                 
-                                {/* Status badge */}
-                                <Tag 
-                                  color={canSelect ? "green" : expired ? "red" : "orange"} 
-                                  icon={canSelect ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
-                                  className={isSelected ? 'animate-pulse' : ''}
-                                >
-                                  {canSelect ? 'Hợp lệ' : expired ? 'Hết hạn' : 'Không khả dụng'}
-                                </Tag>
+                                <div className="flex items-center space-x-2">
+                                  {/* Status badge */}
+                                  <Tag 
+                                    color={canSelect ? "green" : expired ? "red" : "orange"} 
+                                    icon={canSelect ? <CheckCircleOutlined /> : <ClockCircleOutlined />}
+                                    className={isSelected ? 'animate-pulse' : ''}
+                                  >
+                                    {canSelect ? 'Hợp lệ' : expired ? 'Hết hạn' : 'Không khả dụng'}
+                                  </Tag>
+                                  
+                                  {/* Delete button */}
+                                  <Popconfirm
+                                    title="Xóa SmartCA"
+                                    description={`Bạn có chắc chắn muốn xóa chứng thư số của "${cert.commonName || cert.name}"?`}
+                                    onConfirm={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteSmartCA(cert);
+                                    }}
+                                    onCancel={(e) => e.stopPropagation()}
+                                    okText="Xóa"
+                                    cancelText="Hủy"
+                                    okType="danger"
+                                  >
+                                    <Button
+                                      type="text"
+                                      danger
+                                      size="small"
+                                      icon={<DeleteOutlined />}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="hover:bg-red-50"
+                                      title="Xóa SmartCA"
+                                    />
+                                  </Popconfirm>
+                                </div>
                               </div>
 
                               {/* Chi tiết certificate */}
@@ -400,7 +512,19 @@ const SmartCASelector = ({
           </div>
         </>
       )}
+
+      {/* Add SmartCA Modal */}
+      <AddSmartCA
+        visible={showAddSmartCA}
+        onCancel={() => setShowAddSmartCA(false)}
+        onSuccess={handleAddSmartCASuccess}
+        contractInfo={{
+          userId: userId,
+          accessToken: localStorage.getItem('jwt_token')
+        }}
+      />
     </Modal>
+    </App>
   );
 };
 
