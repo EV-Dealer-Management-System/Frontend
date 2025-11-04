@@ -1,13 +1,18 @@
 import React, { useState } from "react";
 import { ProTable } from "@ant-design/pro-components";
-import { Tag, Card, Tooltip, Button } from "antd";
+import { Tag, Card, Tooltip, Button, Input } from "antd";
 import { PercentageOutlined, EditOutlined } from "@ant-design/icons";
 import TierLevelDisplay from "./TierLevelDisplay";
 import EditTierModal from "./EditTierModal";
 
+const { Search } = Input;
+
 function TierTable({ dealerTiers, loading, onReload, onUpdate }) {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [selectedTier, setSelectedTier] = useState(null);
+
+    //tìm kiếm theo từ khóa
+    const [searchKeyword, setSearchKeyword] = useState("");
 
     const handleEdit = (record) => {
         setSelectedTier(record);
@@ -147,7 +152,14 @@ function TierTable({ dealerTiers, loading, onReload, onUpdate }) {
             <Card bordered={false} className="shadow-md rounded-lg">
                 <ProTable
                     columns={columns}
-                    dataSource={dealerTiers}
+                    dataSource={dealerTiers.filter((item) =>{
+                        const keyword = searchKeyword.trim().toLowerCase();
+                        return (
+                            item.name.toLowerCase().includes(keyword) ||
+                            item.description?.toLowerCase().includes(keyword) ||
+                            String(item.level).includes(keyword)
+                        );
+                    })}
                     rowKey="id"
                     loading={loading}
                     search={false}
@@ -157,6 +169,16 @@ function TierTable({ dealerTiers, loading, onReload, onUpdate }) {
                                 Danh Sách Dealer Tier
                             </span>
                         ),
+                        actions: [
+                            <Search
+                                key="search"
+                                placeholder="Tìm kiếm theo từ khóa"
+                                onSearch={(value) => setSearchKeyword(value)}
+                                style={{ width: 300 }}
+                                allowClear
+                                onChange={(e) => setSearchKeyword(e.target.value)}
+                            />
+                        ],
                     }}
                     pagination={{
                         pageSize: 10,

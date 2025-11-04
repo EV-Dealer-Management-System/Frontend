@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Space, Button, Tooltip, message } from 'antd';
+import { Table, Tag, Space, Button, Tooltip, message, Input } from 'antd';
 import { EyeOutlined, FileTextOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { GetAllDealerContract } from '../../../../App/EVMAdmin/DealerContract/GetAllDealerContract';
+import {ConfigProvider} from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
+
+const { Search } = Input;
 
 // Component hiển thị bảng danh sách hợp đồng sẵn sàng (status = 2)
 function ContractTable({ onView }) {
     const [contracts, setContracts] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [searchKeyword, setSearchKeyword] = useState('');
 
     // Tải danh sách hợp đồng sẵn sàng từ API
     const loadContracts = async () => {
@@ -147,6 +152,15 @@ function ContractTable({ onView }) {
                     <CheckCircleOutlined className="mr-2 text-green-500" />
                     Hợp đồng sẵn sàng ký
                 </h3>
+                <Search
+                    placeholder="Tìm kiếm hợp đồng"
+                    onSearch={(value) => setSearchKeyword(value)}
+                    onChange={
+                        (e) => setSearchKeyword(e.target.value)
+                    }
+                    style={{ width: 300 }}
+                    allowClear
+                />
                 <Button
                     icon={<ReloadOutlined />}
                     onClick={loadContracts}
@@ -156,9 +170,17 @@ function ContractTable({ onView }) {
                 </Button>
             </div>
             <div className="contract-table" >
+            <ConfigProvider locale={viVN}>
             <Table
                 columns={columns}
-                dataSource={contracts}
+                dataSource={contracts.filter((item) => {
+                    const keyword = searchKeyword.toLowerCase();
+                    return (
+                        item.name?.toLowerCase().includes(keyword) ||
+                        item.createdName?.toLowerCase().includes(keyword) ||
+                        item.ownerName?.toLowerCase().includes(keyword)
+                    );
+                })}
                 rowKey="id"
                 loading={loading}
                 pagination={{
@@ -171,6 +193,7 @@ function ContractTable({ onView }) {
                 size="middle"
                 className="shadow-sm"
             />
+            </ConfigProvider>
             </div>
         </div>
     );
