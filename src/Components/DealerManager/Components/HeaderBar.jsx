@@ -13,7 +13,7 @@ function HeaderBar({ collapsed, isMobile }) {
     const navigate = useNavigate();
     const token = localStorage.getItem("jwt_token");
     const decodedToken = token ? jwtDecode(token) : null;
-    const userFullName = decodedToken?.name || "Dealer Manager";
+    const userFullName = decodedToken?.FullName || "Dealer Manager";
     const userDealerName = decodedToken?.DealerName || "Đại lý không xác định";
     const handleLogout = () => {
         localStorage.removeItem("jwt_token");
@@ -70,7 +70,7 @@ function HeaderBar({ collapsed, isMobile }) {
         <div style={headerStyle}>
             {/* Left side - Dealer Name */}
             <div className="flex items-center gap-2">
-                <span className="text-base font-semibold text-gray-800">Tên đại lý: {userDealerName}</span>
+                <span className="text-base font-semibold text-gray-800"> {userDealerName}</span>
             </div>
 
             {/* Right side - User Info */}

@@ -76,8 +76,8 @@ function TemplateOverview() {
   return (
     <EVMStaffLayout>
       <PageContainer
-        title="Tổng quan Template Xe Điện"
-        subTitle={`${templates.length} template có sẵn`}
+        title="Tổng Quan Xe Điện"
+        subTitle={`${templates.length} mẫu xe điện có sẵn`}
         extra={[
           <Button
             key="refresh"
