@@ -205,6 +205,13 @@ function ContractPage() {
     }
   }
 
+  // Cập nhật SmartCA info từ SmartCASelector
+  function handleReloadSmartCA(update) {
+  setSmartCAInfo(prev =>
+    typeof update === "function" ? update(prev) : update
+  );
+}
+
   // Ép reload PDF bằng cache-busting
   async function refreshPdfCache(reason = '') {
     if (!contractInfo?.downloadUrl) return;
@@ -665,6 +672,7 @@ function ContractPage() {
           currentSelectedId={selectedSmartCA?.id}
           contractService={contractService}
           userId={contractInfo?.processedByUserId}
+          onReloadSmartCA={handleReloadSmartCA}
         />
 
         {/* SmartCA Selector Modal cho existing SmartCA */}
@@ -678,6 +686,7 @@ function ContractPage() {
           currentSelectedId={selectedSmartCA?.id}
           contractService={contractService}
           userId={contractInfo?.processedByUserId}
+          onReloadSmartCA={handleReloadSmartCA}
         />
       </div>
     </div>

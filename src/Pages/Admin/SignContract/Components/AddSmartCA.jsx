@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, message } from 'antd';
+import { Modal, Form, Input, App } from 'antd';
 import { SmartCAService } from '../../../../App/EVMAdmin/SignContractEVM/SmartCA';
 
 // Component để thêm SmartCA
@@ -7,6 +7,7 @@ function AddSmartCA({ visible, onCancel, onSuccess, contractInfo }) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const smartCAService = SmartCAService();
+  const {message} = App.useApp();
 
   // Xử lý submit form với logic thực tế
   const handleSubmit = async () => {
@@ -48,7 +49,15 @@ function AddSmartCA({ visible, onCancel, onSuccess, contractInfo }) {
       
     } catch (error) {
       console.error('Lỗi khi thêm SmartCA:', error);
-      message.error('Có lỗi không mong muốn khi thêm SmartCA');
+      if (error.response) {
+        const serverMsg =
+          error.response?.data?.message || error.response?.data?.error || error.message;
+        message.error('Thêm SmartCA thất bại: ' + serverMsg);
+      }else if (error.message) {
+        message.error('Thêm SmartCA thất bại: ' + error.message);
+      } else {
+        message.error('Thêm SmartCA thất bại do lỗi không xác định');
+      }
     } finally {
       setLoading(false);
     }
