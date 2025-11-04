@@ -16,6 +16,7 @@ const SmartCASelector = ({
   onReloadSmartCA,
   loading, 
   isExistingSmartCA = false, 
+  isForSigning = false,   // New prop để xác định context signing
   currentSelectedId = null,
   contractService = null,  // For Customer use case
   userId = null           // For Customer use case
@@ -26,6 +27,18 @@ const SmartCASelector = ({
 
   const { message } = App.useApp();
   
+  // Debug logging để kiểm tra props
+  React.useEffect(() => {
+    if (visible) {
+      console.log('=== SMARTCA SELECTOR PROPS DEBUG ===');
+      console.log('isForSigning:', isForSigning);
+      console.log('isExistingSmartCA:', isExistingSmartCA);
+      console.log('currentSelectedId:', currentSelectedId);
+      console.log('smartCAData:', smartCAData);
+      console.log('userId:', userId);
+    }
+  }, [visible, isForSigning, isExistingSmartCA, currentSelectedId, smartCAData, userId]);
+  
   const smartCAService = SmartCAService();
 
   const activeContractService = contractService || SignContract();
@@ -33,7 +46,7 @@ const SmartCASelector = ({
   // Tự động chọn certificate hiện tại khi mở modal
   useEffect(() => {
     if (visible && currentSelectedId) {
-      const certificates = getAllCertificates();
+      const certificates = getAllCertificates;
       const currentCert = certificates.find(cert => cert.id === currentSelectedId);
       if (currentCert) {
         setSelectedCertificate(currentCert);
@@ -47,12 +60,16 @@ const SmartCASelector = ({
 
 
 
-  // Lấy tất cả certificates từ defaultSmartCa và userCertificates
-  function getAllCertificates() {
+  // Lấy tất cả certificates từ defaultSmartCa và userCertificates với useMemo để force re-render
+  const getAllCertificates = React.useMemo(() => {
+    console.log('=== RECALCULATING CERTIFICATES ===');
+    console.log('smartCAData:', smartCAData);
+    
     const certificates = [];
     
     // Thêm defaultSmartCa nếu có
     if (smartCAData?.defaultSmartCa) {
+      console.log('Adding defaultSmartCa:', smartCAData.defaultSmartCa);
       certificates.push({
         ...smartCAData.defaultSmartCa,
         isDefault: true
@@ -61,6 +78,7 @@ const SmartCASelector = ({
     
     // Thêm userCertificates
     if (smartCAData?.userCertificates?.length > 0) {
+      console.log('Adding userCertificates:', smartCAData.userCertificates);
       smartCAData.userCertificates.forEach(cert => {
         // Tránh trùng lặp với defaultSmartCa
         if (!certificates.find(c => c.id === cert.id)) {
@@ -72,10 +90,11 @@ const SmartCASelector = ({
       });
     }
     
+    console.log('Final certificates:', certificates);
     return certificates;
-  }
+  }, [smartCAData]);
 
-  const certificates = getAllCertificates();
+  const certificates = getAllCertificates;
 
   // Format ngày tháng đơn giản
   function formatDate(dateString) {
@@ -123,7 +142,7 @@ const SmartCASelector = ({
 
       // 2) Retry nhẹ để đồng bộ từ BE (chống rỗng do độ trễ)
       const tryRefetch = async (attempt = 1) => {
-        const res = await activeContractService.handleCheckSmartCA(Number(userId));
+        const res = await smartCAService.handleCheckSmartCA(String(userId));
         const data = res?.data ?? res; 
         const total = (data?.userCertificates?.length || 0) + (data?.defaultSmartCa ? 1 : 0);
         if (total === 0 && attempt < 2) {
@@ -148,18 +167,28 @@ const SmartCASelector = ({
 
   // Xử lý thêm SmartCA thành công
   const handleAddSmartCASuccess = async() => {
+    console.log('=== ADD SMARTCA SUCCESS DEBUG ===');
     setShowAddSmartCA(false);
     
    try {
-    const res = await activeContractService.handleCheckSmartCA(Number(userId));
+    // Sử dụng đúng smartCAService thay vì activeContractService
+    console.log('Reloading SmartCA for userId:', userId);
+    const res = await smartCAService.handleCheckSmartCA(String(userId));
+    console.log('SmartCA reload response:', res);
+    
     const data = res?.data ?? res;
+    console.log('Processed data:', data);
+    
     if (onReloadSmartCA) {
+      console.log('Calling onReloadSmartCA with data:', data);
       onReloadSmartCA(data);
     }
-    } catch (e) {
-      console.error('Error adding SmartCA:', e);
-    }
+    
     message.success('Thêm SmartCA thành công!');
+    } catch (e) {
+      console.error('Error reloading SmartCA after add:', e);
+      message.error('Có lỗi khi tải lại danh sách SmartCA');
+    }
   };
 
   // Xử lý chọn chứng chỉ với API call
@@ -206,7 +235,9 @@ const SmartCASelector = ({
       
       if (result.success) {
         message.success('Đã cập nhật SmartCA thành công');
-        onSelect(selectedCertificate);
+        if (typeof onSelect === "function") {
+          onSelect(selectedCertificate);
+        }
       } else {
         message.error(result.error || 'Có lỗi khi cập nhật SmartCA');
       }
@@ -248,7 +279,10 @@ const SmartCASelector = ({
           disabled={!selectedCertificate}
           loading={updating || loading}
         >
-          {updating ? 'Đang cập nhật...' : (currentSelectedId ? 'Đổi Chứng Thư' : 'Chọn để ký')}
+          {updating ? 'Đang cập nhật...' : (
+            isForSigning ? 'Ký hợp đồng' : 
+            (currentSelectedId ? 'Đổi Chứng Thư' : 'Chọn để ký')
+          )}
         </Button>
       ]}
       width={800}

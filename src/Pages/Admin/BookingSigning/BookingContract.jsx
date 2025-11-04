@@ -326,6 +326,9 @@ function BookingContract() {
           currentSelectedId={selectedSmartCA?.id}
           contractService={contractService}
           userId={evcUser.userId} // Fixed admin user ID for EVM
+          isExistingSmartCA={true}
+          isForSigning={true}
+          onReloadSmartCA={(newData) => setSmartCAInfo(newData)}
         />
 
         {/* PDF Modal - Reuse từ SignContract system */}

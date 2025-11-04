@@ -182,6 +182,11 @@ export const createHandlers = ({
       setSelectedSmartCA(certificate);
       setShowSmartCASelector(false);
       message.success(`Đã chọn chứng thư: ${certificate.commonName || certificate.name || 'SmartCA'}`);
+      
+      // Mở modal ký sau khi chọn SmartCA
+      setTimeout(() => {
+        contractSigning.setShowSignatureModal(true);
+      }, 300);
     }
   };
 

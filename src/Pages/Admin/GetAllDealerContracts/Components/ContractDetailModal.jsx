@@ -1,4 +1,4 @@
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect} from 'react';
 import { Modal, Descriptions, Tag, Space, Spin, Button, message, App } from 'antd';
 import {
     FileTextOutlined,
@@ -35,6 +35,8 @@ function ContractDetailModal({ visible, contractId, onClose }) {
     const [showSmartCASelector, setShowSmartCASelector] = useState(false);
     const [smartCAData, setSmartCAData] = useState(null);
     const [smartCALoading, setSmartCALoading] = useState(false);
+
+    // Loại bỏ pendingOpenSignature - simplify modal flow
 
     // EVC token và userId
     const [evcToken, setEvcToken] = useState(null);
@@ -172,54 +174,37 @@ function ContractDetailModal({ visible, contractId, onClose }) {
             return;
         }
 
-        // Kiểm tra EVC User ID
-        if(!evcUserId)  {
-            try {
-                setSmartCALoading(true);
-                const { userId } = await SignContract().getAccessTokenForEVC();
-                if(!userId) {
-                    throw new Error("Không nhận được EVC User ID");
-                }
-                setEvcUserId(userId);
-            } catch (error) {
-                console.error('Lỗi khi lấy EVC User ID:', error);
-                setErrorEVC('Không thể lấy EVC User ID');
-            }finally {
-                setSmartCALoading(false);
-            }
-        }
-        
-        // Bước 1: Check SmartCA status
         setSmartCALoading(true);
         try {
-            console.log('=== CHECKING SMARTCA STATUS BEFORE SIGNING ===');
-            console.log('User ID:', evcUserId);
+            // ✅ luôn có uid dùng ngay, không phụ thuộc state vừa set
+            let uid = evcUserId;
+            if (!uid) {
+            const { userId } = await SignContract().getAccessTokenForEVC();
+            if (!userId) throw new Error("Không nhận được EVC User ID");
+            setEvcUserId(userId);   // để lần sau có sẵn
+            uid = userId;           // dùng cục bộ ngay bây giờ
+            }
 
-            const smartCAResult = await smartCAService.handleCheckSmartCA(evcUserId);
+            console.log('=== CHECKING SMARTCA STATUS BEFORE SIGNING ===');
+            console.log('User ID (local):', uid);
+
+            const smartCAResult = await smartCAService.handleCheckSmartCA(uid);
             console.log('SmartCA check result:', smartCAResult);
-            
+
             if (smartCAResult.success) {
-                const hasValidSmartCA = smartCAService.isSmartCAValid(smartCAResult.data);
-                
-                if (hasValidSmartCA) {
-                    // Có SmartCA → Hiển thị selector để chọn
-                    setSmartCAData(smartCAResult.data);
-                    setShowSmartCASelector(true);
-                    console.log('Has valid SmartCA → Show selector');
-                } else {
-                    // Chưa có SmartCA → Hiển thị form add
-                    setShowAddSmartCAModal(true);
-                    console.log('No valid SmartCA → Show add modal');
-                }
+            const hasValidSmartCA = smartCAService.isSmartCAValid(smartCAResult.data);
+            if (hasValidSmartCA) {
+                setSmartCAData(smartCAResult.data);
+                setShowSmartCASelector(true);       // ✅ có chứng thư → chọn & ký
             } else {
-                // Lỗi khi check → Hiển thị form add
-                setShowAddSmartCAModal(true);
-                console.log('Error checking SmartCA → Show add modal');
+                setShowAddSmartCAModal(true);       // ✅ chưa có → Add
+            }
+            } else {
+            setShowAddSmartCAModal(true);         // lỗi check → Add
             }
         } catch (error) {
             console.error('Error checking SmartCA:', error);
             message.error('Có lỗi khi kiểm tra SmartCA');
-            // Fallback: Hiển thị form add SmartCA
             setShowAddSmartCAModal(true);
         } finally {
             setSmartCALoading(false);
@@ -230,36 +215,78 @@ function ContractDetailModal({ visible, contractId, onClose }) {
     const handleAddSmartCASuccess = async (addedData) => {
         console.log('SmartCA added successfully:', addedData);
         setShowAddSmartCAModal(false);
-        
-        // Sau khi add thành công, check lại để hiển thị selector
-        await handleStartSigning();
+
+        // Reload SmartCA data - đảm bảo có data mới nhất
+        setSmartCALoading(true);
+        try {
+            // ✅ đảm bảo có uid cục bộ để check ngay
+            let uid = evcUserId;
+            if (!uid) {
+            const { userId } = await SignContract().getAccessTokenForEVC();
+            if (!userId) throw new Error('Không nhận được EVC User ID');
+            setEvcUserId(userId);
+            uid = userId;
+            }
+
+            const checkAgain = await smartCAService.handleCheckSmartCA(uid);
+            if (checkAgain.success && smartCAService.isSmartCAValid(checkAgain.data)) {
+            setSmartCAData(checkAgain.data); // Set data mới
+            setShowSmartCASelector(true);
+            } else {
+            message.warning("Không thể xác nhận chứng thư mới, vui lòng thử lại.");
+            }
+        } catch (err) {
+            console.error("Lỗi khi check lại SmartCA sau khi thêm:", err);
+            message.error("Lỗi khi xác nhận chứng thư mới.");
+        } finally {
+            setSmartCALoading(false);
+        }
     };
 
     // Xử lý khi chọn SmartCA thành công
     const handleSmartCASelected = (selectedCA) => {
-        console.log('SmartCA selected:', selectedCA);
-        setShowSmartCASelector(false);
+        console.log('=== SMARTCA SELECTED DEBUG ===');
+        console.log('Selected CA:', selectedCA);
+        console.log('Current showSmartCASelector:', showSmartCASelector);
+        console.log('Current showSignatureModal:', showSignatureModal);
         
-        // Tiếp tục với logic ký hiện có (không thay đổi)
-        setShowSignatureModal(true);
+        // Đóng selector trước
+        setShowSmartCASelector(false);
+        console.log('Set showSmartCASelector to false');
+        
+        // Tăng timeout lên 300ms để đảm bảo modal đóng hoàn toàn
+        setTimeout(() => {
+            console.log('Opening signature modal after timeout');
+            setShowSignatureModal(true);
+            console.log('Set showSignatureModal to true');
+        }, 300);
     };
 
     // Hàm reload SmartCA data
     const handleReloadSmartCA = (update) => {
-        setSmartCAData(prev => (typeof update === 'function' ? update(prev) : update));
+        console.log('=== HANDLE RELOAD SMARTCA DEBUG ===');
+        console.log('Update parameter:', update);
+        console.log('Previous smartCAData:', smartCAData);
+        
+        const newData = typeof update === 'function' ? update(smartCAData) : update;
+        console.log('New smartCAData:', newData);
+        
+        setSmartCAData(newData);
+        console.log('SmartCA data updated successfully');
     };
 
     // Reset signing state khi đóng modal
     useEffect(() => {
         if (!visible) {
+            // chỉ reset khi đóng toàn bộ modal chi tiết hợp đồng,
+            // KHÔNG reset trong lúc đang đóng selector.
             resetSigningState();
-            // Reset SmartCA states
             setShowAddSmartCAModal(false);
             setShowSmartCASelector(false);
             setSmartCAData(null);
             setSmartCALoading(false);
         }
-    }, [visible, resetSigningState]);
+    }, [visible]);
 
     // Reload contract detail sau khi ký thành công
     const handleContractSigned = () => {
@@ -551,8 +578,10 @@ function ContractDetailModal({ visible, contractId, onClose }) {
                 smartCAData={smartCAData}
                 loading={smartCALoading}
                 isExistingSmartCA={true}
+                isForSigning={true}
                 userId={evcUserId}
                 onReloadSmartCA={handleReloadSmartCA}
+                key={`smartca-${evcUserId}-${showSmartCASelector}`} // Force re-render
             />
         </Modal>
         </App>
