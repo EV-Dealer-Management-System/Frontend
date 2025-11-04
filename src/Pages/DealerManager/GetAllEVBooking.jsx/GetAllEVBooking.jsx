@@ -222,7 +222,7 @@ function GetAllEVBooking() {
       };
     });
   }, [bookings]);
-
+  
   // Format ngày giờ
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
@@ -292,8 +292,8 @@ function GetAllEVBooking() {
           toString(booking.note).toLowerCase().includes(searchLower);
 
         if (!matchesSearch) return false;
-      }
 
+      }
       // Filter by active tab (status) - Updated mapping theo enum BookingStatus
       if (activeTab && activeTab !== "all") {
         const statusMap = {
@@ -303,7 +303,7 @@ function GetAllEVBooking() {
           approved: 3,           // Approved = 3
           rejected: 4,           // Rejected = 4
           cancelled: 5,          // Cancelled = 5
-          signedByAdmin: 6,      // SignedByAdmin = 6
+          signedByAdmin: 6,      // SignedByAdmin = 6 
           completed: 7,          // Completed = 7
         };
         const filterStatusValue = statusMap[activeTab];

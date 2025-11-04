@@ -66,7 +66,6 @@ const useContractDetails = () => {
       return null;
     } catch (err) {
       console.error('Lỗi khi tải PDF preview:', err);
-      message.error('Lỗi khi tải xem trước PDF');
       return null;
     } finally {
       setPdfLoading(false);

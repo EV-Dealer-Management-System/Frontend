@@ -58,11 +58,10 @@ import Createvehicle from "./Pages/EVMStaff/Vehicle/CreateVehicle";
 import TemplateOverview from "./Pages/EVMStaff/Vehicle/TemplateOverview";
 import AdminGetAllEVBooking from "./Pages/Admin/GetAllEVBooking/AdminGetAllEVBooking";
 import EVMGetAllInventory from "./Pages/Admin/GetAllEVInventory/EVMGetAllInventory";
-
 import FeedbackDealerStaff from "./Pages/DealerManager/StaffFeedback/FeedbackDealerStaff";
 import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedback/UpdateStatusCustomerFeedback";
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
-
+import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
 function App() {
   return (
     <BrowserRouter>
@@ -152,6 +151,7 @@ function App() {
                   path="dealer/contracts"
                   element={<GetAllDealerContractPage />}
                 />
+                <Route path="dealer/all-dealer-tiers" element={<AdminGetAllDealerTier />} />
                 <Route path="staff/evm-staff" element={<GetAllEVMStaff />} />
                 <Route
                   path="staff/create-evm-staff"
