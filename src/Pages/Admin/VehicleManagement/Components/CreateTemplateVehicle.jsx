@@ -636,34 +636,6 @@ function CreateTemplateVehicle() {
         </Space>
       </div>
 
-      <Alert
-        message="Danh sách Template Xe Điện"
-        description={
-          <div>
-            <p className="mb-1">
-              Tổng: <strong>{templatesList.length}</strong> templates |{" "}
-              Hoạt động: <strong className="text-green-600">{templatesList.filter(t => t.isActive === true || t.isActive === 1).length}</strong> |{" "}
-              Đã xóa: <strong className="text-red-600">{templatesList.filter(t => t.isActive === false || t.isActive === 0).length}</strong>
-            </p>
-            {templatesList.length > 0 && templatesList[0].color && (
-              <p className="text-xs text-gray-600 mt-2 p-2 bg-gray-100 rounded">
-                🔍 Debug màu sắc (template đầu tiên): 
-                colorName=<code>{templatesList[0].color?.colorName || 'null'}</code> | 
-                colorCode=<code>{templatesList[0].color?.colorCode || 'null'}</code> | 
-                hexCode=<code>{templatesList[0].color?.hexCode || 'null'}</code>
-              </p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              Khi xóa template, trạng thái isActive sẽ chuyển từ <strong>true → false</strong> (soft delete)
-            </p>
-          </div>
-        }
-        type="info"
-        showIcon
-        closable
-        className="mb-4"
-      />
-
       <Card className="shadow-sm">
         <Table
           columns={templateColumns}
