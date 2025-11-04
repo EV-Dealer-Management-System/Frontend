@@ -48,6 +48,9 @@ function ManageVersion() {
   const [currentVersion, setCurrentVersion] = useState(null);
   const [form] = Form.useForm();
 
+  // Filter states
+  const [searchModel, setSearchModel] = useState("");
+
   useEffect(() => {
     loadVersions();
     loadModels();
@@ -208,17 +211,34 @@ function ManageVersion() {
     }
   };
 
+  // Filter data
+  const filteredVersions = versions.filter((version) => {
+    const model = models.find((m) => m.id === version.modelId);
+    const modelName = model?.modelName || "";
+
+    const matchModel = searchModel
+      ? modelName.toLowerCase().includes(searchModel.toLowerCase())
+      : true;
+
+    return matchModel;
+  });
+
+  // Clear filters
+  const handleClearFilters = () => {
+    setSearchModel("");
+  };
+
   const columns = [
     {
       title: "STT",
-      width: 70,
+      width: 100,
       align: "center",
       render: (_, __, i) => i + 1,
     },
     {
       title: "Model",
       dataIndex: "modelId",
-      width: 220,
+      width: 100,
       render: (modelId) => {
         const m = models.find((x) => x.id === modelId);
         return <Tag color="blue">{m?.modelName || (modelId ? modelId.slice(0, 8) : "N/A")}</Tag>;
@@ -227,67 +247,13 @@ function ManageVersion() {
     {
       title: "Version",
       dataIndex: "versionName",
-      width: 240,
+      width: 140,
       render: (t) => (
         <Space>
           <SettingOutlined style={{ color: "#1890ff" }} />
           <Text strong>{t}</Text>
         </Space>
       ),
-    },
-    {
-      title: "Công suất (W)",
-      dataIndex: "motorPower",
-      width: 140,
-      render: (v) => <Tag color="orange">{v}</Tag>,
-    },
-    {
-      title: "Pin (V)",
-      dataIndex: "batteryCapacity",
-      width: 110,
-      render: (v) => <Tag color="green">{v}</Tag>,
-    },
-    {
-      title: "Tầm (km)",
-      dataIndex: "rangePerCharge",
-      width: 120,
-      render: (v) => <Tag color="blue">{v}</Tag>,
-    },
-    {
-      title: "Tốc độ (km/h)",
-      dataIndex: "topSpeed",
-      width: 140,
-      render: (v) => <Tag color="red">{v}</Tag>,
-    },
-    {
-      title: "Nặng (kg)",
-      dataIndex: "weight",
-      width: 110,
-    },
-    {
-      title: "Cao (mm)",
-      dataIndex: "height",
-      width: 110,
-    },
-    {
-      title: "Năm SX",
-      dataIndex: "productionYear",
-      width: 110,
-    },
-    {
-      title: "Cung cấp",
-      dataIndex: "supplyStatus",
-      width: 130,
-      render: (s) => {
-        const cfg = SUPPLY_STATUS_MAP[s] || { text: `Mã ${s}`, color: "default" };
-        return <Tag color={cfg.color}>{cfg.text}</Tag>;
-      },
-    },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      ellipsis: true,
-      render: (t) => <Text type="secondary">{t || "—"}</Text>,
     },
     {
       title: "Thao tác",
@@ -347,18 +313,63 @@ function ManageVersion() {
                 <SettingOutlined style={{ color: "#1890ff", marginRight: 8 }} />
                 Danh sách Version
               </Title>
-              <Text type="secondary">Tổng cộng: {versions.length} phiên bản</Text>
+              <Text type="secondary">
+                Hiển thị: {filteredVersions.length} / {versions.length} phiên bản
+              </Text>
             </Col>
           </Row>
           <Divider className="!mt-2" />
+
+          {/* Filter Section */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={12} md={8}>
+              <div>
+                <Text className="block mb-2 text-sm font-medium">Tìm Model:</Text>
+                <Select
+                  placeholder="Chọn hoặc nhập tên model..."
+                  value={searchModel || undefined}
+                  onChange={setSearchModel}
+                  allowClear
+                  size="large"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children ?? "")
+                      .toString()
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  className="w-full"
+                >
+                  {[...new Set(models.map(m => m.modelName))].map((modelName) => (
+                    <Option key={modelName} value={modelName}>
+                      {modelName}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+            </Col>
+
+            <Col xs={24} sm={12} md={8}>
+              <div className="flex items-end h-full">
+                <Button
+                  onClick={handleClearFilters}
+                  size="large"
+                  className="mb-0"
+                >
+                  Xóa bộ lọc
+                </Button>
+              </div>
+            </Col>
+          </Row>
+
           <Table
             size="middle"
             columns={columns}
-            dataSource={versions}
+            dataSource={filteredVersions}
             rowKey="id"
             loading={loading}
             pagination={{
-              total: versions.length,
+              total: filteredVersions.length,
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,

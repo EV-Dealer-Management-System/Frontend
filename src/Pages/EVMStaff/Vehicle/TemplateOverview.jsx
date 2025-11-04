@@ -80,7 +80,7 @@ function TemplateOverview() {
     <EVMStaffLayout>
       <PageContainer
         title="Tổng Quan Xe Điện"
-        subTitle={`${templates.length} mẫu xe điện có sẵn`}
+        subTitle={`${templates.filter(t => t.isActive).length} mẫu xe điện có sẵn`}
         extra={[
           <Search
             key="search"
@@ -121,33 +121,38 @@ function TemplateOverview() {
         {/* Template Grid */}
         {!loading && templates.length > 0 && (
           <Row gutter={[16, 16]}>
-           {templates
+            {templates
               .filter((template) => {
+                // Ẩn những template có status ngừng hoạt động
+                const isActive = template.isActive !== false && template.status !== 0;
+
                 const keyword = searchKeyword.toLowerCase();
-                return (
+                const matchKeyword = (
                   template.version?.modelName?.toLowerCase().includes(keyword) ||
                   template.version?.versionName?.toLowerCase().includes(keyword) ||
                   template.color?.colorName?.toLowerCase().includes(keyword)
                 );
+
+                return isActive && matchKeyword;
               })
               .map((template) => {
-              // Chuẩn hóa data để khớp với VehicleCard
-              const vehicleData = {
-                ...template,
-                modelName: template.version?.modelName,
-                versionName: template.version?.versionName,
-                colorName: template.color?.colorName,
-              };
+                // Chuẩn hóa data để khớp với VehicleCard
+                const vehicleData = {
+                  ...template,
+                  modelName: template.version?.modelName,
+                  versionName: template.version?.versionName,
+                  colorName: template.color?.colorName,
+                };
 
-              return (
-                <Col xs={24} sm={12} md={8} lg={6} key={template.id}>
-                  <VehicleCard
-                    vehicle={vehicleData}
-                    onViewDetails={handleViewDetails}
-                  />
-                </Col>
-              );
-            })}
+                return (
+                  <Col xs={24} sm={12} md={8} lg={6} key={template.id}>
+                    <VehicleCard
+                      vehicle={vehicleData}
+                      onViewDetails={handleViewDetails}
+                    />
+                  </Col>
+                );
+              })}
           </Row>
         )}
 

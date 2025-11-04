@@ -171,7 +171,7 @@ function ManageModel() {
     {
       title: "Mô tả",
       dataIndex: "description",
-      ellipsis: true,
+      width: 100,
       render: (text) => <Text type="secondary">{text || "Chưa có mô tả"}</Text>,
     },
     {
@@ -255,7 +255,7 @@ function ManageModel() {
               showQuickJumper: true,
               showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} model`,
             }}
-            scroll={{ x: "max-content" }}
+
             sticky
           />
         </Card>

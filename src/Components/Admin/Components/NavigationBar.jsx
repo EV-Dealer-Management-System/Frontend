@@ -136,12 +136,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DatabaseOutlined />,
             component: "./VehicleCatalog",
           },
-          {
-            path: "/admin/vehicle/allocation",
-            name: "Phân bổ xe cho đại lý",
-            icon: <GlobalOutlined />,
-            component: "./VehicleAllocation",
-          },
         ],
       },
       {

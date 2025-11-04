@@ -60,18 +60,18 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/evm-staff/vehicles",
-        name: "Quản lý xe",
+        name: "Quản lý xe điện",
         icon: <CarOutlined />,
         routes: [
           {
             path: "/evm-staff/vehicles/template-overview",
-            name: "Tổng quan Templates",
+            name: "Tổng quan xe điện",
             icon: <EyeOutlined />,
             component: "./TemplateOverview",
           },
           {
             path: "/evm-staff/vehicles/create-vehicle",
-            name: "Tạo xe",
+            name: "Tạo và quản lý xe điện",
             icon: <PlusOutlined />,
             component: "./CreateVehicle",
           },
@@ -148,12 +148,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/evm-staff/dealer-feedback",
-        name: "Dealer's Feedback",
+        name: "Quản lý Feedback Đại lý",
         icon: <CommentOutlined />,
         routes: [
           {
             path: "/evm-staff/dealer-feedback/all",
-            name: "Quản lý Dealer's Feedback",
+            name: "Quản lý Feedback Đại lý",
             icon: <CommentOutlined />,
             component: "./StaffFeedbackManage/UpdateStatusStaffFeedback",
           },

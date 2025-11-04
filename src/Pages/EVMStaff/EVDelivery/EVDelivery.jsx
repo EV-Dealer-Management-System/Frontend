@@ -11,6 +11,7 @@ const { Search } = Input;
 import DeliveryDetailModal from './Components/DeliveryDetailModal';
 
 function EVDelivery() {
+    const [searchKeyword, setSearchKeyword] = useState('');
     const [deliveries, setDeliveries] = useState([]);
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({
