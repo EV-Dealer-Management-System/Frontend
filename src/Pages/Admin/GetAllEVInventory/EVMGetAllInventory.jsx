@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Button, message } from "antd";
+import { Button, message, Input, Select } from "antd";
 import { ReloadOutlined } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import AdminLayout from "../../../Components/Admin/AdminLayout";
@@ -8,11 +8,18 @@ import VehicleDetailModal from "./Components/VehicleDetailModal";
 import StatisticsCards from "./Components/StatisticsCards";
 import InventoryTable from "./Components/InventoryTable";
 
+const { Search } = Input;
+const { Option } = Select;
+
 function EVMGetAllInventory() {
     const [loading, setLoading] = useState(false);
     const [inventoryData, setInventoryData] = useState([]);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
+
+    // Từ khóa tìm kiếm & bộ lọc trạng thái
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
 
     // Fetch dữ liệu kho xe của hãng
     const fetchInventoryData = useCallback(async () => {
@@ -68,18 +75,45 @@ function EVMGetAllInventory() {
         <AdminLayout>
             <PageContainer
                 title="Quản Lý Kho Xe Toàn Hệ Thống"
-                subTitle="Theo dõi tổng quan kho xe điện của hãng trên toàn quốc"
                 extra={[
-                    <Button
-                        key="refresh"
-                        type="primary"
-                        icon={<ReloadOutlined />}
-                        onClick={handleRefresh}
-                        loading={loading}
-                        className="bg-blue-500 hover:bg-blue-600 border-blue-500"
-                    >
-                        Làm Mới Dữ Liệu
-                    </Button>
+                    <>
+                        <Select
+                            key="status-filter"
+                            showSearch                     // ✅ Cho phép nhập từ khóa
+                            placeholder="Chọn hoặc nhập tình trạng"
+                            value={statusFilter || undefined}
+                            style={{ width: 280 }}
+                            allowClear
+                            onSearch={(value) => setStatusFilter(value)}  // ✅ Gõ -> cập nhật
+                            onChange={(value) => setStatusFilter(value)}  // ✅ Chọn -> cập nhật
+                            filterOption={false}                          // Không giới hạn khi gõ
+                            options={[
+                                { label: "Dồi Dào", value: "dồi dào" },
+                                { label: "Đầy Đủ", value: "đầy đủ" },
+                                { label: "Trung Bình", value: "trung bình" },
+                                { label: "Ít", value: "ít" },
+                                { label: "Hết Hàng", value: "hết hàng" },
+                            ]}
+                         />
+                        <Search
+                            key="search"
+                            placeholder="Tìm kiếm theo tên xe, phiên bản hoặc màu..."
+                            value={searchKeyword}
+                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            allowClear
+                            style={{ width: 280 }}
+                        />,
+                        <Button
+                            key="refresh"
+                            type="primary"
+                            icon={<ReloadOutlined />}
+                            onClick={handleRefresh}
+                            loading={loading}
+                            className="bg-blue-500 hover:bg-blue-600 border-blue-500"
+                        >
+                            Làm Mới Dữ Liệu
+                        </Button>
+                        </>
                 ]}
                 className="bg-white"
             >
@@ -90,7 +124,30 @@ function EVMGetAllInventory() {
                     {/* Bảng dữ liệu */}
                     <InventoryTable
                         loading={loading}
-                        filteredData={inventoryData}
+                        filteredData={inventoryData.filter((item) => {
+                            const keyword = (searchKeyword || "").toLowerCase().trim();
+                            const status = (statusFilter || "").toLowerCase().trim();
+
+                            // Xác định tình trạng của xe (giống logic trong InventoryTable)
+                            let computedStatus = "";
+                            if (item.quantity > 20) computedStatus = "dồi dào";
+                            else if (item.quantity > 10) computedStatus = "đầy đủ";
+                            else if (item.quantity > 5) computedStatus = "trung bình";
+                            else if (item.quantity > 0) computedStatus = "ít";
+                            else computedStatus = "hết hàng";
+
+                            // Lọc theo từ khóa và tình trạng
+                            const matchesKeyword =
+                            !keyword ||
+                            item.modelName.toLowerCase().includes(keyword) ||
+                            item.versionName.toLowerCase().includes(keyword) ||
+                            item.colorName.toLowerCase().includes(keyword);
+
+                            const matchesStatus =
+                            !status || computedStatus.includes(status);
+
+                            return matchesKeyword && matchesStatus;
+                        })}
                         onShowDetail={showDetailModal}
                     />
                 </div>

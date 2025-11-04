@@ -1,6 +1,8 @@
 import React from "react";
 import { Table, Card, Spin, Tag, Button } from "antd";
 import { CarOutlined, EyeOutlined, ShopOutlined } from "@ant-design/icons";
+import { ConfigProvider } from "antd";
+import viVN from "antd/lib/locale/vi_VN";
 
 function InventoryTable({ loading, filteredData, onShowDetail }) {
     // Cấu hình cột cho bảng
@@ -97,6 +99,7 @@ function InventoryTable({ loading, filteredData, onShowDetail }) {
     return (
         <Card>
             <Spin spinning={loading} tip="Đang tải dữ liệu kho xe...">
+                <ConfigProvider locale={viVN}>
                 <Table
                     columns={columns}
                     dataSource={filteredData}
@@ -120,6 +123,7 @@ function InventoryTable({ loading, filteredData, onShowDetail }) {
                         ),
                     }}
                 />
+                </ConfigProvider>
             </Spin>
         </Card>
     );
