@@ -8,7 +8,7 @@ import {
     ShopOutlined,
     InboxOutlined
 } from '@ant-design/icons';
-import UpdateStatusButton from './UpdateStatusButton';
+import ConfirmDeliveryButton from './ConfirmDeliveryButton';
 
 const { Panel } = Collapse;
 
@@ -61,9 +61,9 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
             description: 'Đang chuẩn bị xe'
         },
         {
-            title: 'Vận chuyển',
+            title: 'Sản Xuất Xe',
             icon: <RocketOutlined />,
-            description: 'Xe đang được vận chuyển'
+            description: 'Xe đang được sản xuất'
         },
         {
             title: 'Giao hàng',
@@ -73,7 +73,7 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
         {
             title: 'Đến đại lý',
             icon: <ShopOutlined />,
-            description: 'Xe đã đến đại lý'
+            description: 'Xe đã đến đại lý và đang chờ xác nhận'
         },
         {
             title: 'Hoàn tất',
@@ -104,7 +104,7 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
             className="delivery-detail-modal"
         >
             <div className="space-y-6 pt-4">
-                {/* Trạng thái hiện tại và nút cập nhật */}
+                {/* Trạng thái hiện tại và nút xác nhận */}
                 <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
                     <div className="flex items-center justify-between mb-4">
                         <div>
@@ -117,33 +117,40 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                             </Tag>
                         </div>
                         <div className="text-right">
-                            <div className="text-gray-600 text-sm mb-1">Tổng số lượng xe giao:  {totalVehicles} </div>
-                          
+                            <div className="text-gray-600 text-sm mb-1">Tổng số lượng xe giao:  {totalVehicles} xe</div>
                         </div>
                     </div>
 
-                    <Divider className="my-3" />
-
-                    {/* Nút cập nhật trạng thái hoặc thông báo đã xác nhận */}
-                    <div className="flex justify-end">
-                        {delivery.status === 5 ? (
-                            <div className="text-green-600 text-sm font-medium flex items-center gap-2">
-                                <CheckCircleOutlined className="text-base" />
-                                 Đơn giao xe đã được bên đại lý xác nhận 
+                    {/* Hiển thị nút xác nhận hoặc thông báo */}
+                    {delivery.status === 4 && (
+                        <>
+                            <Divider className="my-3" />
+                            <div className="flex justify-end">
+                                <ConfirmDeliveryButton
+                                    deliveryId={delivery.id}
+                                    currentStatus={delivery.status}
+                                    onSuccess={() => {
+                                        if (onStatusUpdated) {
+                                            onStatusUpdated();
+                                        }
+                                        onClose();
+                                    }}
+                                />
                             </div>
-                        ) : (
-                            <UpdateStatusButton
-                                deliveryId={delivery.id}
-                                currentStatus={delivery.status}
-                                onSuccess={() => {
-                                    if (onStatusUpdated) {
-                                        onStatusUpdated();
-                                    }
-                                    onClose();
-                                }}
-                            />
-                        )}
-                    </div>
+                        </>
+                    )}
+
+                    {delivery.status === 5 && (
+                        <>
+                            <Divider className="my-3" />
+                            <div className="flex justify-end">
+                                <div className="text-green-600 text-sm font-medium flex items-center gap-2">
+                                    <CheckCircleOutlined className="text-base" />
+                                    Đơn giao xe đã được xác nhận
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </Card>
 
                 {/* Timeline theo dõi */}

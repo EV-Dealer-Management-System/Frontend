@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Card, message, Input } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
-import EVMStaffLayout from '../../../Components/EVMStaff/EVMStaffLayout';
-import { getAllEVDelivery } from '../../../App/EVMStaff/EVDelivery/GetAllEVDelivery';
+import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
+import { getAllEVDelivery } from '../../../App/DealerManager/EVDelivery/GetAllEVDelivery';
 import DeliveryTable from './Components/DeliveryTable';
 import StatusFilter from './Components/StatusFilter';
+import DeliveryDetailModal from './Components/DeliveryDetailModal';
 
 const { Search } = Input;
 
-import DeliveryDetailModal from './Components/DeliveryDetailModal';
-
-function EVDelivery() {
+function DMEVDelivery() {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [deliveries, setDeliveries] = useState([]);
     const [templateSummary, setTemplateSummary] = useState([]);
@@ -82,14 +81,14 @@ function EVDelivery() {
     };
 
     return (
-        <EVMStaffLayout>
+        <DealerManagerLayout>
             <PageContainer
                 title="Theo dõi giao xe"
-                subTitle="Quản lý và theo dõi tiến trình giao xe đến đại lý"
+                subTitle="Theo dõi tiến trình giao xe từ nhà sản xuất đến đại lý"
                 extra={[
                     <Search
                         key="search"
-                        placeholder="Tìm kiếm theo mã giao xe hoặc tên đại lý"
+                        placeholder="Tìm kiếm theo mã giao xe hoặc mô tả"
                         onSearch={(value) => console.log('Search value:', value)}
                         style={{ width: 300 }}
                         onChange={(e) => setSearchKeyword(e.target.value)}
@@ -123,8 +122,8 @@ function EVDelivery() {
                     onStatusUpdated={handleStatusUpdated}
                 />
             </PageContainer>
-        </EVMStaffLayout>
+        </DealerManagerLayout>
     );
 }
 
-export default EVDelivery;
+export default DMEVDelivery;

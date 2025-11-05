@@ -19,4 +19,3 @@ function DeliveryStatusTag({ status }) {
 }
 
 export default DeliveryStatusTag;
-

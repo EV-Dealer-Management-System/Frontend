@@ -63,8 +63,8 @@ import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedbac
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
 import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
 import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
-import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
-import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
+import DMEVDelivery from "./Pages/DealerManager/DMEVDelivery/EVDelivery";
+
 function App() {
   return (
     <BrowserRouter>
@@ -193,6 +193,7 @@ function App() {
                 <Route path="" element={<DealerManager />} />
                 <Route path="ev/ev-booking" element={<EVBooking />} />
                 <Route path="ev/all-ev-booking" element={<GetAllEVBooking />} />
+                <Route path="ev/ev-delivery" element={<DMEVDelivery />} />
                 <Route
                   path="ev/all-ev-quotes"
                   element={<GetAllEVQuotesDealerManager />}
@@ -311,8 +312,8 @@ function App() {
                   path="schedule/test-drive"
                   element={<ScheduleTestDrive />}
                 />
-                <Route path="orders/all-orders" element={<OrderListStaffView />} />
-                <Route path="orders/create-order" element={<CreateEVOrder />} />
+                {/* <Route path="orders/all-orders" element={<OrderListStaffView />} />
+                <Route path="orders/create-order" element={<CreateEVOrder />} /> */}
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ Dealer Staff */}
                 <Route
                   path="*"
