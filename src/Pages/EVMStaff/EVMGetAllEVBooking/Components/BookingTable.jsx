@@ -317,7 +317,7 @@ function BookingTable({
                             </Button>
                         )}
 
-                        {isSignedByAdmin && (
+                        {/* {isSignedByAdmin && (
                             <Button
                                 type="primary"
                                 icon={<CheckCircleOutlined />}
@@ -333,7 +333,7 @@ function BookingTable({
                             >
                                 Hoàn Thành Đơn
                             </Button>
-                        )}
+                        )} */}
                     </Space>
                 );
             },

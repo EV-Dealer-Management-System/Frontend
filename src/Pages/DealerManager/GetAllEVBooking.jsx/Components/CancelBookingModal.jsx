@@ -11,7 +11,6 @@ function CancelBookingModal({ visible, booking, onClose, onConfirm, loading }) {
         <Modal
             title={
                 <div className="flex items-center">
-                    <ExclamationCircleOutlined className="mr-2 text-orange-500 text-xl" />
                     <span className="font-semibold">Xác Nhận Hủy Đơn Booking</span>
                 </div>
             }
@@ -30,22 +29,14 @@ function CancelBookingModal({ visible, booking, onClose, onConfirm, loading }) {
                     {booking && (
                         <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Mã Booking:</span>
-                                <span className="font-semibold text-gray-800">
-                                    {booking.id?.slice(0, 13)}...
-                                </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Số lượng xe:</span>
-                                <span className="font-semibold text-gray-800">
-                                    {booking.totalQuantity || 0} xe
-                                </span>
                             </div>
                         </div>
                     )}
 
                     <p className="text-sm text-red-500 mt-4 font-medium">
-                        ⚠️ Lưu ý: Hành động này không thể hoàn tác!
+                     Lưu ý: Hành động này không thể hoàn tác!
                     </p>
                 </div>
 
