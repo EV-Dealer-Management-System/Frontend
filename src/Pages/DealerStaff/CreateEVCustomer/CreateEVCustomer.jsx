@@ -5,7 +5,7 @@ import {
   ProFormTextArea,
   PageContainer,
 } from "@ant-design/pro-components";
-import { message, Card, Row, Col, Space, Modal } from "antd";
+import { message, Card, Row, Col, Space } from "antd";
 import {
   UserAddOutlined,
   UserOutlined,
@@ -14,10 +14,10 @@ import {
   FileTextOutlined,
   SaveOutlined,
   ClearOutlined,
-  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { createCustomer } from "../../../App/DealerStaff/EVCustomerManagement/CreateEVCustomer";
 import DealerStaffLayout from "../../../Components/DealerStaff/DealerStaffLayout";
+import SuccessModal from "../../../Components/DealerStaff/Components/SuccessModal";
 import dayjs from "dayjs";
 
 function CreateEVCustomer() {
@@ -154,6 +154,16 @@ function CreateEVCustomer() {
                   maxLength: 10,
                 }}
               />
+              <ProFormText
+                name="email"
+                label={
+                  <span className="text-base font-semibold">
+                    <UserOutlined className="mr-2 text-purple-600" />
+                    Email
+                  </span>
+                }
+                placeholder="VD: example@gmail.com"
+              />
 
               {/* Địa chỉ */}
               <ProFormText
@@ -199,72 +209,11 @@ function CreateEVCustomer() {
         </div>
 
         {/* Success Modal */}
-        <Modal
-          open={successModalVisible}
-          onCancel={handleCloseSuccessModal}
-          footer={null}
-          centered
-          width={500}
-        >
-          <div className="text-center py-6">
-            <div className="mb-6">
-              <CheckCircleOutlined className="text-6xl text-green-500" />
-            </div>
-
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Đăng ký thành công!
-            </h2>
-
-            <p className="text-gray-600 mb-6">
-              Thông tin khách hàng đã được lưu vào hệ thống.
-              <br />
-              Chúng tôi sẽ liên hệ tư vấn trong thời gian sớm nhất.
-            </p>
-
-            {customerInfo && (
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4 mb-6 text-left">
-                <h4 className="font-semibold text-gray-800 mb-3 text-center">
-                  Thông tin đã lưu
-                </h4>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <UserOutlined className="text-blue-600" />
-                    <span className="text-sm">
-                      <strong>Họ tên:</strong> {customerInfo.fullName}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <PhoneOutlined className="text-green-600" />
-                    <span className="text-sm">
-                      <strong>SĐT:</strong> {customerInfo.phoneNumber}
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <EnvironmentOutlined className="text-red-600 mt-0.5" />
-                    <span className="text-sm">
-                      <strong>Địa chỉ:</strong> {customerInfo.address}
-                    </span>
-                  </div>
-                  {customerInfo.note && (
-                    <div className="flex items-start gap-2">
-                      <FileTextOutlined className="text-orange-600 mt-0.5" />
-                      <span className="text-sm">
-                        <strong>Ghi chú:</strong> {customerInfo.note}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={handleCloseSuccessModal}
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Đóng & tiếp tục
-            </button>
-          </div>
-        </Modal>
+        <SuccessModal
+          visible={successModalVisible}
+          onClose={handleCloseSuccessModal}
+          customerInfo={customerInfo}
+        />
       </PageContainer>
     </DealerStaffLayout>
   );

@@ -66,6 +66,7 @@ import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
 import DMEVDelivery from "./Pages/DealerManager/DMEVDelivery/EVDelivery";
 import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
 import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
+import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
 
 function App() {
   return (
@@ -201,7 +202,8 @@ function App() {
                   element={<GetAllEVQuotesDealerManager />}
                 />
                 <Route path="ev/inventory" element={<GetAllEVInventory />} />
-                
+
+                <Route path="settings/dealer-profile" element={<DealerProfile />} />
                 <Route path="staff/staff-list" element={<DealerStaffList />} />
                 <Route
                   path="customers/get-all-customers"
@@ -265,7 +267,7 @@ function App() {
                 <Route
                   path="dealer-feedback/all"
                   element={<UpdateStatusStaffFeedback />}
-                /> 
+                />
                 <Route path="ev/ev-delivery" element={<EVDelivery />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ EVM Staff */}
                 <Route

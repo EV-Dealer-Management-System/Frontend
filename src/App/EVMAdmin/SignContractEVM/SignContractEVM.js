@@ -173,7 +173,7 @@ export const SignContract = () => {
         showReason: contractData.showReason !== undefined ? contractData.showReason : true,
         confirmTermsConditions: contractData.confirmTermsConditions !== undefined ? contractData.confirmTermsConditions : true
       };
-
+      console.log("Signing contract with request body:", requestBody);
       console.log("Signing contract with data:", {
         pageSign,
         signingPosition,
