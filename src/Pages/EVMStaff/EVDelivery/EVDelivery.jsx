@@ -13,6 +13,7 @@ import DeliveryDetailModal from './Components/DeliveryDetailModal';
 function EVDelivery() {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [deliveries, setDeliveries] = useState([]);
+    const [templateSummary, setTemplateSummary] = useState([]);
     const [loading, setLoading] = useState(false);
     const [pagination, setPagination] = useState({
         current: 1,
@@ -31,6 +32,7 @@ function EVDelivery() {
 
             if (response.isSuccess) {
                 setDeliveries(response.result.data);
+                setTemplateSummary(response.result.templateSummary || []);
                 setPagination({
                     current: response.result.pagination.pageNumber,
                     pageSize: response.result.pagination.pageSize,
@@ -112,6 +114,7 @@ function EVDelivery() {
                     visible={detailVisible}
                     onClose={handleCloseDetail}
                     delivery={selectedDelivery}
+                    templateSummary={templateSummary}
                 />
             </PageContainer>
         </EVMStaffLayout>

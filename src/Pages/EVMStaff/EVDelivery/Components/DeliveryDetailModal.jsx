@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Card, Tag, Steps, Row, Col, Divider } from 'antd';
+import { Modal, Card, Tag, Steps, Row, Col, Divider, Collapse } from 'antd';
 import {
     CarOutlined,
     ClockCircleOutlined,
@@ -8,6 +8,8 @@ import {
     ShopOutlined,
     InboxOutlined
 } from '@ant-design/icons';
+
+const { Panel } = Collapse;
 
 // Ánh xạ trạng thái giao xe
 const deliveryStatusMap = {
@@ -18,16 +20,27 @@ const deliveryStatusMap = {
     5: { text: 'Giao nhận hoàn tất', color: 'green' },
 };
 
-// Ánh xạ trạng thái chi tiết xe
-const vehicleStatusMap = {
-    1: { text: 'Chờ xử lý', color: 'default' },
-    2: { text: 'Đang vận chuyển', color: 'processing' },
-    3: { text: 'Đã giao', color: 'success' },
-};
-
 // Component modal chi tiết đơn giao xe
-function DeliveryDetailModal({ visible, onClose, delivery }) {
+function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [] }) {
     if (!delivery) return null;
+
+    // Lọc templateSummary dựa trên VIN của delivery hiện tại
+    const deliveryVINs = delivery.vehicleDeliveryDetails?.map(v => v.vin) || [];
+    const filteredTemplateSummary = templateSummary
+        .map(template => {
+            // Lọc các VIN thuộc delivery này
+            const matchedVINs = template.vinList.filter(vin => deliveryVINs.includes(vin));
+
+            if (matchedVINs.length > 0) {
+                return {
+                    ...template,
+                    vehicleCount: matchedVINs.length,
+                    vinList: matchedVINs
+                };
+            }
+            return null;
+        })
+        .filter(template => template !== null);
 
     // Xác định bước hiện tại cho timeline
     const getCurrentStep = (status) => {
@@ -66,6 +79,8 @@ function DeliveryDetailModal({ visible, onClose, delivery }) {
         }
     ];
 
+    const totalVehicles = filteredTemplateSummary?.reduce((sum, item) => sum + item.vehicleCount, 0) || 0;
+
     return (
         <Modal
             title={
@@ -99,9 +114,9 @@ function DeliveryDetailModal({ visible, onClose, delivery }) {
                             </Tag>
                         </div>
                         <div className="text-right">
-                            <div className="text-gray-600 text-sm mb-1">Số lượng xe</div>
+                            <div className="text-gray-600 text-sm mb-1">Tổng số lượng xe</div>
                             <div className="text-2xl font-bold text-blue-600">
-                                {delivery.vehicleDeliveryDetails?.length || 0}
+                                {totalVehicles}
                             </div>
                         </div>
                     </div>
@@ -170,55 +185,45 @@ function DeliveryDetailModal({ visible, onClose, delivery }) {
                         <div className="flex items-center justify-between">
                             <span className="font-semibold">
                                 <CarOutlined className="mr-2" />
-                                Danh sách xe ({delivery.vehicleDeliveryDetails?.length || 0})
+                                Đơn hàng: Gồm {filteredTemplateSummary?.length || 0} mẫu xe
                             </span>
                         </div>
                     }
                     className="shadow-sm"
                 >
-                    {delivery.vehicleDeliveryDetails?.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {delivery.vehicleDeliveryDetails.map((vehicle, index) => (
-                                <Card
-                                    key={vehicle.id}
-                                    size="small"
-                                    className="bg-gradient-to-br from-blue-50 to-white border-blue-200 hover:shadow-md transition-shadow"
-                                >
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                                                #{index + 1}
+                    {filteredTemplateSummary?.length > 0 ? (
+                        <Collapse
+                            className="bg-transparent border-none"
+                            expandIconPosition="end"
+                        >
+                            {filteredTemplateSummary.map((summary) => (
+                                <Panel
+                                    key={summary.templateId}
+                                    header={
+                                        <div className="flex items-center justify-between pr-4">
+                                            <span className="font-semibold text-sm text-blue-700">
+                                                {summary.versionName} - {summary.colorName}
                                             </span>
-                                            <Tag color={vehicleStatusMap[vehicle.status]?.color}>
-                                                {vehicleStatusMap[vehicle.status]?.text}
-                                            </Tag>
+                                            <Tag color="blue">Số lượng: {summary.vehicleCount}</Tag>
                                         </div>
-                                        <div className="bg-white p-2 rounded border border-blue-100">
-                                            <div className="text-xs text-gray-500 mb-1">VIN Number</div>
-                                            <div className="font-mono font-bold text-blue-700 text-sm">
-                                                {vehicle.vin}
+                                    }
+                                    className="mb-3 bg-gray-50 rounded-lg border border-gray-200"
+                                >
+                                    <div className="text-xs text-gray-500 mb-2">Danh sách VIN:</div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {summary.vinList.map((vin) => (
+                                            <div key={vin} className="font-mono bg-white px-3 py-2 border rounded text-xs">
+                                                {vin}
                                             </div>
-                                        </div>
-                                        <div className="text-xs text-gray-600">
-                                            <span className="font-medium">Mã xe:</span>
-                                            <div className="font-mono mt-1 bg-gray-50 px-2 py-1 rounded">
-                                                {vehicle.electricVehicleId}
-                                            </div>
-                                        </div>
-                                        {/* {vehicle.note && (
-                                            <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
-                                                <span className="font-medium text-yellow-800">📝 Ghi chú:</span>
-                                                <div className="text-gray-700 mt-1">{vehicle.note}</div>
-                                            </div>
-                                        )} */}
+                                        ))}
                                     </div>
-                                </Card>
+                                </Panel>
                             ))}
-                        </div>
+                        </Collapse>
                     ) : (
                         <div className="text-center py-12 bg-gray-50 rounded-lg">
                             <CarOutlined className="text-5xl text-gray-300 mb-3" />
-                            <div className="text-gray-400 text-sm">Chưa có xe nào được gán vào đơn giao này</div>
+                            <div className="text-gray-400 text-sm">Không có thông tin tóm tắt xe.</div>
                         </div>
                     )}
                 </Card>
