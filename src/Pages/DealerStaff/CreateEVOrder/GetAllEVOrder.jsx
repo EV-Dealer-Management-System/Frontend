@@ -158,9 +158,14 @@ function OrderListStaffView() {
   //search
   const [searchText, setSearchText] = useState("");
 
+  // filter trạng thái
   const [statusFilter, setStatusFilter] = useState("");
-
+  // đọc location để lấy query param
   const location = useLocation();
+
+  //
+  const [ successModalVisible, setSuccessModalVisible ] = useState(false);
+  const [ successMessage, setSuccessMessage ] = useState("");
 
   // tổng báo giá từ quoteDetails
   const calcQuoteTotal = (order) => {
@@ -286,8 +291,14 @@ useEffect(() => {
       message.success(
         method === "cash"
           ? "Ghi nhận thanh toán tiền mặt thành công"
-          : "Tạo thanh toán VNPay thành công"
+          : "Tạo thanh toán VNPay thành công. Vui lòng kiểm tra email khách hàng."
       );
+      const successMsg =
+        method === "cash"
+          ? "Ghi nhận thanh toán tiền mặt thành công"
+          : "Tạo thanh toán VNPay thành công. Vui lòng kiểm tra email khách hàng.";
+      setSuccessMessage(successMsg);
+      setSuccessModalVisible(true);
 
       closePayModal();
       // refresh âm thầm
@@ -523,8 +534,15 @@ useEffect(() => {
             style={{ width: 180 }}
             options={statusOptions}
             value={statusFilter}
-            onChange={(v) => setStatusFilter(v)}
-            allowClear
+            onChange={(v) => {
+              // nếu người dùng clear => về "Tất cả"
+              if (v === undefined) {
+                setStatusFilter("");
+              } else {
+                setStatusFilter(v);
+              }
+            }}
+            allowClear={statusFilter !== ""}
             />
         </Col>
         <Col>
@@ -799,6 +817,23 @@ useEffect(() => {
               </Space>
             );
           })()}
+        </Modal>
+        <Modal
+        open={successModalVisible}
+          onCancel={() => setSuccessModalVisible(false)}
+          footer={[
+            <Button key="ok" type="primary" onClick={() => setSuccessModalVisible(false)}>
+              Đóng
+            </Button>,
+        ]}
+        title="Thông báo"
+        >
+        <Space direction="vertical" align="center" style={{ width: "100%" }}>
+          <CheckCircleOutlined style={{ fontSize: 48, color: "#52c41a" }} />
+          <Text strong style={{ fontSize: 16, textAlign: "center" }}>
+            {successMessage}
+          </Text>
+        </Space>
         </Modal>
 
         {/* DRAWER CHI TIẾT */}
