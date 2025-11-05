@@ -279,10 +279,9 @@ useEffect(() => {
     try {
       setPayLoading(true);
 
-      await api.post("/CustomerOrder/pay-customer-order", {
-        orderId: payingOrder.id,
-        isCash: method === "cash",
-      });
+     await api.put(
+      `/CustomerOrder/pay-deposit-customer-order/${payingOrder.id}?isCash=${method === "cash"}`
+    );
 
       message.success(
         method === "cash"
