@@ -44,9 +44,21 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ success, error, warning, info }}>
       {children}
-      <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999999 }}>
+      <div style={{ 
+        position: 'fixed', 
+        top: '84px', 
+        right: '20px', 
+        zIndex: 10000,
+        pointerEvents: 'none'
+      }}>
         {toasts.map((toast, index) => (
-          <div key={toast.id} style={{ marginBottom: index > 0 ? '10px' : '0' }}>
+          <div 
+            key={toast.id} 
+            style={{ 
+              marginBottom: index > 0 ? '10px' : '0',
+              pointerEvents: 'auto'
+            }}
+          >
             <CustomToast
               message={toast.message}
               type={toast.type}

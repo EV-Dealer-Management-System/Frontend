@@ -61,6 +61,8 @@ function DeliveryTable({
                     <div className="text-gray-400">{new Date(date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
             ),
+            sorter: (a, b) => new Date(a.createdDate) - new Date(b.createdDate),
+            defaultSortOrder: 'descend',
         },
         {
             title: '',

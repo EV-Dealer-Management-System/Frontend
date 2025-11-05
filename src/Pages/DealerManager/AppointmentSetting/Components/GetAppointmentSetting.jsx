@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, message, Spin, Typography, Modal } from 'antd';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { Card, Descriptions, Button, Space, message, Spin, Typography, Modal, App as AntApp } from 'antd';
 import { EditOutlined, ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { GetAppointmentSetting } from '../../../../App/DealerManager/AppointmentSetting/GetAppointmentSetting';
 import { GetAppointmentById } from '../../../../App/DealerManager/AppointmentSetting/GetAppointmentById';
@@ -7,7 +7,8 @@ import UpdateAppointmentSettingForm from './UpdateAppointmentSettingForm';
 
 const { Title, Text } = Typography;
 
-const GetAppointmentSettingComponent = () => {
+const GetAppointmentSettingComponent = forwardRef(({ onSettingChanged }, ref) => {
+  const { notification } = AntApp.useApp();
   const [loading, setLoading] = useState(false);
   const [setting, setSetting] = useState(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -38,6 +39,11 @@ const GetAppointmentSettingComponent = () => {
   useEffect(() => {
     fetchSetting();
   }, []);
+
+  // Expose refresh method so parent can force reload
+  useImperativeHandle(ref, () => ({
+    refresh: () => fetchSetting(),
+  }));
 
   // Xử lý sửa appointment setting
   const handleEdit = async () => {
@@ -79,6 +85,14 @@ const GetAppointmentSettingComponent = () => {
   const handleEditSuccess = () => {
     handleEditModalClose();
     fetchSetting(); // Refresh danh sách sau khi cập nhật thành công
+    try {
+      onSettingChanged && onSettingChanged();
+    } catch {}
+    notification.success({
+      message: 'Cập nhật thành công',
+      description: 'Cấu hình Appointment Setting đã được cập nhật. Danh sách slot đã được làm mới.',
+      placement: 'topRight',
+    });
   };
 
   // Format time từ "08:00:00" thành "08:00"
@@ -88,6 +102,7 @@ const GetAppointmentSettingComponent = () => {
   };
 
   return (
+    <AntApp>
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={4} style={{ margin: 0 }}>
@@ -182,8 +197,11 @@ const GetAppointmentSettingComponent = () => {
         </Spin>
       </Modal>
     </div>
+    </AntApp>
   );
-};
+});
+
+GetAppointmentSettingComponent.displayName = 'GetAppointmentSettingComponent';
 
 export default GetAppointmentSettingComponent;
 

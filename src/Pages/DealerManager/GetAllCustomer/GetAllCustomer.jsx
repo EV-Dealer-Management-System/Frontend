@@ -12,7 +12,8 @@ import {
 import { getAllCustomer } from '../../../App/DealerManager/CustomerManagement/GetAllCustomer';
 import dayjs from 'dayjs';
 import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
-
+import { ConfigProvider } from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
 const { Statistic } = StatisticCard;
 
 function GetAllCustomer() {
@@ -132,6 +133,7 @@ function GetAllCustomer() {
 
     return (
         <DealerManagerLayout>
+            <ConfigProvider locale={viVN}>
             <PageContainer
                 title="Quản Lý Khách Hàng"
                 subTitle="Hệ thống quản lý khách hàng xe máy điện"
@@ -197,6 +199,7 @@ function GetAllCustomer() {
                     className="shadow-md rounded-lg"
                     bordered={false}
                 >
+                    
                     <ProTable
                         dataSource={customers}
                         columns={columns}
@@ -231,6 +234,7 @@ function GetAllCustomer() {
                     />
                 </Card>
             </PageContainer>
+            </ConfigProvider>
         </DealerManagerLayout>
     );
 }

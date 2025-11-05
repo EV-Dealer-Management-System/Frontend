@@ -8,13 +8,14 @@ import {
   Form,
   Input,
   InputNumber,
-  message,
+  App,
   Popconfirm,
   Tag,
   Row,
   Col,
   Typography,
   Divider,
+  Select,
 } from "antd";
 import {
   PlusOutlined,
@@ -24,12 +25,14 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   SearchOutlined,
+  SortAscendingOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input; // (Không dùng nhưng giữ nếu muốn mô tả sau)
+const { TextArea } = Input;
+const { Option } = Select;
 
 const popularColors = [
   { name: "Đỏ Cherry", code: "#DC143C" },
@@ -60,6 +63,7 @@ const getContrastText = (hex) => {
 };
 
 function ColorManagement() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [colors, setColors] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -67,8 +71,9 @@ function ColorManagement() {
   const [currentColor, setCurrentColor] = useState(null);
   const [form] = Form.useForm();
 
-  // Search
+  // Search and Sort
   const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, code-asc, cost-desc, cost-asc
 
   useEffect(() => {
     loadColors();
@@ -92,15 +97,38 @@ function ColorManagement() {
     }
   };
 
-  const filtered = useMemo(() => {
-    if (!query) return colors;
-    const q = query.toLowerCase();
-    return (colors || []).filter(
-      (c) =>
-        c.colorName?.toLowerCase().includes(q) ||
-        c.colorCode?.toLowerCase().includes(q)
-    );
-  }, [colors, query]);
+  const filteredAndSorted = useMemo(() => {
+    // Filter
+    let filtered = colors;
+    if (query) {
+      const q = query.toLowerCase();
+      filtered = (colors || []).filter(
+        (c) =>
+          c.colorName?.toLowerCase().includes(q) ||
+          c.colorCode?.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "name-asc":
+          return (a.colorName || "").localeCompare(b.colorName || "", "vi");
+        case "name-desc":
+          return (b.colorName || "").localeCompare(a.colorName || "", "vi");
+        case "code-asc":
+          return (a.colorCode || "").localeCompare(b.colorCode || "", "vi");
+        case "cost-desc":
+          return (b.extraCost || 0) - (a.extraCost || 0);
+        case "cost-asc":
+          return (a.extraCost || 0) - (b.extraCost || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [colors, query, sortBy]);
 
   const handleCreate = () => {
     setIsEditing(false);
@@ -151,48 +179,7 @@ function ColorManagement() {
       }
 
       if (result.success) {
-        Modal.success({
-          title: (
-            <Space>
-              <CheckCircleOutlined style={{ color: "#52c41a" }} />
-              {isEditing ? "Cập nhật Màu sắc thành công!" : "Tạo Màu sắc thành công!"}
-            </Space>
-          ),
-          content: (
-            <div style={{ marginTop: 12 }}>
-              <p>
-                <strong>Tên màu:</strong> {payload.colorName}
-              </p>
-              <p style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <strong>Mã màu:</strong>
-                <span
-                  style={{
-                    padding: "4px 10px",
-                    background: payload.colorCode,
-                    color: getContrastText(payload.colorCode),
-                    border: "1px solid #d9d9d9",
-                    borderRadius: 6,
-                    fontFamily: "monospace",
-                  }}
-                >
-                  {payload.colorCode}
-                </span>
-              </p>
-              <p>
-                <strong>Phụ thu:</strong>{" "}
-                {payload.extraCost.toLocaleString("vi-VN")} ₫
-              </p>
-              {result.data?.id && (
-                <p>
-                  <strong>ID:</strong>{" "}
-                  <Text code copyable>
-                    {result.data.id}
-                  </Text>
-                </p>
-              )}
-            </div>
-          ),
-        });
+        message.success(isEditing ? "Cập nhật Màu sắc thành công!" : "Tạo Màu sắc thành công!");
         setIsModalVisible(false);
         form.resetFields();
         await loadColors();
@@ -310,19 +297,49 @@ function ColorManagement() {
                 Danh sách Màu sắc
               </Title>
               <Text type="secondary">
-                Tổng cộng: {colors.length} màu &nbsp;•&nbsp; Hiển thị: {filtered.length}
+                Tổng cộng: {colors.length} màu &nbsp;•&nbsp; Hiển thị: {filteredAndSorted.length}
               </Text>
             </Col>
           </Row>
           <Divider className="!mt-2" />
+          
+          {/* Search and Sort Section */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={16} md={12}>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="Tìm theo tên/mã màu..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                size="large"
+              />
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <Select
+                value={sortBy}
+                onChange={setSortBy}
+                size="large"
+                style={{ width: "100%" }}
+                suffixIcon={<SortAscendingOutlined />}
+              >
+                <Option value="name-asc">Tên màu A-Z</Option>
+                <Option value="name-desc">Tên màu Z-A</Option>
+                <Option value="code-asc">Mã màu A-Z</Option>
+                <Option value="cost-desc">Phụ thu cao → thấp</Option>
+                <Option value="cost-asc">Phụ thu thấp → cao</Option>
+              </Select>
+            </Col>
+          </Row>
+
           <Table
             size="middle"
             columns={columns}
-            dataSource={filtered}
+            dataSource={filteredAndSorted}
             rowKey="id"
             loading={loading}
             pagination={{
-              total: filtered.length,
+              total: filteredAndSorted.length,
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
@@ -454,10 +471,18 @@ function ColorManagement() {
               >
                 <InputNumber
                   min={0}
+                  precision={0}
                   style={{ width: "100%" }}
                   size="large"
-                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  parser={(v) => v.replace(/\$\s?|(,*)/g, "")}
+                  formatter={(value) => {
+                    if (!value && value !== 0) return '';
+                    return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                  }}
+                  parser={(value) => {
+                    if (!value) return '';
+                    const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                    return parsed === '' ? '' : Number(parsed);
+                  }}
                   addonAfter="₫"
                 />
               </Form.Item>

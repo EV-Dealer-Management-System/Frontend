@@ -11,6 +11,7 @@ const { Title } = Typography;
 const Appointment = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const getAvailableAppointmentRef = useRef(null);
+  const getAppointmentSettingRef = useRef(null);
 
   const showModal = () => {
     setIsModalVisible(true);
@@ -25,6 +26,9 @@ const Appointment = () => {
     // Refresh danh sách slot sau khi tạo thành công
     if (getAvailableAppointmentRef.current) {
       getAvailableAppointmentRef.current.refresh();
+    }
+    if (getAppointmentSettingRef.current) {
+      getAppointmentSettingRef.current.refresh();
     }
   };
 
@@ -46,14 +50,19 @@ const Appointment = () => {
               borderColor: '#52c41a',
             }}
           >
-            Tạo Slot Lịch
+            Tạo Appointment Setting
           </Button>
         </div>
         
         <GetAvailableAppointment ref={getAvailableAppointmentRef} />
         
         <div style={{ marginTop: 24 }}>
-          <GetAppointmentSetting />
+          <GetAppointmentSetting
+            ref={getAppointmentSettingRef}
+            onSettingChanged={() => {
+              getAvailableAppointmentRef.current && getAvailableAppointmentRef.current.refresh();
+            }}
+          />
         </div>
 
         <Modal
@@ -61,7 +70,7 @@ const Appointment = () => {
             <Space>
               <ScheduleOutlined style={{ color: '#1890ff' }} />
               <span style={{ fontWeight: 600, fontSize: 18 }}>
-                Tạo Slot Lịch Lái Thử
+                Tạo Appointment Setting
               </span>
             </Space>
           }
