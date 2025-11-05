@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Table, Tag, Typography, Button, Space, Tooltip, Divider } from 'antd';
+import React, { useState } from 'react';
+import { Card, Table, Tag, Typography, Button, Space, Tooltip, Divider, Input } from 'antd';
 import {
     GiftOutlined,
     PercentageOutlined,
@@ -16,6 +16,7 @@ import { ConfigProvider } from 'antd';
 import viVN from 'antd/lib/locale/vi_VN';
 
 const { Title, Text } = Typography;
+const { Search } = Input;
 
 function PromotionTable({
     promotions,
@@ -26,6 +27,8 @@ function PromotionTable({
     onView,
     onDelete
 }) {
+
+    const [searchText, setSearchText] = useState('');
 
     const columns = [
         {
@@ -200,6 +203,12 @@ function PromotionTable({
                             <Title level={4} className="m-0 text-gray-900">
                                 Danh sách khuyến mãi
                             </Title>
+                            <Search
+                                placeholder="Tìm kiếm khuyến mãi"
+                                allowClear
+                                onChange={(e) => setSearchText(e.target.value)}
+                                style={{ width: 300, marginTop: 8 }}
+                            />
                         </div>
                     </div>
                     {/* <div className="text-sm text-gray-500">
@@ -212,7 +221,14 @@ function PromotionTable({
         >
             <Table
                 columns={columns}
-                dataSource={promotions}
+                dataSource={promotions.filter((item) =>{
+                    const keywords = searchText.toLowerCase();
+                    return (
+                        item.name.toLowerCase().includes(keywords) ||
+                        item.description.toLowerCase().includes(keywords) ||
+                        item.percentage.toString().includes(keywords)
+                    );
+                })}
                 rowKey="id"
                 pagination={{
                     pageSize: 10,

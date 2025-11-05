@@ -91,7 +91,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <FileTextOutlined />,
             component: "./DealerContracts",
           },
-
+          {
+            path: "/admin/dealer/all-dealer-tiers",
+            name: "Cấp bậc đại lý",
+            icon: <LineChartOutlined />,
+            component: "./DealerTierManagement",
+          }
           // {
           //   path: "/admin/dealer/promotions",
           //   name: "Quản lý khuyến Mãi ",
@@ -130,12 +135,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             name: "Danh mục xe",
             icon: <DatabaseOutlined />,
             component: "./VehicleCatalog",
-          },
-          {
-            path: "/admin/vehicle/allocation",
-            name: "Phân bổ xe cho đại lý",
-            icon: <GlobalOutlined />,
-            component: "./VehicleAllocation",
           },
         ],
       },

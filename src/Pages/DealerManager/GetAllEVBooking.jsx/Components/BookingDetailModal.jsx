@@ -19,6 +19,11 @@ import {
   FileTextOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  SyncOutlined,
+  AuditOutlined,
 } from "@ant-design/icons";
 import { getEVModelById } from "../../../../App/DealerManager/EVBooking/Layouts/GetEVModelByID";
 import { getEVVersionById } from "../../../../App/DealerManager/EVBooking/Layouts/GetEVVersionByID";
@@ -31,7 +36,6 @@ function BookingDetailModal({
   booking,
   loading,
   formatDateTime,
-  getStatusTag,
 }) {
   // State để lưu thông tin chi tiết đã fetch
   const [detailsData, setDetailsData] = useState([]);
@@ -166,6 +170,85 @@ function BookingDetailModal({
     },
   ];
 
+  // Hiển thị trạng thái booking với đầy đủ các status
+  const getBookingStatusTag = (status) => {
+    // Mapping theo BookingStatus enum: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4, Cancelled=5, SignedByAdmin=6, Completed=7
+    const statusMap = {
+      0: {
+        color: "#8c8c8c",
+        bg: "#fafafa",
+        text: "Bản Nháp",
+        icon: <SyncOutlined />,
+      },
+      1: {
+        color: "#faad14",
+        bg: "#fffbe6",
+        text: "Chờ Dealer Ký",
+        icon: <AuditOutlined />,
+      },
+      2: {
+        color: "#fa8c16",
+        bg: "#fff7e6",
+        text: "Chờ Duyệt",
+        icon: <ClockCircleOutlined />,
+      },
+      3: {
+        color: "#52c41a",
+        bg: "#f6ffed",
+        text: "Đã Duyệt",
+        icon: <CheckCircleOutlined />,
+      },
+      4: {
+        color: "#ff4d4f",
+        bg: "#fff1f0",
+        text: "Đã Từ Chối",
+        icon: <CloseCircleOutlined />,
+      },
+      5: {
+        color: "#8c8c8c",
+        bg: "#fafafa",
+        text: "Đã Hủy",
+        icon: <CloseCircleOutlined />,
+      },
+      6: {
+        color: "#13c2c2",
+        bg: "#e6fffb",
+        text: "Admin Đã Ký",
+        icon: <CheckCircleOutlined />,
+      },
+      7: {
+        color: "#1890ff",
+        bg: "#e6f7ff",
+        text: "Đã Hoàn Thành",
+        icon: <CheckCircleOutlined />,
+      },
+    };
+
+    const statusInfo = statusMap[status] || {
+      color: "#d9d9d9",
+      bg: "#fafafa",
+      text: "Không xác định",
+      icon: null,
+    };
+
+    return (
+      <Tag
+        icon={statusInfo.icon}
+        style={{
+          color: statusInfo.color,
+          backgroundColor: statusInfo.bg,
+          borderColor: statusInfo.color,
+          padding: "4px 12px",
+          fontSize: 13,
+          fontWeight: 500,
+          borderRadius: 6,
+        }}
+      >
+        {statusInfo.text}
+      </Tag>
+    );
+  };
+
   return (
     <Modal
       title={
@@ -222,7 +305,7 @@ function BookingDetailModal({
             <Descriptions.Item
               label={<span className="font-semibold">Trạng Thái</span>}
             >
-              {getStatusTag(booking.status)}
+              {getBookingStatusTag(booking.status)}
             </Descriptions.Item>
 
             <Descriptions.Item

@@ -46,14 +46,19 @@ function EVVersionDetails() {
 
                         if (
                             templateResponse.isSuccess &&
-                            templateResponse.result &&
-                            templateResponse.result.length > 0
+                            templateResponse.result
                         ) {
+                            const template = templateResponse.result;
                             const vehicleData = {
-                                ...templateResponse.result[0],
+                                ...template,
                                 quantity: vehicle.quantity,
-                                versionId: vehicle.versionId,
+                                versionId: template.version?.versionId || vehicle.versionId,
+                                // Flatten nested data để dễ truy cập
+                                versionName: template.version?.versionName,
+                                modelName: template.version?.modelName,
+                                colorName: template.color?.colorName,
                             };
+                            console.log("Vehicle data structure:", vehicleData); // Debug log
                             return vehicleData;
                         }
                         return null;
@@ -67,7 +72,10 @@ function EVVersionDetails() {
                 });
 
                 const templates = await Promise.all(templatePromises);
-                setVehicleTemplates(templates.filter((t) => t !== null));
+                const filteredTemplates = templates.filter((t) => t !== null);
+                console.log("Total templates after filter:", filteredTemplates.length);
+                console.log("Templates data:", filteredTemplates);
+                setVehicleTemplates(filteredTemplates);
             } else {
                 setError("Không thể tải danh sách xe từ kho");
             }
@@ -120,11 +128,11 @@ function EVVersionDetails() {
     const availableVehicles = vehicleTemplates.filter(
         (v) => v.quantity > 0
     ).length;
-    const activeVehicles = vehicleTemplates.filter((v) => v.isActive).length;
-    const totalInventory = vehicleTemplates.reduce(
-        (sum, v) => sum + v.quantity,
-        0
-    );
+    // const activeVehicles = vehicleTemplates.filter((v) => v.isActive).length;
+    // const totalInventory = vehicleTemplates.reduce(
+    //     (sum, v) => sum + v.quantity,
+    //     0
+    // );
 
     return (
         <DealerStaffLayout>

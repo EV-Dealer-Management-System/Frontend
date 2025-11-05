@@ -7,11 +7,14 @@ import {
     SettingOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
+import { jwtDecode } from "jwt-decode";
 function HeaderBar({ collapsed, isMobile }) {
-    const navigate = useNavigate();
-    const userFullName = localStorage.getItem("userFullName") || "Dealer Manager";
 
+    const navigate = useNavigate();
+    const token = localStorage.getItem("jwt_token");
+    const decodedToken = token ? jwtDecode(token) : null;
+    const userFullName = decodedToken?.FullName || "Dealer Manager";
+    const userDealerName = decodedToken?.DealerName || "Đại lý không xác định";
     const handleLogout = () => {
         localStorage.removeItem("jwt_token");
         localStorage.removeItem("user");
@@ -54,7 +57,8 @@ function HeaderBar({ collapsed, isMobile }) {
         height: '56px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
+        paddingLeft: '24px',
         paddingRight: '24px',
         backgroundColor: 'white',
         borderBottom: '1px solid #d9d9d9',
@@ -64,9 +68,14 @@ function HeaderBar({ collapsed, isMobile }) {
     };
     return (
         <div style={headerStyle}>
-            {/* Right side only - Notification + Email + Avatar + Language */}
+            {/* Left side - Dealer Name */}
+            <div className="flex items-center gap-2">
+                <span className="text-base font-semibold text-gray-800"> {userDealerName}</span>
+            </div>
+
+            {/* Right side - User Info */}
             <Space size="large" align="center">
-                <span className="text-sm text-gray-600">Chào, {userFullName}</span>
+                <span className="text-sm text-gray-600">Xin Chào, {userFullName}</span>
                 <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
                     <Avatar
                         className="cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"

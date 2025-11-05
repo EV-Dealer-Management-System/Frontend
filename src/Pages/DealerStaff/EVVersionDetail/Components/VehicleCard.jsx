@@ -14,10 +14,32 @@ import {
 const { Title, Text } = Typography;
 
 function VehicleCard({ vehicle, onViewDetails }) {
+ 
+
+
   // Format giá VND
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
+
+  // Lấy URL ảnh đầu tiên từ nhiều trường hợp có thể
+  const getImageUrl = () => {
+    if (vehicle.imgUrl && Array.isArray(vehicle.imgUrl) && vehicle.imgUrl[0]) {
+      return vehicle.imgUrl[0];
+    }
+    if (vehicle.imageUrl && Array.isArray(vehicle.imageUrl) && vehicle.imageUrl[0]) {
+      return vehicle.imageUrl[0];
+    }
+    if (vehicle.images && Array.isArray(vehicle.images) && vehicle.images[0]) {
+      return vehicle.images[0];
+    }
+    if (vehicle.image) {
+      return vehicle.image;
+    }
+    return null;
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
     <ProCard
@@ -42,14 +64,18 @@ function VehicleCard({ vehicle, onViewDetails }) {
           overflow: "hidden",
         }}
       >
-        {vehicle.imgUrl?.[0] ? (
+        {imageUrl ? (
           <img
-            src={vehicle.imgUrl[0]}
+            src={imageUrl}
             alt={vehicle.modelName || vehicle.version?.modelName}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
+            }}
+            onError={(e) => {
+              console.error("Image load error:", imageUrl);
+              e.target.style.display = "none";
             }}
           />
         ) : (

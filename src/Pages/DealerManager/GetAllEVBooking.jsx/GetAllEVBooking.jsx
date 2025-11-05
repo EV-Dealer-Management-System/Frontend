@@ -157,12 +157,14 @@ function GetAllEVBooking() {
 
     const stats = {
       total: bookings.length,
-      draft: bookings.filter((b) => getStatus(b) === 0).length,      // Draft = 0
-      pending: bookings.filter((b) => getStatus(b) === 1).length,    // Pending = 1
-      approved: bookings.filter((b) => getStatus(b) === 2).length,   // Approved = 2
-      rejected: bookings.filter((b) => getStatus(b) === 3).length,   // Rejected = 3
-      cancelled: bookings.filter((b) => getStatus(b) === 4).length,  // Cancelled = 4
-      completed: bookings.filter((b) => getStatus(b) === 5).length,  // Completed = 5
+      draft: bookings.filter((b) => getStatus(b) === 0).length,              // Draft = 0
+      waittingDealerSign: bookings.filter((b) => getStatus(b) === 1).length, // WaittingDealerSign = 1
+      pending: bookings.filter((b) => getStatus(b) === 2).length,            // Pending = 2
+      approved: bookings.filter((b) => getStatus(b) === 3).length,           // Approved = 3
+      rejected: bookings.filter((b) => getStatus(b) === 4).length,           // Rejected = 4
+      cancelled: bookings.filter((b) => getStatus(b) === 5).length,          // Cancelled = 5
+      signedByAdmin: bookings.filter((b) => getStatus(b) === 6).length,      // SignedByAdmin = 6
+      completed: bookings.filter((b) => getStatus(b) === 7).length,          // Completed = 7
       totalVehicles: bookings.reduce(
         (sum, b) => sum + (b.totalQuantity || 0),
         0
@@ -182,16 +184,17 @@ function GetAllEVBooking() {
       stats.total > 0 ? (stats.totalVehicles / stats.total).toFixed(1) : 0;
 
     return stats;
-  }, [bookings]);
-
-  // Dữ liệu cho biểu đồ phân bố trạng thái
+  }, [bookings]);  // Dữ liệu cho biểu đồ phân bố trạng thái
   const statusChartData = useMemo(() => {
     return [
       { type: "Bản Nháp", value: statistics.draft, color: "#8c8c8c" },
+      { type: "Chờ Dealer Ký", value: statistics.waittingDealerSign, color: "#faad14" },
       { type: "Chờ Duyệt", value: statistics.pending, color: "#fa8c16" },
       { type: "Đã Duyệt", value: statistics.approved, color: "#52c41a" },
+      { type: "Admin Đã Ký", value: statistics.signedByAdmin, color: "#13c2c2" },
       { type: "Hoàn Thành", value: statistics.completed, color: "#1890ff" },
       { type: "Từ Chối", value: statistics.rejected, color: "#ff4d4f" },
+      { type: "Đã Hủy", value: statistics.cancelled, color: "#bfbfbf" },
     ].filter((item) => item.value > 0);
   }, [statistics]);
 
@@ -219,7 +222,7 @@ function GetAllEVBooking() {
       };
     });
   }, [bookings]);
-
+  
   // Format ngày giờ
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
@@ -248,21 +251,24 @@ function GetAllEVBooking() {
 
   // Hiển thị trạng thái booking
   const getStatusTag = (status) => {
-    // Mapping theo BookingStatus enum: Draft=0, Pending=1, Approved=2, Rejected=3, Cancelled=4, Completed=5
+    // Mapping theo BookingStatus enum: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4, Cancelled=5, SignedByAdmin=6, Completed=7
     const statusMap = {
-      0: { color: "default", text: "Bản Nháp" },
-      1: { color: "orange", text: "Chờ Duyệt" },
-      2: { color: "green", text: "Đã Duyệt" },
-      3: { color: "red", text: "Từ Chối" },
-      4: { color: "default", text: "Đã Hủy" },
-      5: { color: "blue", text: "Hoàn Thành" },
+      0: { color: "default", text: "Bản Nháp", icon: <ClockCircleOutlined /> },
+      1: { color: "gold", text: "Chờ Dealer Ký", icon: <ClockCircleOutlined /> },
+      2: { color: "orange", text: "Chờ Duyệt", icon: <ClockCircleOutlined /> },
+      3: { color: "green", text: "Đã Duyệt", icon: <CheckCircleOutlined /> },
+      4: { color: "red", text: "Đã Từ Chối", icon: <CloseCircleOutlined /> },
+      5: { color: "default", text: "Đã Hủy", icon: <CloseCircleOutlined /> },
+      6: { color: "cyan", text: "Admin Đã Ký", icon: <CheckCircleOutlined /> },
+      7: { color: "blue", text: "Đã Hoàn Thành", icon: <CheckCircleOutlined /> },
     };
 
     const statusInfo = statusMap[status] || {
       color: "default",
       text: "Không xác định",
+      icon: null,
     };
-    return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+    return <Tag color={statusInfo.color} icon={statusInfo.icon}>{statusInfo.text}</Tag>;
   };
 
   // Lọc dữ liệu
@@ -286,17 +292,19 @@ function GetAllEVBooking() {
           toString(booking.note).toLowerCase().includes(searchLower);
 
         if (!matchesSearch) return false;
-      }
 
+      }
       // Filter by active tab (status) - Updated mapping theo enum BookingStatus
       if (activeTab && activeTab !== "all") {
         const statusMap = {
-          draft: 0,      // Draft = 0
-          pending: 1,    // Pending = 1 
-          approved: 2,   // Approved = 2
-          rejected: 3,   // Rejected = 3
-          cancelled: 4,  // Cancelled = 4
-          completed: 5,  // Completed = 5
+          draft: 0,              // Draft = 0
+          waittingDealerSign: 1, // WaittingDealerSign = 1
+          pending: 2,            // Pending = 2 
+          approved: 3,           // Approved = 3
+          rejected: 4,           // Rejected = 4
+          cancelled: 5,          // Cancelled = 5
+          signedByAdmin: 6,      // SignedByAdmin = 6 
+          completed: 7,          // Completed = 7
         };
         const filterStatusValue = statusMap[activeTab];
         const bookingStatus =

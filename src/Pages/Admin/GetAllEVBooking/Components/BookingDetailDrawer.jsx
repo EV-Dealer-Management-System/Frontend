@@ -22,6 +22,7 @@ import {
     CloseCircleOutlined,
     SyncOutlined,
     LoadingOutlined,
+    AuditOutlined,
 } from "@ant-design/icons";
 import { getEVModelById } from "../../../../App/DealerManager/EVBooking/Layouts/GetEVModelByID";
 import { getEVVersionById } from "../../../../App/DealerManager/EVBooking/Layouts/GetEVVersionByID";
@@ -115,14 +116,16 @@ const BookingDetailDrawer = ({
 
     // Lấy icon cho status
     const getStatusIcon = (status) => {
-        // Mapping theo BookingStatus enum: Draft=0, Pending=1, Approved=2, Rejected=3, Cancelled=4, Completed=5
+        // Mapping theo BookingStatus enum: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4, Cancelled=5, SignedByAdmin=6, Completed=7
         const iconMap = {
-            0: <SyncOutlined style={{ color: "#8c8c8c" }} />,       // Draft
-            1: <ClockCircleOutlined style={{ color: "#fa8c16" }} />, // Pending
-            2: <CheckCircleOutlined style={{ color: "#52c41a" }} />, // Approved
-            3: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />, // Rejected
-            4: <CloseCircleOutlined style={{ color: "#8c8c8c" }} />, // Cancelled
-            5: <CheckCircleOutlined style={{ color: "#1890ff" }} />, // Completed
+            0: <SyncOutlined style={{ color: "#8c8c8c" }} />,           // Draft
+            1: <AuditOutlined style={{ color: "#faad14" }} />,          // WaittingDealerSign
+            2: <ClockCircleOutlined style={{ color: "#fa8c16" }} />,    // Pending
+            3: <CheckCircleOutlined style={{ color: "#52c41a" }} />,    // Approved
+            4: <CloseCircleOutlined style={{ color: "#ff4d4f" }} />,    // Rejected
+            5: <CloseCircleOutlined style={{ color: "#8c8c8c" }} />,    // Cancelled
+            6: <CheckCircleOutlined style={{ color: "#13c2c2" }} />,    // SignedByAdmin
+            7: <CheckCircleOutlined style={{ color: "#1890ff" }} />,    // Completed
         };
 
         return iconMap[status] || <ClockCircleOutlined />;

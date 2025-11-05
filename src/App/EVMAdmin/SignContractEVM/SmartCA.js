@@ -181,6 +181,58 @@ export const SmartCAService = () => {
     }
   };
 
+  // Xóa SmartCA
+  const handleDeleteSmartCA = async (smartCAId, userId) => {
+    try {
+      if (!smartCAId) {
+        return {
+          success: false,
+          error: 'SmartCA ID không hợp lệ để xóa.'
+        };
+      }
+      
+      if (!userId) {
+        return {
+          success: false,
+          error: 'User ID không hợp lệ để xóa SmartCA.'
+        };
+      }
+
+      const response = await api.post('/EContract/delete-smartca', 
+        {
+          id: String(smartCAId),
+          userId: parseInt(userId)
+        },
+        { headers: { 'Content-Type': 'application/json', Accept: 'application/json'} }
+      );
+
+      if (response.data.success) {
+        return {
+          success: true,
+          message: response.data.message || 'Xóa SmartCA thành công',
+          data: response.data.data
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || 'Xóa SmartCA thất bại'
+        };
+      }
+    } catch (error) {
+      console.error('Error deleting SmartCA:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.messages?.[0] ||
+                          error.message || 
+                          'Có lỗi khi xóa SmartCA';
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
+  };
+
   // Utility: Format thông tin SmartCA
   const formatSmartCAInfo = (smartCAInfo) => {
     if (!smartCAInfo) return null;
@@ -203,6 +255,7 @@ export const SmartCAService = () => {
     handleCheckSmartCA,
     handleAddSmartCA,
     handleUpdateSmartCA,
+    handleDeleteSmartCA,
     // Utility functions
     isSmartCAValid,
     validateCCCD,
