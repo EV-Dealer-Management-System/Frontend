@@ -163,12 +163,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <TeamOutlined />,
             component: "./CustomerList",
           },
-          {
-            path: "/dealer-manager/customers/create-customer",
-            name: "Tạo khách hàng mới",
-            icon: <LineChartOutlined />,
-            component: "./StaffPerformance",
-          },
         ],
       },
       {
@@ -202,6 +196,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         icon: <SettingOutlined />,
         component: "./Settings",
         routes: [
+          {
+            path: "/dealer-manager/settings/dealer-profile",
+            name: "Thông tin đại lý",
+            icon: <UserAddOutlined />,
+            component: "./UserProfile",
+          },
           {
             path: "/dealer-manager/settings/change-password",
             name: "Đổi mật khẩu",
