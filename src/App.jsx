@@ -63,6 +63,8 @@ import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedbac
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
 import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
 import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
+import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
+import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
 function App() {
   return (
     <BrowserRouter>
@@ -309,6 +311,8 @@ function App() {
                   path="schedule/test-drive"
                   element={<ScheduleTestDrive />}
                 />
+                <Route path="orders/all-orders" element={<OrderListStaffView />} />
+                <Route path="orders/create-order" element={<CreateEVOrder />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ Dealer Staff */}
                 <Route
                   path="*"
