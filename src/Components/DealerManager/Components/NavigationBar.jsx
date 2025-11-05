@@ -96,7 +96,7 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/dealer/inventory",
-        name: "Kho xe",
+        name: "Kho xe của đại lý",
         icon: <ThunderboltOutlined />,
         routes: [
           {
@@ -105,7 +105,15 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DatabaseOutlined />,
             component: "./Inventory",
           },
-          {
+        ],
+      },
+      {
+        path: "/dealer-manager/ev/ev-delivery",
+        name: "Quản lí đặt xe",
+        icon: <ShoppingCartOutlined />,
+        component: "./EVDelivery",
+        routes: [
+           {
             path: "/dealer-manager/ev/ev-booking",
             name: "Yêu cầu nhập hàng",
             icon: <DeploymentUnitOutlined />,
@@ -117,7 +125,13 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <GlobalOutlined />,
             component: "./InventoryHistory",
           },
-        ],
+          {
+            path: "/dealer-manager/ev/ev-delivery",
+            name: "Theo dõi giao xe ",
+            icon: <ShoppingCartOutlined />,
+            component: "./EVDelivery",
+          },
+        ]
       },
       {
         path: "/dealer-manager/staff",
@@ -148,12 +162,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             name: "Danh sách khách hàng",
             icon: <TeamOutlined />,
             component: "./CustomerList",
-          },
-          {
-            path: "/dealer-manager/customers/create-customer",
-            name: "Tạo khách hàng mới",
-            icon: <LineChartOutlined />,
-            component: "./StaffPerformance",
           },
         ],
       },
@@ -188,6 +196,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         icon: <SettingOutlined />,
         component: "./Settings",
         routes: [
+          {
+            path: "/dealer-manager/settings/dealer-profile",
+            name: "Thông tin đại lý",
+            icon: <UserAddOutlined />,
+            component: "./UserProfile",
+          },
           {
             path: "/dealer-manager/settings/change-password",
             name: "Đổi mật khẩu",

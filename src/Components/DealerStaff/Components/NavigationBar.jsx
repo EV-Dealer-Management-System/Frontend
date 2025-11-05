@@ -81,6 +81,25 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
           },
         ],
       },
+       {
+        path: "/dealer-staff/orders",
+        name: "Đơn hàng",
+        icon: <ShoppingCartOutlined />,
+        routes: [
+          {
+            path: "/dealer-staff/orders/create-order",
+            name: "Tạo đơn hàng",
+            icon: <PlusOutlined />,
+            component: "./CreateOrder",
+          },
+          {
+            path: "/dealer-staff/orders/all-orders",
+            name: "Danh sách đơn hàng",
+            icon: <FileTextOutlined />,
+            component: "./AllOrders",
+          },
+        ],
+      },
       {
         path: "/dealer-staff/customers",
         name: "Khách hàng",

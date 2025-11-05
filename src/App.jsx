@@ -63,6 +63,11 @@ import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedbac
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
 import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
 import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
+import DMEVDelivery from "./Pages/DealerManager/DMEVDelivery/EVDelivery";
+import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
+import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
+import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
+
 function App() {
   return (
     <BrowserRouter>
@@ -191,12 +196,14 @@ function App() {
                 <Route path="" element={<DealerManager />} />
                 <Route path="ev/ev-booking" element={<EVBooking />} />
                 <Route path="ev/all-ev-booking" element={<GetAllEVBooking />} />
+                <Route path="ev/ev-delivery" element={<DMEVDelivery />} />
                 <Route
                   path="ev/all-ev-quotes"
                   element={<GetAllEVQuotesDealerManager />}
                 />
                 <Route path="ev/inventory" element={<GetAllEVInventory />} />
-                
+
+                <Route path="settings/dealer-profile" element={<DealerProfile />} />
                 <Route path="staff/staff-list" element={<DealerStaffList />} />
                 <Route
                   path="customers/get-all-customers"
@@ -260,7 +267,7 @@ function App() {
                 <Route
                   path="dealer-feedback/all"
                   element={<UpdateStatusStaffFeedback />}
-                /> 
+                />
                 <Route path="ev/ev-delivery" element={<EVDelivery />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ EVM Staff */}
                 <Route
@@ -309,6 +316,8 @@ function App() {
                   path="schedule/test-drive"
                   element={<ScheduleTestDrive />}
                 />
+                <Route path="orders/all-orders" element={<OrderListStaffView />} />
+                <Route path="orders/create-order" element={<CreateEVOrder />} /> 
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ Dealer Staff */}
                 <Route
                   path="*"

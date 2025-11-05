@@ -108,6 +108,8 @@ function CreateElectricVehicle() {
   // VIN List Management - ✅ Thêm state để quản lý danh sách VIN
   const [vinList, setVinList] = useState([]);
   const [currentVinInput, setCurrentVinInput] = useState('');
+  const [bulkVinInput, setBulkVinInput] = useState(''); // ✅ State for bulk VIN input
+  const [isBulkInputMode, setIsBulkInputMode] = useState(false); // ✅ Toggle between single/bulk mode
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -347,6 +349,8 @@ function CreateElectricVehicle() {
     setVersions([]); // ✅ Reset versions list
     setVinList([]); // ✅ Reset VIN list
     setCurrentVinInput(''); // ✅ Reset current VIN input
+    setBulkVinInput(''); // ✅ Reset bulk VIN input
+    setIsBulkInputMode(false); // ✅ Reset to single input mode
     setIsCreateModalVisible(true);
   };
 
@@ -393,7 +397,99 @@ function CreateElectricVehicle() {
   const handleClearAllVins = () => {
     setVinList([]);
     setCurrentVinInput('');
+    setBulkVinInput('');
     message.info('Đã xóa tất cả VIN');
+  };
+
+  // ✅ Thêm nhiều VIN cùng lúc (bulk add)
+  const handleBulkAddVins = () => {
+    const inputText = bulkVinInput.trim();
+
+    if (!inputText) {
+      message.warning('Vui lòng nhập danh sách VIN!');
+      return;
+    }
+
+    // Tách VIN theo dấu xuống dòng, dấu phẩy, hoặc khoảng trắng
+    const vinsArray = inputText
+      .split(/[\n,\s]+/) // Split by newline, comma, or space
+      .map(vin => vin.trim().toUpperCase())
+      .filter(vin => vin.length > 0); // Remove empty strings
+
+    if (vinsArray.length === 0) {
+      message.warning('Không tìm thấy VIN hợp lệ!');
+      return;
+    }
+
+    // Validate và filter VINs
+    const validVins = [];
+    const invalidVins = [];
+    const duplicateVins = [];
+    const existingVins = [];
+
+    vinsArray.forEach(vin => {
+      // Check format
+      if (!/^VIN\d{10}$/.test(vin)) {
+        invalidVins.push(vin);
+        return;
+      }
+
+      // Check duplicate in current list
+      if (vinList.includes(vin)) {
+        duplicateVins.push(vin);
+        return;
+      }
+
+      // Check duplicate in newly added list
+      if (validVins.includes(vin)) {
+        duplicateVins.push(vin);
+        return;
+      }
+
+      // Check existing in database
+      if (vehiclesList.some(v => v.vin === vin)) {
+        existingVins.push(vin);
+        return;
+      }
+
+      validVins.push(vin);
+    });
+
+    // Add valid VINs to list
+    if (validVins.length > 0) {
+      setVinList([...vinList, ...validVins]);
+      setBulkVinInput('');
+
+      let successMsg = `✅ Đã thêm ${validVins.length} VIN`;
+
+      // Show warnings for invalid/duplicate VINs
+      if (invalidVins.length > 0) {
+        successMsg += `\n⚠️ ${invalidVins.length} VIN không đúng format`;
+      }
+      if (duplicateVins.length > 0) {
+        successMsg += `\n⚠️ ${duplicateVins.length} VIN trùng lặp`;
+      }
+      if (existingVins.length > 0) {
+        successMsg += `\n❌ ${existingVins.length} VIN đã tồn tại trong hệ thống`;
+      }
+
+      message.success(successMsg, 5);
+    } else {
+      // No valid VINs
+      let errorMsg = '❌ Không có VIN hợp lệ nào được thêm!\n';
+
+      if (invalidVins.length > 0) {
+        errorMsg += `\n⚠️ ${invalidVins.length} VIN không đúng format (phải là VIN + 10 số)`;
+      }
+      if (duplicateVins.length > 0) {
+        errorMsg += `\n⚠️ ${duplicateVins.length} VIN bị trùng lặp`;
+      }
+      if (existingVins.length > 0) {
+        errorMsg += `\n❌ ${existingVins.length} VIN đã tồn tại trong hệ thống`;
+      }
+
+      message.error(errorMsg, 6);
+    }
   };
 
   // ✅ Handle tạo vehicle
@@ -894,25 +990,67 @@ function CreateElectricVehicle() {
             <Row gutter={16}>
               <Col span={24}>
                 <div className="mb-4">
-                  <Text strong className="block mb-2">
-                    <CarOutlined className="mr-2" />
-                    Danh sách VIN (có thể thêm nhiều VIN)
-                  </Text>
+                  <div className="flex justify-between items-center mb-2">
+                    <Text strong>
+                      <CarOutlined className="mr-2" />
+                      Danh sách VIN
+                    </Text>
+                    <Radio.Group
+                      value={isBulkInputMode}
+                      onChange={(e) => setIsBulkInputMode(e.target.value)}
+                      size="small"
+                    >
+                      <Radio.Button value={false}>Nhập từng VIN</Radio.Button>
+                      <Radio.Button value={true}>Nhập hàng loạt</Radio.Button>
+                    </Radio.Group>
+                  </div>
 
-                  <Space.Compact style={{ width: '100%' }} className="mb-3">
-                    <Input
-                      placeholder="Nhập VIN (VD: VIN1234567890)"
-                      value={currentVinInput}
-                      onChange={(e) => setCurrentVinInput(e.target.value.toUpperCase())}
-                      onPressEnter={handleAddVin}
-                      maxLength={13}
-                      style={{ textTransform: 'uppercase' }}
-                      prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
-                    />
-                    <Button type="primary" onClick={handleAddVin} icon={<PlusOutlined />}>
-                      Thêm VIN
-                    </Button>
-                  </Space.Compact>
+                  {/* Single VIN Input Mode */}
+                  {!isBulkInputMode && (
+                    <Space.Compact style={{ width: '100%' }} className="mb-3">
+                      <Input
+                        placeholder="Nhập VIN (VD: VIN1234567890)"
+                        value={currentVinInput}
+                        onChange={(e) => setCurrentVinInput(e.target.value.toUpperCase())}
+                        onPressEnter={handleAddVin}
+                        maxLength={13}
+                        style={{ textTransform: 'uppercase' }}
+                        prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
+                      />
+                      <Button type="primary" onClick={handleAddVin} icon={<PlusOutlined />}>
+                        Thêm VIN
+                      </Button>
+                    </Space.Compact>
+                  )}
+
+                  {/* Bulk VIN Input Mode */}
+                  {isBulkInputMode && (
+                    <div className="mb-3">
+                      <Input.TextArea
+                        placeholder="Nhập nhiều VIN, mỗi VIN một dòng hoặc cách nhau bởi dấu phẩy&#10;VD:&#10;VIN1234567890&#10;VIN0987654321&#10;VIN1111111111"
+                        value={bulkVinInput}
+                        onChange={(e) => setBulkVinInput(e.target.value.toUpperCase())}
+                        rows={6}
+                        style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                      />
+                      <Button
+                        type="primary"
+                        onClick={handleBulkAddVins}
+                        icon={<PlusOutlined />}
+                        className="mt-2 w-full"
+                        size="large"
+                      >
+                        Thêm tất cả VIN
+                      </Button>
+                      <Alert
+                        message="Hướng dẫn"
+                        description="Nhập mỗi VIN trên một dòng, hoặc cách nhau bằng dấu phẩy. Format: VIN + 10 chữ số (VD: VIN1234567890)"
+                        type="info"
+                        showIcon
+                        className="mt-2"
+                      />
+                    </div>
+                  )}
 
                   {/* VIN List Display */}
                   {vinList.length > 0 && (
@@ -998,9 +1136,10 @@ function CreateElectricVehicle() {
                   label="Trạng thái"
                   name="status"
                   initialValue={1}
+                  rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
                   tooltip="Trạng thái ban đầu của xe khi tạo mới"
                 >
-                  <Select>
+                  <Select placeholder="Chọn trạng thái...">
                     <Option value={1}><span className="mr-2">✅</span>Khả dụng</Option>
                     <Option value={2}><span className="mr-2">⏳</span>Đang chờ</Option>
                     <Option value={3}><span className="mr-2">📦</span>Đã đặt</Option>
@@ -1016,9 +1155,9 @@ function CreateElectricVehicle() {
                 <Form.Item
                   label="Ngày sản xuất"
                   name="manufactureDate"
-                  tooltip="Có thể để trống"
+                  rules={[{ required: true, message: "Vui lòng chọn ngày sản xuất!" }]}
                 >
-                  <Input type="date" placeholder="Chọn ngày sản xuất (tùy chọn)" />
+                  <Input type="date" placeholder="Chọn ngày sản xuất" />
                 </Form.Item>
               </Col>
             </Row>
@@ -1028,9 +1167,9 @@ function CreateElectricVehicle() {
                 <Form.Item
                   label="Ngày nhập kho"
                   name="importDate"
-
+                  rules={[{ required: true, message: "Vui lòng chọn ngày nhập kho!" }]}
                 >
-                  <Input type="date" placeholder="Chọn ngày nhập kho (tùy chọn)" />
+                  <Input type="date" placeholder="Chọn ngày nhập kho" />
                 </Form.Item>
               </Col>
 
@@ -1038,9 +1177,9 @@ function CreateElectricVehicle() {
                 <Form.Item
                   label="Hạn bảo hành"
                   name="warrantyExpiryDate"
-
+                  rules={[{ required: true, message: "Vui lòng chọn hạn bảo hành!" }]}
                 >
-                  <Input type="date" placeholder="Chọn hạn bảo hành (tùy chọn)" />
+                  <Input type="date" placeholder="Chọn hạn bảo hành" />
                 </Form.Item>
               </Col>
             </Row>
@@ -1055,6 +1194,8 @@ function CreateElectricVehicle() {
                   setSelectedTemplate(null);
                   setVinList([]);
                   setCurrentVinInput('');
+                  setBulkVinInput('');
+                  setIsBulkInputMode(false);
                 }}>
                   Hủy
                 </Button>
