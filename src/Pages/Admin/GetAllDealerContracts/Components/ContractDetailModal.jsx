@@ -21,6 +21,7 @@ import { SmartCAService } from '../../../../App/EVMAdmin/SignContractEVM/SmartCA
 import { SignContract } from '../../../../App/EVMAdmin/SignContractEVM/SignContractEVM';
 import PDFModal from '../../SignContract/Components/PDF/PDFModal';
 import GetPDFPreview from './GetPDFPreview';
+import api from '../../../../api/api';
 
 // Component hiển thị chi tiết hợp đồng trong modal
 function ContractDetailModal({ visible, contractId, onClose }) {
@@ -156,11 +157,38 @@ function ContractDetailModal({ visible, contractId, onClose }) {
     };
 
     // Xử lý tải xuống hợp đồng
-    const handleDownload = () => {
-        if (contractDetail?.downloadUrl) {
-            window.open(contractDetail.downloadUrl, '_blank');
+    const handleDownload = async () => {
+        if (!contractDetail?.downloadUrl) {
+            message.warning("Không có file để tải xuống.");
+            return;
+        }
+
+        try {
+            const response = await api.get("/EContract/preview", {
+            params: { downloadUrl: contractDetail.downloadUrl },
+            responseType: "blob",
+            });
+
+            if (response.status === 200 && response.data) {
+            const blob = new Blob([response.data]);
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `HopDong_${contractDetail?.no || "download"}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            } else {
+            message.error("Không thể tải hợp đồng (dữ liệu rỗng).");
+            }
+        } catch (error) {
+            console.error("Lỗi khi tải hợp đồng:", error);
+            message.error("Không thể tải file (có thể lỗi CORS hoặc server).");
         }
     };
+
 
     // Kiểm tra xem có thể ký hợp đồng không
     const canSignContract = () => {

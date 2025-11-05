@@ -88,6 +88,7 @@ function ContractTable({ onView }) {
             key: 'createdAt',
             width: 180,
             sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+            defaultSortOrder: 'descend',
             render: (date) => {
                 return new Date(date).toLocaleString('vi-VN', {
                     year: 'numeric',
