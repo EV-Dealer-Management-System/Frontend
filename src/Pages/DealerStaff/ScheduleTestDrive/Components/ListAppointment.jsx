@@ -27,6 +27,7 @@ import { UpdateAppointment } from '../../../../App/DealerManager/ScheduleManagem
 import CreateAppointmentForm from './CreateAppointment';
 import CalendarView from './CalendarView';
 import { useToast } from './ToastContainer';
+import { translateSuccessMessage, translateErrorMessage } from './translateMessage';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -87,17 +88,17 @@ const ListAppointment = () => {
       );
 
       if (response.isSuccess || response.statusCode === 200) {
-        const successMessage = response.message || 'Cập nhật trạng thái thành công!';
+        const successMessage = translateSuccessMessage(response.message, 'Cập nhật trạng thái thành công!');
         toast.success(successMessage);
         handleEditModalClose();
         fetchAppointments(); // Refresh list
       } else {
-        const errorMessage = response.message || 'Cập nhật trạng thái thất bại!';
+        const errorMessage = translateErrorMessage(response.message, 'Cập nhật trạng thái thất bại!');
         toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error updating appointment status:', error);
-      const errorMessage = error.response?.data?.message || 'Đã xảy ra lỗi khi cập nhật trạng thái';
+      const errorMessage = translateErrorMessage(error.response?.data?.message, 'Đã xảy ra lỗi khi cập nhật trạng thái');
       toast.error(errorMessage);
     } finally {
       setUpdating(false);
@@ -117,7 +118,7 @@ const ListAppointment = () => {
       if (response.isSuccess) {
         setAppointments(response.result || []);
       } else {
-        toast.error(response.message || 'Không thể tải danh sách lịch hẹn');
+        toast.error(translateErrorMessage(response.message, 'Không thể tải danh sách lịch hẹn'));
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -271,8 +272,9 @@ const ListAppointment = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center', 
-        marginBottom: 16,
-        padding: '0 20px'
+        marginBottom: 12,
+        padding: '0 20px',
+        flexShrink: 0
       }}>
         <Segmented
           value={viewMode}
@@ -312,39 +314,43 @@ const ListAppointment = () => {
       </div>
 
       {viewMode === 'calendar' ? (
-        <CalendarView />
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <CalendarView />
+        </div>
       ) : (
-        <Card
-          style={{ width: '100%' }}
-          title={
-            <Title level={4}>
-              <ScheduleOutlined className="mr-2" /> 
-              Danh Sách Lịch Hẹn
-            </Title>
-          }
-          extra={
-            <Text strong>
-              Tổng: {appointments.length} lịch hẹn
-            </Text>
-          }
-          bodyStyle={{ padding: '24px' }}
-        >
-          <Table 
-            columns={columns}
-            dataSource={appointments}
-            loading={loading}
-            rowKey="id"
-            scroll={{ y: 600 }}
-            pagination={{
-              showSizeChanger: true,
-              showQuickJumper: true,
-              pageSizeOptions: [5, 10, 20, 50],
-              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} lịch hẹn`,
-            }}
-            tableLayout="fixed"
-            className="responsive-table"
-          />
-        </Card>
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 20px' }}>
+          <Card
+            style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}
+            title={
+              <Title level={4}>
+                <ScheduleOutlined className="mr-2" /> 
+                Danh Sách Lịch Hẹn
+              </Title>
+            }
+            extra={
+              <Text strong>
+                Tổng: {appointments.length} lịch hẹn
+              </Text>
+            }
+            bodyStyle={{ padding: '16px', flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <Table 
+              columns={columns}
+              dataSource={appointments}
+              loading={loading}
+              rowKey="id"
+              scroll={{ y: 'calc(100vh - 420px)' }}
+              pagination={{
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: [5, 10, 20, 50],
+                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} lịch hẹn`,
+              }}
+              tableLayout="fixed"
+              className="responsive-table"
+            />
+          </Card>
+        </div>
       )}
 
       {/* Modal Tạo Lịch Hẹn */}

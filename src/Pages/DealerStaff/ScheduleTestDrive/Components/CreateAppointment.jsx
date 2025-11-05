@@ -20,6 +20,7 @@ import { GetAllCustomers } from "../../../../App/DealerManager/ScheduleManagemen
 import { GetAllTemplates } from "../../../../App/DealerManager/ScheduleManagement/GetAllTemplates";
 import { GetAvailableAppointments } from "../../../../App/DealerManager/ScheduleManagement/GetAvailableAppointments";
 import { useToast } from "./ToastContainer";
+import { translateSuccessMessage, translateErrorMessage } from "./translateMessage";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -53,21 +54,21 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         if (customersResponse.isSuccess) {
           setCustomers(customersResponse.result || []);
         } else {
-          message.error(
-            customersResponse.message || "Không thể tải danh sách khách hàng"
+          toast.error(
+            translateErrorMessage(customersResponse.message, "Không thể tải danh sách khách hàng")
           );
         }
 
         if (templatesResponse.isSuccess) {
           setTemplates(templatesResponse.result || []);
         } else {
-          message.error(
-            templatesResponse.message || "Không thể tải danh sách template"
+          toast.error(
+            translateErrorMessage(templatesResponse.message, "Không thể tải danh sách template")
           );
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        message.error("Đã xảy ra lỗi khi tải dữ liệu");
+        toast.error("Đã xảy ra lỗi khi tải dữ liệu");
       } finally {
         setCustomerLoading(false);
         setTemplateLoading(false);
@@ -106,7 +107,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         setAvailableSlots(response.result || []);
         console.log('✅ Available slots:', response.result);
       } else {
-        toast.error(response.message || "Không thể tải khung giờ có sẵn");
+        toast.error(translateErrorMessage(response.message, "Không thể tải khung giờ có sẵn"));
         setAvailableSlots([]);
       }
     } catch (error) {
@@ -212,7 +213,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
 
       if (response && response.isSuccess) {
         console.log("✅ Success branch");
-        const successMessage = response.message || "Đặt lịch hẹn thành công!";
+        const successMessage = translateSuccessMessage(response.message, "Đặt lịch hẹn thành công!");
         console.log("💬 Showing success message:", successMessage);
         
         toast.success(successMessage);
@@ -229,7 +230,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         }
       } else {
         console.log("❌ Error branch - isSuccess is false");
-        const errorMessage = response?.message || "Đặt lịch hẹn thất bại!";
+        const errorMessage = translateErrorMessage(response?.message, "Đặt lịch hẹn thất bại!");
         console.log("💬 Showing error message:", errorMessage);
         
         toast.error(`Đặt lịch thất bại: ${errorMessage}`);
@@ -246,11 +247,10 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         console.log("🔴 Error response branch");
         // Lỗi từ server
         const errorData = error.response.data;
-        const errorMessage =
-          errorData?.message ||
-          errorData?.error ||
-          errorData?.title ||
-          "Lỗi từ máy chủ";
+        const errorMessage = translateErrorMessage(
+          errorData?.message || errorData?.error || errorData?.title,
+          "Lỗi từ máy chủ"
+        );
         
         console.log("💬 Showing error message:", errorMessage);
         toast.error(`Đặt lịch thất bại: ${errorMessage}`);
@@ -265,7 +265,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
       } else {
         console.log("🔴 Error other branch");
         // Lỗi khác
-        const errorMessage = error.message || "Lỗi không xác định";
+        const errorMessage = translateErrorMessage(error.message, "Lỗi không xác định");
         toast.error(`Đặt lịch thất bại: ${errorMessage}`);
       }
     } finally {

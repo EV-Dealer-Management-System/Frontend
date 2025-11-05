@@ -51,10 +51,6 @@ const CustomToast = ({ message, type, duration = 3000, onClose }) => {
   return (
     <div
       style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 9999999,
         backgroundColor: styles.backgroundColor,
         color: 'white',
         padding: '16px 24px',

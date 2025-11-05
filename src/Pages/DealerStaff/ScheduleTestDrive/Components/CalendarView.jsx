@@ -21,8 +21,6 @@ import {
   StatisticCard
 } from '@ant-design/pro-components';
 import {
-  LeftOutlined,
-  RightOutlined,
   SearchOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -32,18 +30,62 @@ import {
 } from '@ant-design/icons';
 import { GetAllAppointment } from '../../../../App/DealerManager/ScheduleManagement/GetAllAppointment';
 import { useToast } from './ToastContainer';
+import { translateErrorMessage } from './translateMessage';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-const { Divider } = StatisticCard;
 
+// Đảm bảo moment luôn sử dụng locale tiếng Việt
 moment.locale('vi');
 
+// Mapping thủ công cho các thứ trong tuần (fallback nếu locale không hoạt động)
+const dayNamesMap = {
+  'Sunday': 'Chủ Nhật',
+  'Monday': 'Thứ Hai',
+  'Tuesday': 'Thứ Ba',
+  'Wednesday': 'Thứ Tư',
+  'Thursday': 'Thứ Năm',
+  'Friday': 'Thứ Sáu',
+  'Saturday': 'Thứ Bảy'
+};
+
+// Helper function để format ngày với locale vi đảm bảo
+const formatDateVietnamese = (date, formatStr) => {
+  if (!date) return '';
+  // Đảm bảo locale vi được set trước khi format
+  const m = moment(date);
+  m.locale('vi');
+  let formatted = m.format(formatStr);
+  
+  // Nếu format vẫn trả về tiếng Anh, thử thay thế thủ công
+  if (formatStr.includes('dddd')) {
+    const englishDayName = m.format('dddd');
+    const vietnameseDayName = dayNamesMap[englishDayName] || englishDayName;
+    formatted = formatted.replace(englishDayName, vietnameseDayName);
+  }
+  
+  return formatted;
+};
+
+// Helper function để format tên thứ trong tuần
+const getDayNameVietnamese = (date) => {
+  if (!date) return '';
+  const m = moment(date);
+  m.locale('vi');
+  const dayName = m.format('dddd');
+  // Nếu vẫn là tiếng Anh, thay thế thủ công
+  return dayNamesMap[dayName] || dayName;
+};
+
 const CalendarView = () => {
+  // Đảm bảo locale được set lại khi component mount
+  useEffect(() => {
+    moment.locale('vi');
+  }, []);
   const toast = useToast();
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(moment());
+  const [selectedDate, setSelectedDate] = useState(moment().locale('vi'));
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modelFilter, setModelFilter] = useState('all');
@@ -70,7 +112,7 @@ const CalendarView = () => {
       if (response.isSuccess) {
         setAppointments(response.result || []);
       } else {
-        toast.error(response.message || 'Không thể tải danh sách lịch hẹn');
+        toast.error(translateErrorMessage(response.message, 'Không thể tải danh sách lịch hẹn'));
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -83,7 +125,9 @@ const CalendarView = () => {
   const parseDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return null;
     const cleanStr = dateTimeStr.replace('Z', '');
-    return moment(cleanStr);
+    const m = moment(cleanStr);
+    m.locale('vi'); // Đảm bảo locale vi khi parse
+    return m;
   };
 
   const formatDateTime = (dateTimeStr) => {
@@ -167,16 +211,45 @@ const CalendarView = () => {
     });
   };
 
-  const handlePrevDay = () => {
-    setSelectedDate(prev => moment(prev).subtract(1, 'day'));
-  };
+  // Get unique dates with appointments
+  const datesWithAppointments = useMemo(() => {
+    // Đảm bảo locale tiếng Việt
+    moment.locale('vi');
+    
+    const dateSet = new Set();
+    appointments.forEach(apt => {
+      const aptDate = parseDateTime(apt.startTime);
+      if (aptDate) {
+        dateSet.add(aptDate.format('YYYY-MM-DD'));
+      }
+    });
+    // Sort dates and format for display
+    return Array.from(dateSet)
+      .sort()
+      .map(dateStr => {
+        const date = moment(dateStr);
+        
+        const appointmentCount = appointments.filter(apt => {
+          const aptDate = parseDateTime(apt.startTime);
+          return aptDate && aptDate.format('YYYY-MM-DD') === dateStr;
+        }).length;
+        
+        // Format với locale vi sử dụng helper function
+        const dayName = getDayNameVietnamese(date);
+        const dateStrFormatted = formatDateVietnamese(date, 'DD/MM/YYYY');
+        
+        return {
+          value: dateStr,
+          label: `${dayName}, ${dateStrFormatted} (${appointmentCount} lịch)`,
+          date: date.clone().locale('vi')
+        };
+      });
+  }, [appointments]);
 
-  const handleNextDay = () => {
-    setSelectedDate(prev => moment(prev).add(1, 'day'));
-  };
-
-  const handleToday = () => {
-    setSelectedDate(moment());
+  const handleDateChange = (dateStr) => {
+    if (dateStr) {
+      setSelectedDate(moment(dateStr).locale('vi'));
+    }
   };
 
   const showDetailModal = (appointment) => {
@@ -190,11 +263,11 @@ const CalendarView = () => {
   };
 
   return (
-    <div style={{ padding: 0, backgroundColor: '#f0f2f5', minHeight: '100%', width: '100%' }}>
+    <div style={{ padding: '0 20px', backgroundColor: '#f0f2f5', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Filter Bar */}
       <ProCard
-        style={{ marginBottom: 16 }}
-        bodyStyle={{ padding: '16px' }}
+        style={{ marginBottom: 12, flexShrink: 0 }}
+        bodyStyle={{ padding: '12px' }}
       >
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} md={6}>
@@ -254,7 +327,7 @@ const CalendarView = () => {
       </ProCard>
 
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[12, 12]} style={{ marginBottom: 12, flexShrink: 0 }}>
         <Col xs={12} sm={12} md={6}>
           <StatisticCard
             statistic={{
@@ -350,41 +423,71 @@ const CalendarView = () => {
       </Row>
 
       {/* Main Content */}
-      <Row gutter={[16, 16]}>
+      <Row gutter={[12, 12]} style={{ flex: 1, overflow: 'hidden', display: 'flex', margin: 0 }}>
         {/* Calendar Schedule */}
-        <Col xs={24} lg={17} xl={18}>
+        <Col xs={24} lg={17} xl={18} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ProCard
             title={
               <Space>
                 <ClockCircleOutlined style={{ color: '#1890ff' }} />
                 <Text strong>
-                  Lịch theo khung giờ • {selectedDate.format('dddd, DD/MM')}
+                  Lịch theo khung giờ • {formatDateVietnamese(selectedDate, 'dddd, DD/MM')}
                 </Text>
               </Space>
             }
             extra={
               <Space size={8}>
-                <Button
-                  icon={<LeftOutlined />}
-                  onClick={handlePrevDay}
-                  size="small"
-                />
-                <Button
-                  onClick={handleToday}
-                  size="small"
-                  type="primary"
+                <Select
+                  style={{ width: 280 }}
+                  placeholder="Chọn ngày có lịch"
+                  value={selectedDate.format('YYYY-MM-DD')}
+                  onChange={handleDateChange}
+                  showSearch
+                  optionFilterProp="children"
+                  suffixIcon={<CalendarOutlined />}
+                  getPopupContainer={(trigger) => trigger.parentElement}
+                  dropdownRender={(menu) => (
+                    <div>
+                      {menu}
+                      <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                        <Button
+                          type="link"
+                          block
+                          onClick={() => {
+                            const today = moment().locale('vi');
+                            setSelectedDate(today);
+                            handleDateChange(today.format('YYYY-MM-DD'));
+                          }}
+                          style={{ textAlign: 'center' }}
+                        >
+                          Hôm nay ({moment().locale('vi').format('DD/MM/YYYY')})
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 >
-                  Hôm nay
-                </Button>
-                <Button
-                  icon={<RightOutlined />}
-                  onClick={handleNextDay}
-                  size="small"
-                />
+                  {datesWithAppointments.length > 0 ? (
+                    datesWithAppointments.map(option => (
+                      <Option key={option.value} value={option.value}>
+                        {option.label}
+                      </Option>
+                    ))
+                  ) : (
+                    <Option value={selectedDate.format('YYYY-MM-DD')} disabled>
+                      Không có lịch hẹn nào
+                    </Option>
+                  )}
+                  {/* Always include current selected date if not in list */}
+                  {!datesWithAppointments.find(d => d.value === selectedDate.format('YYYY-MM-DD')) && (
+                    <Option key={selectedDate.format('YYYY-MM-DD')} value={selectedDate.format('YYYY-MM-DD')}>
+                      {formatDateVietnamese(selectedDate, 'dddd, DD/MM/YYYY')} (0 lịch)
+                    </Option>
+                  )}
+                </Select>
               </Space>
             }
-            style={{ height: 'calc(100vh - 400px)', minHeight: 500 }}
-            bodyStyle={{ padding: '16px', height: 'calc(100% - 57px)', overflowY: 'auto' }}
+            style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+            bodyStyle={{ padding: '12px', height: 'calc(100% - 57px)', overflowY: 'auto', flex: 1, minHeight: 0 }}
           >
             {timeSlots.map(timeSlot => {
               const slotAppointments = getAppointmentsForSlot(timeSlot);
@@ -479,7 +582,7 @@ const CalendarView = () => {
         </Col>
 
         {/* Vehicle List Sidebar */}
-        <Col xs={24} lg={7} xl={6}>
+        <Col xs={24} lg={7} xl={6} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ProCard
             title={
               <Space>
@@ -487,8 +590,8 @@ const CalendarView = () => {
                 <Text strong>Danh sách lịch hẹn</Text>
               </Space>
             }
-            style={{ height: 'calc(100vh - 400px)', minHeight: 500 }}
-            bodyStyle={{ padding: '12px', height: 'calc(100% - 57px)', overflowY: 'auto' }}
+            style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+            bodyStyle={{ padding: '12px', height: 'calc(100% - 57px)', overflowY: 'auto', flex: 1, minHeight: 0 }}
           >
             <Space direction="vertical" style={{ width: '100%' }} size={12}>
               {dayAppointments.map(apt => {

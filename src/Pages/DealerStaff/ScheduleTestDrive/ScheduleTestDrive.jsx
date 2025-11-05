@@ -13,25 +13,28 @@ const ScheduleTestDrive = () => {
       <style>{`
         .schedule-page-container {
           left: 280px !important;
-          transition: left 0.2s ease;
+          top: 64px !important;
+          transition: left 0.2s ease, top 0.2s ease;
         }
         
         @media (max-width: 767px) {
           .schedule-page-container {
             left: 0 !important;
+            top: 64px !important;
           }
         }
         
         /* Khi navbar collapsed (64px) */
         body:has(.ant-pro-sider[style*="width: 64px"]) .schedule-page-container {
           left: 64px !important;
+          top: 64px !important;
         }
       `}</style>
       <div
         className="schedule-page-container"
         style={{
           position: 'fixed',
-          top: 0,
+          top: 64,
           left: 280,
           right: 0,
           bottom: 0,
@@ -43,7 +46,7 @@ const ScheduleTestDrive = () => {
         }}>
         <ToastProvider>
           <div style={{
-            padding: '12px 20px',
+            padding: '8px 20px',
             borderBottom: '1px solid #d9d9d9',
             backgroundColor: '#ffffff',
             flexShrink: 0
@@ -55,8 +58,10 @@ const ScheduleTestDrive = () => {
           </div>
           <div style={{
             flex: 1,
-            overflow: 'auto',
-            backgroundColor: '#f0f2f5'
+            overflow: 'hidden',
+            backgroundColor: '#f0f2f5',
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <ListAppointment />
           </div>
