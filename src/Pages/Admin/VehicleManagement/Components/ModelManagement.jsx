@@ -7,13 +7,14 @@ import {
   Modal,
   Form,
   Input,
-  message,
+  App,
   Popconfirm,
   Tag,
   Row,
   Col,
   Typography,
   Divider,
+  Select,
 } from "antd";
 import {
   PlusOutlined,
@@ -22,20 +23,28 @@ import {
   CarOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
+  SearchOutlined,
+  SortAscendingOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 function ManageModel() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [models, setModels] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentModel, setCurrentModel] = useState(null);
   const [form] = Form.useForm();
+
+  // Filter state
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [sortBy, setSortBy] = useState("name-asc"); // name-asc, name-desc, date-asc, date-desc, status-asc, status-desc
 
   useEffect(() => {
     loadModels();
@@ -94,32 +103,7 @@ function ManageModel() {
       }
 
       if (res.success) {
-        Modal.success({
-          title: (
-            <Space>
-              <CheckCircleOutlined style={{ color: "#52c41a" }} />
-              {isEditing ? "Cập nhật Model thành công!" : "Tạo Model thành công!"}
-            </Space>
-          ),
-          content: (
-            <div style={{ marginTop: 12 }}>
-              <p>
-                <strong>Tên model:</strong> {res.data?.modelName || values.modelName}
-              </p>
-              <p>
-                <strong>Mô tả:</strong> {res.data?.description ?? values.description ?? "—"}
-              </p>
-              {res.data?.id && (
-                <p>
-                  <strong>Model ID:</strong>{" "}
-                  <Text code copyable>
-                    {res.data.id}
-                  </Text>
-                </p>
-              )}
-            </div>
-          ),
-        });
+        message.success(isEditing ? "Cập nhật Model thành công!" : "Tạo Model thành công!");
         setIsModalVisible(false);
         form.resetFields();
         loadModels();
@@ -149,6 +133,40 @@ function ManageModel() {
       setLoading(false);
     }
   };
+
+  // Filter and sort models
+  const filteredAndSortedModels = React.useMemo(() => {
+    // Filter
+    let filtered = models.filter((model) => {
+      const keyword = searchKeyword.toLowerCase();
+      return (
+        model.modelName?.toLowerCase().includes(keyword) ||
+        model.description?.toLowerCase().includes(keyword)
+      );
+    });
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "name-asc":
+          return (a.modelName || "").localeCompare(b.modelName || "", "vi");
+        case "name-desc":
+          return (b.modelName || "").localeCompare(a.modelName || "", "vi");
+        case "date-asc":
+          return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+        case "date-desc":
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case "status-asc":
+          return (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0);
+        case "status-desc":
+          return (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [models, searchKeyword, sortBy]);
 
   const columns = [
     {
@@ -238,18 +256,51 @@ function ManageModel() {
                 <CarOutlined style={{ color: "#1890ff", marginRight: 8 }} />
                 Danh sách Models
               </Title>
-              <Text type="secondary">Tổng cộng: {models.length} model</Text>
+              <Text type="secondary">
+                Tổng cộng: {models.length} model &nbsp;•&nbsp; Hiển thị: {filteredAndSortedModels.length}
+              </Text>
             </Col>
           </Row>
           <Divider className="!mt-2" />
+          
+          {/* Search and Sort Section */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={16} md={12}>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="Tìm theo tên/mô tả model..."
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                size="large"
+              />
+            </Col>
+            <Col xs={24} sm={8} md={6}>
+              <Select
+                value={sortBy}
+                onChange={setSortBy}
+                size="large"
+                style={{ width: "100%" }}
+                suffixIcon={<SortAscendingOutlined />}
+              >
+                <Option value="name-asc">Tên A-Z</Option>
+                <Option value="name-desc">Tên Z-A</Option>
+                <Option value="date-desc">Mới nhất</Option>
+                <Option value="date-asc">Cũ nhất</Option>
+                <Option value="status-desc">Hoạt động trước</Option>
+                <Option value="status-asc">Ngừng trước</Option>
+              </Select>
+            </Col>
+          </Row>
+
           <Table
             size="middle"
             columns={columns}
-            dataSource={models}
+            dataSource={filteredAndSortedModels}
             rowKey="id"
             loading={loading}
             pagination={{
-              total: models.length,
+              total: filteredAndSortedModels.length,
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,

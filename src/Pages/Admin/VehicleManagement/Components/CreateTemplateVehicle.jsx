@@ -6,9 +6,10 @@ import {
   Space,
   Modal,
   Form,
+  Input,
   InputNumber,
   Select,
-  message,
+  App,
   Row,
   Col,
   Typography,
@@ -26,6 +27,8 @@ import {
   EyeOutlined,
   ZoomInOutlined,
   EditOutlined,
+  SearchOutlined,
+  SortAscendingOutlined,
 } from "@ant-design/icons";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
 
@@ -133,6 +136,7 @@ const extractErrorMessage = (err) => {
 
 // ✅ Component TẠO TEMPLATE (không có VIN, có upload ảnh)
 function CreateTemplateVehicle() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [templatesList, setTemplatesList] = useState([]);
   const [models, setModels] = useState([]);
@@ -156,13 +160,20 @@ function CreateTemplateVehicle() {
   // Edit state
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [editUploadedImages, setEditUploadedImages] = useState([]);
+  
+  // Filter state for template list
+  const [templateSearchKeyword, setTemplateSearchKeyword] = useState("");
+  const [templateFilterModel, setTemplateFilterModel] = useState("");
+  const [templateFilterColor, setTemplateFilterColor] = useState("");
+  const [templateSortBy, setTemplateSortBy] = useState("price-asc"); // price-asc, price-desc, model-asc, version-asc, color-asc
   
   // Delete state
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [deletingTemplateId, setDeletingTemplateId] = useState(null);
 
   useEffect(() => {
-    loadAllTemplates();
+    loadAllTemplates(false); // Không hiển thị thông báo khi load lần đầu
     loadModelsVersionsColors();
   }, []);
 
@@ -190,7 +201,7 @@ function CreateTemplateVehicle() {
   };
 
   // ✅ Load tất cả TEMPLATES
-  const loadAllTemplates = async () => {
+  const loadAllTemplates = async (showNotification = false) => {
     try {
       setLoading(true);
       console.log("🔄 Loading all templates...");
@@ -221,19 +232,26 @@ function CreateTemplateVehicle() {
         
         setTemplatesList(templatesData);
         
-        if (templatesData.length === 0) {
-          message.info("Chưa có template nào.");
-        } else {
-          message.success(`Đã tải ${templatesData.length} templates (${activeCount} hoạt động, ${inactiveCount} đã xóa)`);
+        // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
+        if (showNotification) {
+          if (templatesData.length === 0) {
+            message.info("Chưa có template nào.");
+          } else {
+            message.success(`Đã tải lại danh sách templates thành công!`);
+          }
         }
       } else {
         console.warn("⚠️ API returned unsuccessful:", result);
-        message.error(result.error || "Không thể tải templates!");
+        if (showNotification) {
+          message.error(result.error || "Không thể tải templates!");
+        }
         setTemplatesList([]);
       }
     } catch (error) {
       console.error("❌ Error loading templates:", error);
-      message.error("Lỗi khi tải templates!");
+      if (showNotification) {
+        message.error("Lỗi khi tải templates!");
+      }
       setTemplatesList([]);
     } finally {
       setLoading(false);
@@ -271,11 +289,11 @@ function CreateTemplateVehicle() {
       
       // Xử lý response trực tiếp
       if (res?.success || res?.isSuccess) {
-        message.success(res?.message || "✅ Đã xóa template thành công!");
+        message.success("Đã xóa template thành công!");
         setDeletingTemplateId(null);
-        await loadAllTemplates();
+        await loadAllTemplates(false); // Không hiển thị thông báo load lại
       } else {
-        message.error(res?.message || res?.error || "❌ Xóa template thất bại");
+        message.error(res?.message || res?.error || "Xóa template thất bại");
       }
     } catch (err) {
       console.error("❌ Delete error:", err);
@@ -297,6 +315,17 @@ function CreateTemplateVehicle() {
       description: record.description,
     });
     
+    // Load existing images into editUploadedImages
+    const existingImages = Array.isArray(record.imgUrl) ? record.imgUrl : [];
+    const imageFileList = existingImages.map((url, index) => ({
+      uid: `existing-${index}`,
+      name: `image-${index + 1}.jpg`,
+      status: 'done',
+      url: url,
+      thumbUrl: url,
+    }));
+    setEditUploadedImages(imageFileList);
+    
     setIsEditModalVisible(true);
   };
 
@@ -309,10 +338,39 @@ function CreateTemplateVehicle() {
       await form.validateFields();
       const values = form.getFieldsValue(true);
 
+      // 1) Upload ảnh mới (nếu có)
+      let attachmentKeys = [];
+      try {
+        // Lấy ảnh mới (không có uid bắt đầu bằng "existing-")
+        const newImages = editUploadedImages.filter(img => !img.uid.startsWith('existing-') && img.originFileObj);
+        const existingImageUrls = editUploadedImages
+          .filter(img => img.uid.startsWith('existing-') && img.url)
+          .map(img => img.url);
+        
+        // Upload ảnh mới
+        if (newImages.length > 0) {
+          const uploadPromises = newImages.map((f) =>
+            vehicleApi.uploadImageAndGetKey(f.originFileObj)
+          );
+          const newAttachmentKeys = (await Promise.all(uploadPromises)).filter(Boolean);
+          attachmentKeys = [...attachmentKeys, ...newAttachmentKeys];
+        }
+        
+        // Giữ lại ảnh cũ bằng cách lấy attachmentKeys từ URL hiện tại
+        // Nếu API trả về attachmentKeys trong record, sử dụng chúng
+        // Nếu không, có thể cần map từ URL sang key hoặc để trống
+        if (editingTemplate.attachmentKeys && Array.isArray(editingTemplate.attachmentKeys)) {
+          attachmentKeys = [...editingTemplate.attachmentKeys, ...attachmentKeys];
+        }
+      } catch (err) {
+        message.error("Lỗi khi upload ảnh mới");
+        throw err;
+      }
+
       const payload = {
         price: Number(values.price),
         description: values.description || "",
-        attachmentKeys: [], // Keep existing images or add new ones if needed
+        attachmentKeys: attachmentKeys,
       };
 
       console.log("📤 Updating template:", editingTemplate.id, payload);
@@ -324,11 +382,12 @@ function CreateTemplateVehicle() {
 
       const normalized = normalizeApi(res);
       if (normalized.success) {
-        message.success(normalized.message || "✅ Cập nhật template thành công!");
+        message.success("Cập nhật template thành công!");
         setIsEditModalVisible(false);
         form.resetFields();
         setEditingTemplate(null);
-        await loadAllTemplates();
+        setEditUploadedImages([]);
+        await loadAllTemplates(false); // Không hiển thị thông báo load lại
       } else {
         message.error(normalized.message || "Không thể cập nhật template");
       }
@@ -340,6 +399,52 @@ function CreateTemplateVehicle() {
       setLoading(false);
     }
   };
+
+  // Filter and sort templates
+  const filteredAndSortedTemplates = React.useMemo(() => {
+    // Filter
+    let filtered = templatesList.filter((template) => {
+      const keyword = templateSearchKeyword.toLowerCase();
+      const modelMatch = !templateFilterModel || 
+        template.version?.modelName?.toLowerCase().includes(templateFilterModel.toLowerCase());
+      const colorMatch = !templateFilterColor || 
+        template.color?.colorName?.toLowerCase().includes(templateFilterColor.toLowerCase());
+      
+      const keywordMatch = !keyword || 
+        template.version?.modelName?.toLowerCase().includes(keyword) ||
+        template.version?.versionName?.toLowerCase().includes(keyword) ||
+        template.color?.colorName?.toLowerCase().includes(keyword) ||
+        template.description?.toLowerCase().includes(keyword);
+      
+      return modelMatch && colorMatch && keywordMatch;
+    });
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (templateSortBy) {
+        case "price-asc":
+          return (a.price || 0) - (b.price || 0);
+        case "price-desc":
+          return (b.price || 0) - (a.price || 0);
+        case "model-asc":
+          const aModel = a.version?.modelName || "";
+          const bModel = b.version?.modelName || "";
+          return aModel.localeCompare(bModel, "vi");
+        case "version-asc":
+          const aVersion = a.version?.versionName || "";
+          const bVersion = b.version?.versionName || "";
+          return aVersion.localeCompare(bVersion, "vi");
+        case "color-asc":
+          const aColor = a.color?.colorName || "";
+          const bColor = b.color?.colorName || "";
+          return aColor.localeCompare(bColor, "vi");
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [templatesList, templateSearchKeyword, templateFilterModel, templateFilterColor, templateSortBy]);
 
   // ✅ Columns cho bảng TEMPLATES - Gọn gàng và dễ xem
   const templateColumns = [
@@ -531,6 +636,15 @@ function CreateTemplateVehicle() {
     setUploadedImages(list);
   };
 
+  const handleEditImageChange = ({ fileList }) => {
+    let list = [...fileList];
+    if (list.length > 8) {
+      message.warning("Chỉ được upload tối đa 8 hình ảnh!");
+      list = list.slice(0, 8);
+    }
+    setEditUploadedImages(list);
+  };
+
   const handlePreview = async (file) => {
     setPreviewImage(file.thumbUrl || file.url);
     setPreviewVisible(true);
@@ -558,17 +672,14 @@ function CreateTemplateVehicle() {
       await form.validateFields();
       const values = form.getFieldsValue(true);
 
-      // 1) Upload ảnh
-      message.loading({ content: "Đang upload ảnh...", key: "uploading", duration: 0 });
+      // 1) Upload ảnh (không hiển thị thông báo riêng)
       let attachmentKeys = [];
       try {
         const uploadPromises = uploadedImages.map((f) =>
           vehicleApi.uploadImageAndGetKey(f.originFileObj)
         );
         attachmentKeys = (await Promise.all(uploadPromises)).filter(Boolean);
-        message.success({ content: `Upload thành công ${attachmentKeys.length} ảnh!`, key: "uploading", duration: 1.2 });
       } catch (err) {
-        message.destroy("uploading");
         throw err;
       }
 
@@ -590,17 +701,16 @@ function CreateTemplateVehicle() {
 
       const normalized = normalizeApi(res);
       if (normalized.success) {
-        message.success(normalized.message || "🎉 Tạo template thành công!");
+        message.success("Tạo template thành công!");
         setIsCreateModalVisible(false);
         setCurrentStep(0);
         form.resetFields();
         setUploadedImages([]);
-        await loadAllTemplates();
+        await loadAllTemplates(false); // Không hiển thị thông báo load lại
       } else {
         message.error(normalized.message || "Không thể tạo template");
       }
     } catch (err) {
-      message.destroy("uploading");
       message.destroy("creating");
       message.error(extractErrorMessage(err));
       console.error("CREATE TEMPLATE ERROR:", err);
@@ -620,7 +730,7 @@ function CreateTemplateVehicle() {
         <Space>
           <Button
             icon={<ReloadOutlined />}
-            onClick={loadAllTemplates}
+            onClick={() => loadAllTemplates(true)}
             loading={loading}
           >
             Làm mới
@@ -637,9 +747,109 @@ function CreateTemplateVehicle() {
       </div>
 
       <Card className="shadow-sm">
+        <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
+          <Col span={24}>
+            <Title level={4} className="!mb-1">
+              <CarOutlined style={{ color: "#1890ff", marginRight: 8 }} />
+              Danh sách Templates
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Tổng cộng: {templatesList.length} template &nbsp;•&nbsp; Hiển thị: {filteredAndSortedTemplates.length}
+            </Text>
+          </Col>
+        </Row>
+        <Divider className="!mt-2" />
+        
+        {/* Filter and Sort Section */}
+        <Row gutter={[16, 16]} className="mb-4">
+          <Col xs={24} sm={12} md={8}>
+            <Input
+              allowClear
+              prefix={<SearchOutlined />}
+              placeholder="Tìm theo tên model/version/màu..."
+              value={templateSearchKeyword}
+              onChange={(e) => setTemplateSearchKeyword(e.target.value)}
+              size="large"
+            />
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              allowClear
+              placeholder="Lọc theo Model..."
+              value={templateFilterModel || undefined}
+              onChange={setTemplateFilterModel}
+              size="large"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children ?? "")
+                  .toString()
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              style={{ width: "100%" }}
+            >
+              {[...new Set(models.map(m => m.modelName))].map((modelName) => (
+                <Option key={modelName} value={modelName}>
+                  {modelName}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <Select
+              allowClear
+              placeholder="Lọc theo Màu..."
+              value={templateFilterColor || undefined}
+              onChange={setTemplateFilterColor}
+              size="large"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children ?? "")
+                  .toString()
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+              style={{ width: "100%" }}
+            >
+              {colors.map((color) => (
+                <Option key={color.id} value={color.colorName}>
+                  <Space>
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        background: color.colorCode,
+                        borderRadius: "50%",
+                        border: "1px solid #d9d9d9",
+                        display: "inline-block",
+                      }}
+                    />
+                    {color.colorName}
+                  </Space>
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} md={4}>
+            <Select
+              value={templateSortBy}
+              onChange={setTemplateSortBy}
+              size="large"
+              style={{ width: "100%" }}
+              suffixIcon={<SortAscendingOutlined />}
+            >
+              <Option value="price-asc">Giá thấp → cao</Option>
+              <Option value="price-desc">Giá cao → thấp</Option>
+              <Option value="model-asc">Model A-Z</Option>
+              <Option value="version-asc">Version A-Z</Option>
+              <Option value="color-asc">Màu A-Z</Option>
+            </Select>
+          </Col>
+        </Row>
+
         <Table
           columns={templateColumns}
-          dataSource={templatesList}
+          dataSource={filteredAndSortedTemplates}
           rowKey="id"
           loading={loading}
           size="middle"
@@ -773,11 +983,17 @@ function CreateTemplateVehicle() {
                     >
                       <InputNumber
                         min={0}
+                        precision={0}
                         style={{ width: "100%" }}
-                        formatter={(v) =>
-                          `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                        }
-                        parser={(v) => v.replace(/\$\s?|(,*)/g, "")}
+                        formatter={(value) => {
+                          if (!value && value !== 0) return '';
+                          return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        }}
+                        parser={(value) => {
+                          if (!value) return '';
+                          const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                          return parsed === '' ? '' : Number(parsed);
+                        }}
                       />
                     </Form.Item>
                   </Col>
@@ -1126,6 +1342,7 @@ function CreateTemplateVehicle() {
           onCancel={() => {
             setIsEditModalVisible(false);
             setEditingTemplate(null);
+            setEditUploadedImages([]);
             form.resetFields();
           }}
           title={
@@ -1194,9 +1411,17 @@ function CreateTemplateVehicle() {
                 >
                   <InputNumber
                     min={0}
+                    precision={0}
                     style={{ width: "100%" }}
-                    formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                    parser={(v) => v.replace(/\$\s?|(,*)/g, "")}
+                    formatter={(value) => {
+                      if (!value && value !== 0) return '';
+                      return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    }}
+                    parser={(value) => {
+                      if (!value) return '';
+                      const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                      return parsed === '' ? '' : Number(parsed);
+                    }}
                     size="large"
                   />
                 </Form.Item>
@@ -1209,10 +1434,40 @@ function CreateTemplateVehicle() {
                   />
                 </Form.Item>
 
+                <Form.Item
+                  label={
+                    <div className="flex items-center justify-between w-full">
+                      <span>Hình ảnh template (tối đa 8)</span>
+                      <span className="text-gray-500 text-sm">
+                        Đã chọn: <b>{editUploadedImages.length}</b>/8
+                      </span>
+                    </div>
+                  }
+                >
+                  <Upload
+                    listType="picture-card"
+                    fileList={editUploadedImages}
+                    onChange={handleEditImageChange}
+                    onPreview={handlePreview}
+                    customRequest={customUpload}
+                    accept="image/*"
+                  >
+                    {editUploadedImages.length >= 8 ? null : (
+                      <div>
+                        <PlusOutlined />
+                        <div style={{ marginTop: 8 }}>Upload</div>
+                      </div>
+                    )}
+                  </Upload>
+                  <div className="text-xs text-gray-500">
+                    Mỗi ảnh &lt; 5MB. Tối đa 8 ảnh. Có thể xóa ảnh cũ và upload ảnh mới.
+                  </div>
+                </Form.Item>
+
                 <Alert
                   message="Lưu ý"
-                  description="Hiện tại chỉ có thể sửa giá và mô tả. Không thể thay đổi model, version, màu sắc hoặc hình ảnh."
-                  type="warning"
+                  description="Có thể sửa giá, mô tả và hình ảnh. Không thể thay đổi model, version, màu sắc."
+                  type="info"
                   showIcon
                   className="mb-4"
                 />
@@ -1224,6 +1479,7 @@ function CreateTemplateVehicle() {
                     onClick={() => {
                       setIsEditModalVisible(false);
                       setEditingTemplate(null);
+                      setEditUploadedImages([]);
                       form.resetFields();
                     }}
                   >

@@ -263,7 +263,7 @@ const CalendarView = () => {
   };
 
   return (
-    <div style={{ padding: '0 20px', backgroundColor: '#f0f2f5', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ padding: '0 20px', backgroundColor: '#f0f2f5', height: '100%', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
       {/* Filter Bar */}
       <ProCard
         style={{ marginBottom: 12, flexShrink: 0 }}
@@ -271,6 +271,9 @@ const CalendarView = () => {
       >
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} md={6}>
+            <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 500, color: '#262626' }}>
+              Tìm kiếm
+            </div>
             <Input
               placeholder="Tìm kiếm khách hàng, SĐT..."
               prefix={<SearchOutlined />}
@@ -280,13 +283,19 @@ const CalendarView = () => {
             />
           </Col>
           <Col xs={24} sm={12} md={6}>
+            <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 500, color: '#262626' }}>
+              Ngày
+            </div>
             <Input
               value={selectedDate.format('DD/MM/YYYY')}
               prefix={<CalendarOutlined />}
               readOnly
             />
           </Col>
-          <Col xs={12} sm={8} md={4}>
+          <Col xs={12} sm={8} md={6}>
+            <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 500, color: '#262626' }}>
+              Trạng thái
+            </div>
             <Select
               value={statusFilter}
               onChange={setStatusFilter}
@@ -300,17 +309,10 @@ const CalendarView = () => {
               <Option value="4">Đã hủy</Option>
             </Select>
           </Col>
-          <Col xs={12} sm={8} md={4}>
-            <Select
-              value="all"
-              style={{ width: '100%' }}
-              placeholder="Showroom"
-              disabled
-            >
-              <Option value="all">Tất cả</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={4}>
+          <Col xs={12} sm={8} md={6}>
+            <div style={{ marginBottom: 4, fontSize: 13, fontWeight: 500, color: '#262626' }}>
+              Mẫu xe
+            </div>
             <Select
               value={modelFilter}
               onChange={setModelFilter}
@@ -423,7 +425,7 @@ const CalendarView = () => {
       </Row>
 
       {/* Main Content */}
-      <Row gutter={[12, 12]} style={{ flex: 1, overflow: 'hidden', display: 'flex', margin: 0 }}>
+      <Row gutter={[12, 12]} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', margin: 0 }}>
         {/* Calendar Schedule */}
         <Col xs={24} lg={17} xl={18} style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <ProCard
@@ -486,8 +488,8 @@ const CalendarView = () => {
                 </Select>
               </Space>
             }
-            style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
-            bodyStyle={{ padding: '12px', height: 'calc(100% - 57px)', overflowY: 'auto', flex: 1, minHeight: 0 }}
+            style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}
+            bodyStyle={{ padding: '12px', overflowY: 'auto', flex: 1, minHeight: 0 }}
           >
             {timeSlots.map(timeSlot => {
               const slotAppointments = getAppointmentsForSlot(timeSlot);
@@ -590,8 +592,8 @@ const CalendarView = () => {
                 <Text strong>Danh sách lịch hẹn</Text>
               </Space>
             }
-            style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
-            bodyStyle={{ padding: '12px', height: 'calc(100% - 57px)', overflowY: 'auto', flex: 1, minHeight: 0 }}
+            style={{ minHeight: 0, display: 'flex', flexDirection: 'column' }}
+            bodyStyle={{ padding: '12px', overflowY: 'auto', flex: 1, minHeight: 0 }}
           >
             <Space direction="vertical" style={{ width: '100%' }} size={12}>
               {dayAppointments.map(apt => {

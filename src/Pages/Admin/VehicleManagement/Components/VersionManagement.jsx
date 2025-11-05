@@ -10,21 +10,26 @@ import {
   InputNumber,
   Select,
   Switch,
-  message,
+  App,
   Popconfirm,
   Tag,
   Row,
   Col,
   Typography,
   Divider,
+  Descriptions,
 } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
+  EyeOutlined,
   SettingOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
+  StopOutlined,
+  CalendarOutlined,
+  SortAscendingOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
@@ -40,6 +45,7 @@ const SUPPLY_STATUS_MAP = {
 };
 
 function ManageVersion() {
+  const { message } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [versions, setVersions] = useState([]);
   const [models, setModels] = useState([]);
@@ -48,8 +54,13 @@ function ManageVersion() {
   const [currentVersion, setCurrentVersion] = useState(null);
   const [form] = Form.useForm();
 
+  // Detail modal state
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [selectedVersionForDetail, setSelectedVersionForDetail] = useState(null);
+
   // Filter states
   const [searchModel, setSearchModel] = useState("");
+  const [sortBy, setSortBy] = useState("version-asc"); // version-asc, version-desc, model-asc, year-desc, year-asc
 
   useEffect(() => {
     loadVersions();
@@ -144,43 +155,7 @@ function ManageVersion() {
       }
 
       if (res.success) {
-        const modelName =
-          models.find((m) => m.id === payload.modelId)?.modelName || "N/A";
-        Modal.success({
-          title: (
-            <Space>
-              <CheckCircleOutlined style={{ color: "#52c41a" }} />
-              {isEditing ? "Cập nhật Version thành công!" : "Tạo Version thành công!"}
-            </Space>
-          ),
-          content: (
-            <div style={{ marginTop: 12 }}>
-              <p>
-                <strong>Model:</strong> {modelName}
-              </p>
-              <p>
-                <strong>Tên Version:</strong> {res.data?.versionName || payload.versionName}
-              </p>
-              <p>
-                <strong>Công suất:</strong> {payload.motorPower} W
-              </p>
-              <p>
-                <strong>Pin:</strong> {payload.batteryCapacity} V
-              </p>
-              <p>
-                <strong>Tầm hoạt động:</strong> {payload.rangePerCharge} km
-              </p>
-              {res.data?.id && (
-                <p>
-                  <strong>Version ID:</strong>{" "}
-                  <Text code copyable>
-                    {res.data.id}
-                  </Text>
-                </p>
-              )}
-            </div>
-          ),
-        });
+        message.success(isEditing ? "Cập nhật Version thành công!" : "Tạo Version thành công!");
         setIsModalVisible(false);
         form.resetFields();
         loadVersions();
@@ -223,9 +198,47 @@ function ManageVersion() {
     return matchModel;
   });
 
-  // Clear filters
-  const handleClearFilters = () => {
-    setSearchModel("");
+  // Filter and sort data
+  const filteredAndSortedVersions = React.useMemo(() => {
+    // Filter
+    let filtered = versions.filter((version) => {
+      const model = models.find((m) => m.id === version.modelId);
+      const modelName = model?.modelName || "";
+
+      const matchModel = searchModel
+        ? modelName.toLowerCase().includes(searchModel.toLowerCase())
+        : true;
+
+      return matchModel;
+    });
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "version-asc":
+          return (a.versionName || "").localeCompare(b.versionName || "", "vi");
+        case "version-desc":
+          return (b.versionName || "").localeCompare(a.versionName || "", "vi");
+        case "model-asc":
+          const aModel = models.find(m => m.id === a.modelId)?.modelName || "";
+          const bModel = models.find(m => m.id === b.modelId)?.modelName || "";
+          return aModel.localeCompare(bModel, "vi");
+        case "year-desc":
+          return (b.productionYear || 0) - (a.productionYear || 0);
+        case "year-asc":
+          return (a.productionYear || 0) - (b.productionYear || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [versions, models, searchModel, sortBy]);
+
+  // Handle view details
+  const handleViewDetails = (version) => {
+    setSelectedVersionForDetail(version);
+    setIsDetailModalVisible(true);
   };
 
   const columns = [
@@ -257,10 +270,18 @@ function ManageVersion() {
     },
     {
       title: "Thao tác",
-      width: 160,
+      width: 200,
       fixed: "right",
       render: (_, r) => (
         <Space>
+          <Button 
+            size="small" 
+            icon={<EyeOutlined />} 
+            onClick={() => handleViewDetails(r)}
+            type="primary"
+          >
+            Xem chi tiết
+          </Button>
           <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)}>
             Sửa
           </Button>
@@ -314,15 +335,15 @@ function ManageVersion() {
                 Danh sách Version
               </Title>
               <Text type="secondary">
-                Hiển thị: {filteredVersions.length} / {versions.length} phiên bản
+                Hiển thị: {filteredAndSortedVersions.length} / {versions.length} phiên bản
               </Text>
             </Col>
           </Row>
           <Divider className="!mt-2" />
 
-          {/* Filter Section */}
+          {/* Filter and Sort Section */}
           <Row gutter={[16, 16]} className="mb-4">
-            <Col xs={24} sm={12} md={8}>
+            <Col xs={24} sm={12} md={10}>
               <div>
                 <Text className="block mb-2 text-sm font-medium">Tìm Model:</Text>
                 <Select
@@ -338,7 +359,7 @@ function ManageVersion() {
                       .toLowerCase()
                       .includes(input.toLowerCase())
                   }
-                  className="w-full"
+                  style={{ width: "100%" }}
                 >
                   {[...new Set(models.map(m => m.modelName))].map((modelName) => (
                     <Option key={modelName} value={modelName}>
@@ -348,16 +369,22 @@ function ManageVersion() {
                 </Select>
               </div>
             </Col>
-
-            <Col xs={24} sm={12} md={8}>
-              <div className="flex items-end h-full">
-                <Button
-                  onClick={handleClearFilters}
+            <Col xs={24} sm={12} md={6}>
+              <div>
+                <Text className="block mb-2 text-sm font-medium">Sắp xếp:</Text>
+                <Select
+                  value={sortBy}
+                  onChange={setSortBy}
                   size="large"
-                  className="mb-0"
+                  style={{ width: "100%" }}
+                  suffixIcon={<SortAscendingOutlined />}
                 >
-                  Xóa bộ lọc
-                </Button>
+                  <Option value="version-asc">Tên Version A-Z</Option>
+                  <Option value="version-desc">Tên Version Z-A</Option>
+                  <Option value="model-asc">Tên Model A-Z</Option>
+                  <Option value="year-desc">Năm SX mới nhất</Option>
+                  <Option value="year-asc">Năm SX cũ nhất</Option>
+                </Select>
               </div>
             </Col>
           </Row>
@@ -365,11 +392,11 @@ function ManageVersion() {
           <Table
             size="middle"
             columns={columns}
-            dataSource={filteredVersions}
+            dataSource={filteredAndSortedVersions}
             rowKey="id"
             loading={loading}
             pagination={{
-              total: filteredVersions.length,
+              total: filteredAndSortedVersions.length,
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
@@ -558,6 +585,91 @@ function ManageVersion() {
             </Space>
           </div>
         </Form>
+      </Modal>
+
+      {/* Modal chi tiết Version */}
+      <Modal
+        title={
+          <Space>
+            <SettingOutlined style={{ color: "#1890ff" }} />
+            <span>Chi Tiết Phiên Bản</span>
+          </Space>
+        }
+        open={isDetailModalVisible}
+        onCancel={() => {
+          setIsDetailModalVisible(false);
+          setSelectedVersionForDetail(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setIsDetailModalVisible(false);
+            setSelectedVersionForDetail(null);
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+        centered
+      >
+        {selectedVersionForDetail && (
+          <Descriptions bordered column={2} size="middle">
+            
+            <Descriptions.Item label="Tên Model">
+              <Tag color="blue">
+                {models.find(m => m.id === selectedVersionForDetail.modelId)?.modelName || "N/A"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tên Version">
+              <Text strong>{selectedVersionForDetail.versionName}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Công suất động cơ">
+              <Text strong style={{ color: "#f56500" }}>
+                {selectedVersionForDetail.motorPower?.toLocaleString()} W
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Dung lượng pin">
+              <Text strong style={{ color: "#52c41a" }}>
+                {selectedVersionForDetail.batteryCapacity} Ah
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tầm di chuyển">
+              <Text strong style={{ color: "#1890ff" }}>
+                {selectedVersionForDetail.rangePerCharge} km
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tốc độ tối đa">
+              <Text strong style={{ color: "#ff4d4f" }}>
+                {selectedVersionForDetail.topSpeed} km/h
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trọng lượng">
+              <Text strong style={{ color: "#663399" }}>
+                {selectedVersionForDetail.weight} kg
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Chiều cao">
+              <Text strong style={{ color: "#13c2c2" }}>
+                {selectedVersionForDetail.height} mm
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Năm sản xuất">
+              <Tag icon={<CalendarOutlined />} color="blue">
+                {selectedVersionForDetail.productionYear}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag
+                icon={selectedVersionForDetail.isActive ? <CheckCircleOutlined /> : <StopOutlined />}
+                color={selectedVersionForDetail.isActive ? "success" : "default"}
+              >
+                {selectedVersionForDetail.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả" span={2}>
+              <Text>{selectedVersionForDetail.description || "Chưa có mô tả"}</Text>
+            </Descriptions.Item>
+          </Descriptions>
+        )}
       </Modal>
     </PageContainer>
   );
