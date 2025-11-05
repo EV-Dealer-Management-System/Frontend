@@ -14,6 +14,7 @@ import EVBookingUpdateStatus from "../../../../App/DealerManager/EVBooking/EVBoo
 import BookingReviewModal from "./BookingReviewModal";
 import EContractSuccessModal from "./EContractSuccessModal";
 import CancelBookingModal from "./CancelBookingModal";
+import CompleteBookingModal from "./CompleteBookingModal";
 import { EVBookingConfirmEContract } from "../../../../App/DealerManager/EVBooking/EVBookingConfirm";
 
 function BookingTable({
@@ -30,6 +31,10 @@ function BookingTable({
   });
   const [eContractModal, setEContractModal] = useState(false);
   const [cancelModal, setCancelModal] = useState({
+    visible: false,
+    booking: null,
+  });
+  const [completeModal, setCompleteModal] = useState({
     visible: false,
     booking: null,
   });
@@ -66,6 +71,22 @@ function BookingTable({
     });
   };
 
+  // Hiển thị modal hoàn thành
+  const showCompleteModal = (booking) => {
+    setCompleteModal({
+      visible: true,
+      booking: booking,
+    });
+  };
+
+  // Đóng modal hoàn thành
+  const closeCompleteModal = () => {
+    setCompleteModal({
+      visible: false,
+      booking: null,
+    });
+  };
+
   // Xử lý hủy đơn booking
   const handleCancelBooking = async (bookingId) => {
     setUpdatingStatus((prev) => ({ ...prev, [bookingId]: true }));
@@ -81,6 +102,26 @@ function BookingTable({
       }
     } catch (error) {
       message.error(`Không thể hủy booking: ${error.message}`);
+    } finally {
+      setUpdatingStatus((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  // Xử lý hoàn thành booking
+  const handleCompleteBooking = async (bookingId) => {
+    setUpdatingStatus((prev) => ({ ...prev, [bookingId]: true }));
+    closeCompleteModal();
+
+    try {
+      await EVBookingUpdateStatus(bookingId, 7); // Status 7 = Completed
+      message.success("Đã hoàn thành booking thành công!");
+
+      // Refresh data
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error) {
+      message.error(`Không thể hoàn thành booking: ${error.message}`);
     } finally {
       setUpdatingStatus((prev) => ({ ...prev, [bookingId]: false }));
     }
@@ -125,18 +166,18 @@ function BookingTable({
 
   // Hiển thị trạng thái booking với style nâng cao
   const getStatusTag = (status) => {
-    // Mapping theo BookingStatus enum: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4, Cancelled=5, SignedByAdmin=6, Completed=7
+    // Mapping theo BookingStatus enum
     const statusMap = {
       0: {
         color: "#8c8c8c",
         bg: "#fafafa",
-        text: "Bản Nháp",
+        text: "Nháp",
         icon: <SyncOutlined />,
       },
       1: {
         color: "#faad14",
         bg: "#fffbe6",
-        text: "Chờ Dealer Ký",
+        text: "Chờ Ký",
         icon: <AuditOutlined />,
       },
       2: {
@@ -154,7 +195,7 @@ function BookingTable({
       4: {
         color: "#ff4d4f",
         bg: "#fff1f0",
-        text: "Đã Từ Chối",
+        text: "Từ Chối",
         icon: <CloseCircleOutlined />,
       },
       5: {
@@ -172,7 +213,7 @@ function BookingTable({
       7: {
         color: "#1890ff",
         bg: "#e6f7ff",
-        text: "Đã Hoàn Thành",
+        text: "Hoàn Thành",
         icon: <CheckCircleOutlined />,
       },
     };
@@ -191,8 +232,8 @@ function BookingTable({
           color: statusInfo.color,
           backgroundColor: statusInfo.bg,
           borderColor: statusInfo.color,
-          padding: "4px 12px",
-          fontSize: 13,
+          padding: "2px 8px",
+          fontSize: 11,
           fontWeight: 500,
           borderRadius: 6,
         }}
@@ -207,75 +248,31 @@ function BookingTable({
       title: "STT",
       dataIndex: "index",
       valueType: "indexBorder",
-      width: 60,
+      width: 50,
       align: "center",
       fixed: "left",
       render: (text, record, index) => (
         <span style={{ fontWeight: 600, color: "#595959" }}>{index + 1}</span>
       ),
     },
-    // {
-    //   title: "Mã Booking",
-    //   dataIndex: "id",
-    //   key: "id",
-    //   width: 100,
-    //   copyable: true,
-    //   ellipsis: true,
-    //   fixed: "left",
-    //   render: (text) => {
-    //     const fullId = text || "N/A";
-    //     const displayId =
-    //       typeof fullId === "string"
-    //         ? fullId.slice(0, 8) + "..."
-    //         : fullId;
-
-    //     return (
-    //       <Tooltip title={fullId}>
-    //         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-    //           <Tag
-    //             color="blue"
-    //             style={{
-    //               margin: 0,
-    //               fontSize: 11,
-    //               padding: "2px 8px",
-    //               borderRadius: 4,
-    //             }}
-    //           >
-    //             ID
-    //           </Tag>
-    //           <span
-    //             style={{
-    //               fontFamily: "monospace",
-    //               fontSize: 12,
-    //               color: "#1890ff",
-    //               fontWeight: 600,
-    //             }}
-    //           >
-    //             {displayId}
-    //           </span>
-    //         </div>
-    //       </Tooltip>
-    //     );
-    //   },
-    // },
     {
       title: "Ngày Đặt",
       dataIndex: "bookingDate",
       key: "bookingDate",
-      width: 150,
+      width: 120,
       sorter: (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
       defaultSortOrder: "descend",
       render: (text) => (
-        <div style={{ fontSize: 13, color: "#595959" }}>
+        <div style={{ fontSize: 12, color: "#595959" }}>
           {formatDateTime(text)}
         </div>
       ),
     },
     {
-      title: "Số Lượng Xe",
+      title: "SL Xe",
       dataIndex: "totalQuantity",
       key: "totalQuantity",
-      width: 110,
+      width: 80,
       align: "center",
       sorter: (a, b) => (a.totalQuantity || 0) - (b.totalQuantity || 0),
       render: (text) => (
@@ -283,15 +280,15 @@ function BookingTable({
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
-            padding: "6px 14px",
+            gap: 4,
+            padding: "4px 8px",
             backgroundColor: "#e6f7ff",
-            borderRadius: 8,
+            borderRadius: 6,
             border: "1px solid #91d5ff",
           }}
         >
-          <CarOutlined style={{ color: "#1890ff", fontSize: 14 }} />
-          <span style={{ fontWeight: 600, color: "#1890ff", fontSize: 14 }}>
+          <CarOutlined style={{ color: "#1890ff", fontSize: 12 }} />
+          <span style={{ fontWeight: 600, color: "#1890ff", fontSize: 13 }}>
             {text || 0}
           </span>
         </div>
@@ -301,7 +298,7 @@ function BookingTable({
       title: "Trạng Thái",
       dataIndex: "status",
       key: "status",
-      width: 140,
+      width: 130,
       align: "center",
       render: (status) => getStatusTag(status),
     },
@@ -309,72 +306,69 @@ function BookingTable({
       title: "Người Tạo",
       dataIndex: "createdBy",
       key: "createdBy",
-      width: 150,
+      width: 130,
       ellipsis: true,
       render: (text) => (
-        <div style={{ fontSize: 13, color: "#595959" }}>{text || "N/A"}</div>
+        <div style={{ fontSize: 12, color: "#595959" }}>{text || "N/A"}</div>
       ),
     },
     {
       title: "E-Contract",
       dataIndex: "eContract",
       key: "eContract",
-      width: 200,
+      width: 150,
       ellipsis: true,
-      render: (eContract) => {
-        if (!eContract) {
+      render: (eContract, record) => {
+        const contract = record.eContract;
+
+        if (!contract) {
           return (
-            <Tag color="default" style={{ borderRadius: 6 }}>
-              Chưa có hợp đồng
+            <Tag color="default" style={{ borderRadius: 6, fontSize: 11 }}>
+              Chưa có
             </Tag>
           );
         }
 
-        // Mapping trạng thái hợp đồng: Draft=0, WaittingDealerSign=1, Pending=2, Approved=3, Rejected=4
+        // Mapping trạng thái hợp đồng
         const contractStatusMap = {
           0: { color: "default", text: "Bản Nháp" },
-          1: { color: "gold", text: "Chờ Dealer Ký" },
+          1: { color: "gold", text: "Chờ Ký" },
           2: { color: "orange", text: "Chờ Duyệt" },
           3: { color: "green", text: "Đã Duyệt" },
           4: { color: "red", text: "Từ Chối" },
         };
 
-        const statusInfo = contractStatusMap[eContract.status] || {
+        const statusInfo = contractStatusMap[contract.status] || {
           color: "default",
-          text: "Không xác định",
+          text: "N/A",
         };
+
+        const fileName = contract.name || "N/A";
 
         return (
           <Tooltip
             title={
               <div className="space-y-1">
-                <div><strong>Tên file:</strong> {eContract.name}</div>
+                <div><strong>Tên file:</strong> {fileName}</div>
                 <div><strong>Trạng thái:</strong> {statusInfo.text}</div>
-                <div><strong>Người tạo:</strong> {eContract.createdName || "N/A"}</div>
-                <div><strong>Chủ sở hữu:</strong> {eContract.ownerName || "N/A"}</div>
-                <div><strong>Ngày tạo:</strong> {formatDateTime(eContract.createdAt)}</div>
+                <div><strong>Người tạo:</strong> {contract.createdName || "System"}</div>
+                <div><strong>Chủ sở hữu:</strong> {contract.ownerName || "N/A"}</div>
+                <div><strong>Ngày tạo:</strong> {formatDateTime(contract.createdAt)}</div>
               </div>
             }
           >
-            <div className="flex flex-col gap-1">
-              <Tag
-                color={statusInfo.color}
-                icon={<AuditOutlined />}
-                style={{
-                  borderRadius: 6,
-                  fontSize: 12,
-                  padding: "4px 10px",
-                  fontWeight: 500,
-                }}
-              >
-                {statusInfo.text}
-              </Tag>
-              <div
-                className="text-xs text-gray-500 truncate"
-                style={{ maxWidth: 180 }}
-              >
-                {eContract.name}
-              </div>
+            <div
+              style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: "#1890ff",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+            >
+              {fileName}
             </div>
           </Tooltip>
         );
@@ -383,30 +377,30 @@ function BookingTable({
     {
       title: "Thao Tác",
       key: "actions",
-      width: 120,
+      width: 200,
       align: "center",
       fixed: "right",
       render: (_, record) => {
         const isUpdating = updatingStatus[record.id];
-        const isDraft = record.status === 0; // Status Draft = 0
-        const isWaittingDealerSign = record.status === 1; // Status WaittingDealerSign = 1 (Chờ Dealer Ký)
-        const isPending = record.status === 2; // Status Pending = 2 (Chờ Duyệt)
+        const isDraft = record.status === 0;
+        const isWaittingDealerSign = record.status === 1;
+        const isPending = record.status === 2;
+        const isSignedByAdmin = record.status === 6;
 
         return (
-          <Space size={8}>
-            <Button
-              type="default"
-              icon={<EyeOutlined />}
-              onClick={() => onViewDetail(record)}
-              size="middle"
-              style={{
-                borderRadius: 6,
-                fontWeight: 500,
-                borderColor: "#d9d9d9",
-              }}
-            >
-              Chi tiết
-            </Button>
+          <Space size={4} wrap>
+            <Tooltip title="Xem chi tiết">
+              <Button
+                type="default"
+                icon={<EyeOutlined />}
+                onClick={() => onViewDetail(record)}
+                size="small"
+                style={{
+                  borderRadius: 6,
+                  fontSize: 12,
+                }}
+              />
+            </Tooltip>
 
             {isDraft && (
               <Button
@@ -414,10 +408,10 @@ function BookingTable({
                 icon={<CheckCircleOutlined />}
                 onClick={() => showReviewModal(record)}
                 loading={isUpdating}
-                size="middle"
+                size="small"
                 style={{
                   borderRadius: 6,
-                  fontWeight: 500,
+                  fontSize: 12,
                 }}
               >
                 Xác Nhận
@@ -430,13 +424,31 @@ function BookingTable({
                 icon={<CloseCircleOutlined />}
                 onClick={() => showCancelModal(record)}
                 loading={isUpdating}
-                size="middle"
+                size="small"
                 style={{
                   borderRadius: 6,
-                  fontWeight: 500,
+                  fontSize: 12,
                 }}
               >
-                Hủy đơn
+                Hủy
+              </Button>
+            )}
+
+            {isSignedByAdmin && (
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={() => showCompleteModal(record)}
+                loading={isUpdating}
+                size="small"
+                style={{
+                  borderRadius: 6,
+                  fontSize: 12,
+                  backgroundColor: "#52c41a",
+                  borderColor: "#52c41a",
+                }}
+              >
+                Hoàn Thành
               </Button>
             )}
           </Space>
@@ -559,6 +571,15 @@ function BookingTable({
         onClose={closeCancelModal}
         onConfirm={() => handleCancelBooking(cancelModal.booking?.id)}
         loading={updatingStatus[cancelModal.booking?.id]}
+      />
+
+      {/* Modal Hoàn Thành */}
+      <CompleteBookingModal
+        visible={completeModal.visible}
+        booking={completeModal.booking}
+        onClose={closeCompleteModal}
+        onConfirm={() => handleCompleteBooking(completeModal.booking?.id)}
+        loading={updatingStatus[completeModal.booking?.id]}
       />
     </>
   );
