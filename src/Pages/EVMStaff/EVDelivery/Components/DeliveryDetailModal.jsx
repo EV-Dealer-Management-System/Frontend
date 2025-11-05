@@ -1,14 +1,15 @@
-import React from 'react';
-import { Modal, Card, Tag, Steps, Row, Col, Divider, Collapse } from 'antd';
+import React, { useState } from 'react';
+import { Modal, Card, Tag, Row, Col, Divider, Collapse, Button, message, Popconfirm } from 'antd';
 import {
     CarOutlined,
-    ClockCircleOutlined,
     CheckCircleOutlined,
-    RocketOutlined,
-    ShopOutlined,
-    InboxOutlined
+    ToolOutlined,
+    SwapOutlined
 } from '@ant-design/icons';
 import UpdateStatusButton from './UpdateStatusButton';
+import InspectAccidentModal from './InspectAccidentModal';
+import DeliveryProgressTimeline from './DeliveryProgressTimeline';
+import { replaceDamagedEV } from '../../../../App/EVMStaff/EVDelivery/ReplaceDamagedEV';
 
 const { Panel } = Collapse;
 
@@ -25,6 +26,10 @@ const deliveryStatusMap = {
 
 // Component modal chi tiết đơn giao xe
 function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [], onStatusUpdated }) {
+    const [showInspectModal, setShowInspectModal] = useState(false);
+    const [hasInspectedAccident, setHasInspectedAccident] = useState(false);
+    const [replacingVehicle, setReplacingVehicle] = useState(false);
+
     if (!delivery) return null;
 
     // Lọc templateSummary dựa trên VIN của delivery hiện tại
@@ -45,44 +50,31 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
         })
         .filter(template => template !== null);
 
-    // Xác định bước hiện tại cho timeline
-    const getCurrentStep = (status) => {
-        if (status === 5) return 4; // Hoàn tất
-        if (status === 4) return 3; // Đã đến đại lý
-        if (status === 3) return 2; // Đang giao hàng
-        if (status === 2) return 1; // Đang vận chuyển
-        return 0; // Đang chuẩn bị
-    };
-
-    const statusSteps = [
-        {
-            title: 'Chuẩn bị',
-            icon: <InboxOutlined />,
-            description: 'Đang chuẩn bị xe'
-        },
-        {
-            title: 'Vận chuyển',
-            icon: <RocketOutlined />,
-            description: 'Xe đang được vận chuyển'
-        },
-        {
-            title: 'Giao hàng',
-            icon: <CarOutlined />,
-            description: 'Đang giao hàng đến đại lý'
-        },
-        {
-            title: 'Đến đại lý',
-            icon: <ShopOutlined />,
-            description: 'Xe đã đến đại lý'
-        },
-        {
-            title: 'Hoàn tất',
-            icon: <CheckCircleOutlined />,
-            description: 'Giao nhận hoàn tất'
-        }
-    ];
-
     const totalVehicles = filteredTemplateSummary?.reduce((sum, item) => sum + item.vehicleCount, 0) || 0;
+
+    // Xử lý điều xe thay thế
+    const handleReplaceVehicle = async () => {
+        setReplacingVehicle(true);
+        try {
+            const response = await replaceDamagedEV(delivery.id);
+
+            if (response.isSuccess) {
+                message.success('Đã điều xe thay thế thành công');
+                setHasInspectedAccident(false);
+                if (onStatusUpdated) {
+                    onStatusUpdated();
+                }
+                onClose();
+            } else {
+                message.error(response.message || 'Không thể điều xe thay thế');
+            }
+        } catch (error) {
+            console.error('Error replacing damaged EV:', error);
+            message.error('Có lỗi xảy ra khi điều xe thay thế');
+        } finally {
+            setReplacingVehicle(false);
+        }
+    };
 
     return (
         <Modal
@@ -118,18 +110,19 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                         </div>
                         <div className="text-right">
                             <div className="text-gray-600 text-sm mb-1">Tổng số lượng xe giao:  {totalVehicles} </div>
-                          
+
                         </div>
                     </div>
 
                     <Divider className="my-3" />
 
                     {/* Nút cập nhật trạng thái hoặc thông báo đã xác nhận */}
-                    <div className="flex justify-end">
+                    <div className="flex justify-between items-center">
+                        {/* Bên trái: Nút cập nhật trạng thái */}
                         {delivery.status === 5 ? (
                             <div className="text-green-600 text-sm font-medium flex items-center gap-2">
                                 <CheckCircleOutlined className="text-base" />
-                                 Đơn giao xe đã được bên đại lý xác nhận 
+                                Đơn giao xe đã được bên đại lý xác nhận
                             </div>
                         ) : (
                             <UpdateStatusButton
@@ -143,17 +136,44 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                                 }}
                             />
                         )}
+
+                        {/* Bên phải: Nút kiểm tra xe bị sự cố hoặc điều xe thay thế */}
+                        {delivery.status === 6 && !hasInspectedAccident && (
+                            <Button
+                                type="default"
+                                danger
+                                icon={<ToolOutlined />}
+                                onClick={() => setShowInspectModal(true)}
+                                className="flex items-center gap-2"
+                            >
+                                Kiểm tra xe bị hư hỏng
+                            </Button>
+                        )}
+
+                        {delivery.status === 6 && hasInspectedAccident && (
+                            <Popconfirm
+                                title="Xác nhận điều xe thay thế"
+                                description="Bạn có chắc chắn muốn điều xe thay thế cho các xe bị hư hỏng?"
+                                onConfirm={handleReplaceVehicle}
+                                okText="Xác nhận"
+                                cancelText="Hủy"
+                                okButtonProps={{ loading: replacingVehicle }}
+                            >
+                                <Button
+                                    type="primary"
+                                    icon={<SwapOutlined />}
+                                    loading={replacingVehicle}
+                                    className="bg-orange-600 hover:bg-orange-700 flex items-center gap-2"
+                                >
+                                    Điều xe thay thế
+                                </Button>
+                            </Popconfirm>
+                        )}
                     </div>
                 </Card>
 
                 {/* Timeline theo dõi */}
-                <Card title={<span className="font-semibold"><ClockCircleOutlined className="mr-2" />Tiến trình giao hàng</span>} className="shadow-sm">
-                    <Steps
-                        current={getCurrentStep(delivery.status)}
-                        items={statusSteps}
-                        className="px-4"
-                    />
-                </Card>
+                <DeliveryProgressTimeline deliveryStatus={delivery.status} />
 
                 {/* Thông tin chi tiết */}
                 <Row gutter={16}>
@@ -234,12 +254,28 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                                     className="mb-3 bg-gray-50 rounded-lg border border-gray-200"
                                 >
                                     <div className="text-xs text-gray-500 mb-2">Danh sách VIN:</div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {summary.vinList.map((vin) => (
-                                            <div key={vin} className="font-mono bg-white px-3 py-2 border rounded text-xs">
-                                                {vin}
-                                            </div>
-                                        ))}
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {summary.vinList.map((vin) => {
+                                            // Tìm thông tin chi tiết của xe theo VIN
+                                            const vehicleDetail = delivery.vehicleDeliveryDetails?.find(v => v.vin === vin);
+
+                                            return (
+                                                <div key={vin} className="bg-white px-3 py-2 border rounded">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1">
+                                                            <div className="font-mono text-xs font-semibold text-gray-700 mb-1">
+                                                                {vin}
+                                                            </div>
+                                                            {vehicleDetail?.note && (
+                                                                <div className="text-xs text-gray-600 italic">
+                                                                    <span className="font-medium">Ghi chú:</span> {vehicleDetail.note}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </Panel>
                             ))}
@@ -252,6 +288,20 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                     )}
                 </Card>
             </div>
+
+            {/* Modal kiểm tra xe bị sự cố */}
+            <InspectAccidentModal
+                visible={showInspectModal}
+                onClose={() => setShowInspectModal(false)}
+                delivery={delivery}
+                templateSummary={templateSummary}
+                onSuccess={() => {
+                    setHasInspectedAccident(true);
+                    if (onStatusUpdated) {
+                        onStatusUpdated();
+                    }
+                }}
+            />
         </Modal>
     );
 }

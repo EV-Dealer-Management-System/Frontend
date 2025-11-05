@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Button, Select, Space, message, Popconfirm } from 'antd';
+import { Button, Select, Space, message, Popconfirm, Input } from 'antd';
 import { EditOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import { updateEVDeliveryStatus } from '../../../../App/EVMStaff/EVDelivery/UpdateEVDeliveryStatus';
+
+const { TextArea } = Input;
 
 // Enum trạng thái giao xe
 const DeliveryStatus = {
@@ -29,6 +31,7 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState(currentStatus);
     const [loading, setLoading] = useState(false);
+    const [accidentNote, setAccidentNote] = useState('');
 
     // Không cho phép cập nhật nếu đã xác nhận
     if (currentStatus === DeliveryStatus.Confirmed) {
@@ -42,13 +45,24 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
             return;
         }
 
+        // Kiểm tra nếu chọn "Sự cố" thì phải nhập ghi chú
+        if (selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) {
+            message.warning('Vui lòng nhập ghi chú sự cố');
+            return;
+        }
+
         setLoading(true);
         try {
-            const response = await updateEVDeliveryStatus(deliveryId, selectedStatus);
+            const response = await updateEVDeliveryStatus(
+                deliveryId,
+                selectedStatus,
+                selectedStatus === DeliveryStatus.Accident ? accidentNote : ""
+            );
 
             if (response.isSuccess) {
                 message.success('Cập nhật trạng thái thành công');
                 setIsEditing(false);
+                setAccidentNote('');
                 if (onSuccess) {
                     onSuccess();
                 }
@@ -66,6 +80,7 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     // Hủy chỉnh sửa
     const handleCancel = () => {
         setSelectedStatus(currentStatus);
+        setAccidentNote('');
         setIsEditing(false);
     };
 
@@ -83,49 +98,65 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     }
 
     return (
-        <Space className="w-full">
-            <Select
-                value={selectedStatus}
-                onChange={setSelectedStatus}
-                className="w-48"
-                options={statusOptions.map(option => ({
-                    value: option.value,
-                    label: (
-                        <span className="flex items-center gap-2">
-                            <span
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: `var(--ant-${option.color}-6)` }}
-                            />
-                            {option.label}
-                        </span>
-                    ),
-                }))}
-            />
+        <Space direction="vertical" className="w-full">
+            <Space className="w-full">
+                <Select
+                    value={selectedStatus}
+                    onChange={setSelectedStatus}
+                    className="w-48"
+                    options={statusOptions.map(option => ({
+                        value: option.value,
+                        label: (
+                            <span className="flex items-center gap-2">
+                                <span
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: `var(--ant-${option.color}-6)` }}
+                                />
+                                {option.label}
+                            </span>
+                        ),
+                    }))}
+                />
 
-            <Popconfirm
-                title="Xác nhận cập nhật trạng thái"
-                description={`Bạn có chắc muốn cập nhật trạng thái sang "${statusOptions.find(s => s.value === selectedStatus)?.label}"?`}
-                onConfirm={handleUpdateStatus}
-                okText="Xác nhận"
-                cancelText="Hủy"
-            >
-                <Button
-                    type="primary"
-                    icon={<CheckOutlined />}
-                    loading={loading}
-                    className="bg-green-600 hover:bg-green-700"
+                <Popconfirm
+                    title="Xác nhận cập nhật trạng thái"
+                    description={`Bạn có chắc muốn cập nhật trạng thái sang "${statusOptions.find(s => s.value === selectedStatus)?.label}"?`}
+                    onConfirm={handleUpdateStatus}
+                    okText="Xác nhận"
+                    cancelText="Hủy"
+                    disabled={selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()}
                 >
-                    Lưu
-                </Button>
-            </Popconfirm>
+                    <Button
+                        type="primary"
+                        icon={<CheckOutlined />}
+                        loading={loading}
+                        className="bg-green-600 hover:bg-green-700"
+                    >
+                        Lưu
+                    </Button>
+                </Popconfirm>
 
-            <Button
-                icon={<CloseOutlined />}
-                onClick={handleCancel}
-                disabled={loading}
-            >
-                Hủy
-            </Button>
+                <Button
+                    icon={<CloseOutlined />}
+                    onClick={handleCancel}
+                    disabled={loading}
+                >
+                    Hủy
+                </Button>
+            </Space>
+
+            {/* Hiển thị textarea khi chọn trạng thái Sự cố */}
+            {selectedStatus === DeliveryStatus.Accident && (
+                <TextArea
+                    value={accidentNote}
+                    onChange={(e) => setAccidentNote(e.target.value)}
+                    placeholder="Nhập mô tả chi tiết về sự cố..."
+                    rows={3}
+                    className="w-full"
+                    maxLength={500}
+                    showCount
+                />
+            )}
         </Space>
     );
 }
