@@ -215,6 +215,7 @@ function BookingTable({
             key: "bookingDate",
             width: 110,
             sorter: (a, b) => new Date(a.bookingDate) - new Date(b.bookingDate),
+            defaultSortOrder: 'descend',
             render: (text) => (
                 <div style={{ fontSize: 11, color: "#595959" }}>
                     {formatDateTime(text)}
