@@ -4,7 +4,7 @@ import {
   ProTable,
   StatisticCard,
 } from "@ant-design/pro-components";
-import { Card, message, Tag, Avatar, Row, Col, Space } from "antd";
+import { Card, message, Tag, Avatar, Row, Col, Space, Input } from "antd";
 import {
   UserOutlined,
   PhoneOutlined,
@@ -16,12 +16,16 @@ import {
 import { getAllEVCustomer } from "../../../App/DealerStaff/EVCustomerManagement/GetAllEVCustomer";
 import dayjs from "dayjs";
 import DealerStaffLayout from "../../../Components/DealerStaff/DealerStaffLayout";
+import { ConfigProvider } from "antd";
+import viVN from "antd/lib/locale/vi_VN";
 
 const { Statistic } = StatisticCard;
+const { Search } = Input;
 
 function GetAllEVCustomer() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
 
   // Fetch customers data
   useEffect(() => {
@@ -139,6 +143,7 @@ function GetAllEVCustomer() {
 
   return (
     <DealerStaffLayout>
+      <ConfigProvider locale={viVN}>
       <PageContainer
         title="Quản Lý Khách Hàng"
         subTitle="Hệ thống quản lý khách hàng xe máy điện"
@@ -202,7 +207,15 @@ function GetAllEVCustomer() {
         {/* Bảng dữ liệu */}
         <Card className="shadow-md rounded-lg" bordered={false}>
           <ProTable
-            dataSource={customers}
+            dataSource={customers.filter((customer) => {
+              const keywords = searchText.toLowerCase();
+              return (
+                customer.fullName.toLowerCase().includes(keywords) ||
+                customer.phoneNumber.toLowerCase().includes(keywords) ||
+                (customer.address &&
+                  customer.address.toLowerCase().includes(keywords))
+              );
+            })}
             columns={columns}
             rowKey="id"
             loading={loading}
@@ -232,9 +245,20 @@ function GetAllEVCustomer() {
                 Danh Sách Khách Hàng Xe Máy Điện
               </Space>
             }
+            toolbar={{
+              search: (
+                <Search
+                  placeholder="Tìm kiếm khách hàng"
+                  style={{ width: 300 }}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  allowClear
+                />
+              ),
+            }}
           />
         </Card>
       </PageContainer>
+      </ConfigProvider>
     </DealerStaffLayout>
   );
 }
