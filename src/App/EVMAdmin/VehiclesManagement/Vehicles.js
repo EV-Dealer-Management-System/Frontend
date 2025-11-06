@@ -1,22 +1,21 @@
 // Vehicles.js - Business logic cho quản lý Vehicle của EVM Admin
 import api from "../../../api/api";
-import { normalizeApiResponse } from "../../../api/helpers/responseHelper";
 
 export const vehicleApi = {
   // ✅ ĐÚNG: Chỉ GIỮ LẠI 1 hàm getAllVehicles - Gọi endpoint vehicles
   getAllVehicles: async function () {
     try {
       console.log("🔄 [API] Calling: /ElectricVehicle/get-all-vehicles");
-      
+
       const response = await api.get("/ElectricVehicle/get-all-vehicles");
-      
+
       console.log("📥 [API] getAllVehicles Response:", response.data);
 
       // ✅ Xử lý response đúng chuẩn
       if (response.data?.isSuccess) {
         const vehicles = response.data.result || response.data.data || [];
         console.log(`✅ [API] Loaded ${vehicles.length} vehicles`);
-        
+
         return {
           success: true,
           result: vehicles, // ✅ Trả về ở result
@@ -35,7 +34,7 @@ export const vehicleApi = {
     } catch (error) {
       console.error("❌ [API] Error fetching all vehicles:", error);
       console.error("❌ [API] Error response:", error.response?.data);
-      
+
       return {
         success: false,
         result: [],
@@ -155,7 +154,7 @@ export const vehicleApi = {
   },
   updateModel: async function (modelId, modelData) {
     try {
-      const response = await api.put(     
+      const response = await api.put(
         `/ElectricVehicleModel/update-model/${modelId}`,
         modelData
       );
@@ -179,22 +178,22 @@ export const vehicleApi = {
       };
     }
   },
- deleteModel: async function (modelId) {
+  deleteModel: async function (modelId) {
     try {
-      const response = await api.delete(     
+      const response = await api.delete(
         `/ElectricVehicleModel/delete-model/${modelId}`
       );
-      if (response.data?.isSuccess) { 
+      if (response.data?.isSuccess) {
         return {
           success: true,
           message: response.data.message || "Xóa model thành công!",
         };
       } else {
         return {
-          success: false,   
+          success: false,
           error: response.data?.message || "Không thể xóa model",
         };
-      }   
+      }
     } catch (error) {
       console.error("Error deleting model:", error);
       return {
@@ -231,8 +230,8 @@ export const vehicleApi = {
       };
     }
   },
-// create version 
- createVersion: async function (versionData) {
+  // create version 
+  createVersion: async function (versionData) {
     try {
       const response = await api.post(
         "/ElectricVehicleVersion/create-version",
@@ -258,60 +257,60 @@ export const vehicleApi = {
       };
     }
   },
-updateVersion: async function (versionId, versionData) {
+  updateVersion: async function (versionId, versionData) {
     try {
-      const response = await api.put( 
+      const response = await api.put(
         `/ElectricVehicleVersion/update-version/${versionId}`,
         versionData
-      );    
-      if (response.data?.isSuccess) { 
+      );
+      if (response.data?.isSuccess) {
         return {
           success: true,
           data: response.data.result || response.data.data,
           message: response.data.message || "Cập nhật version thành công!",
         };
-      } else {  
+      } else {
         return {
           success: false,
           error: response.data?.message || "Không thể cập nhật version",
         };
-      } 
+      }
     } catch (error) {
       console.error("Error updating version:", error);
       return {
         success: false,
         error: error.message || "Lỗi khi cập nhật version",
       };
-    } 
+    }
   },
   deleteVersion: async function (versionId) {
     try {
-      const response = await api.delete(    
+      const response = await api.delete(
 
         `/ElectricVehicleVersion/detele-version-by-id/${versionId}`,
-      );    
-      if (response.data?.isSuccess) { 
+      );
+      if (response.data?.isSuccess) {
         return {
           success: true,
           message: response.data.message || "Xóa version thành công!",
         };
-      } else {   
+      } else {
         return {
-          success: false, 
+          success: false,
           error: response.data?.message || "Không thể xóa version",
         };
-      } 
+      }
     } catch (error) {
       console.error("Error deleting version:", error);
       return {
         success: false,
         error: error.message || "Lỗi khi xóa version",
       };
-    } 
-  },  
-getVersionByModelId: async function (modelId) {
+    }
+  },
+  getVersionByModelId: async function (modelId) {
     try {
-      const response = await api.get(     
+      const response = await api.get(
         `/ElectricVehicleVersion/get-all-available-versions-by-model-id/${modelId}`
       );
       if (response.data?.isSuccess) {
@@ -320,7 +319,7 @@ getVersionByModelId: async function (modelId) {
           data: response.data.result || response.data.data || [],
         };
       }
-  else {
+      else {
         return {
           success: false,
           data: [],
@@ -334,7 +333,7 @@ getVersionByModelId: async function (modelId) {
         data: [],
         error: error.message || "Lỗi khi tải danh sách versions",
       };
-    } 
+    }
   },
   // === COLOR MANAGEMENT ===
   getAllColors: async function () {
@@ -361,8 +360,8 @@ getVersionByModelId: async function (modelId) {
       };
     }
   },
-//create color 
- createColor: async function (colorData) {
+  //create color 
+  createColor: async function (colorData) {
     try {
       const response = await api.post(
         "/ElectricVehicleColor/create-color",
@@ -521,7 +520,7 @@ getVersionByModelId: async function (modelId) {
       const response = await api.get(
         `/EVTemplate/get-template-by-version-and-color/${versionId}/${colorId}`
       );
-      
+
       if (response.data?.isSuccess) {
         return {
           success: true,
@@ -544,22 +543,32 @@ getVersionByModelId: async function (modelId) {
   },
 
   // Lấy tất cả templates
-  getAllTemplateVehicles: async function () {
+  getAllTemplateVehicles: async function (params = {}) {
     try {
       console.log("🔄 [API] Calling: /EVTemplate/Get-all-template-vehicles");
-      
-      const response = await api.get("/EVTemplate/Get-all-template-vehicles");
-      
+      console.log("📤 [API] Parameters:", params);
+
+      // Xây dựng query parameters
+      const queryParams = new URLSearchParams({
+        pageNumber: params.pageNumber || 1,
+        pageSize: params.pageSize || 10,
+        ...(params.search && { search: params.search }),
+        ...(params.templateId && { templateId: params.templateId })
+      });
+
+      const response = await api.get(`/EVTemplate/Get-all-template-vehicles?${queryParams.toString()}`);
+
       console.log("📥 [API] getAllTemplateVehicles Response:", response.data);
-      
+
       if (response.data?.isSuccess) {
         const templates = response.data.result || response.data.data || [];
         console.log(`✅ [API] Loaded ${templates.length} templates`);
-        
+
         return {
           success: true,
           data: templates,
           message: response.data.message || "Lấy danh sách template thành công",
+          pagination: response.data.pagination || null
         };
       } else {
         return {
@@ -596,7 +605,7 @@ getVersionByModelId: async function (modelId) {
       );
 
       console.log("📥 API Response:", response.data);
-      
+
       if (response.data?.isSuccess) {
         return {
           success: true,
@@ -612,7 +621,7 @@ getVersionByModelId: async function (modelId) {
     } catch (error) {
       console.error("❌ Error creating template:", error);
       console.error("❌ Error response:", error.response?.data);
-      
+
       return {
         success: false,
         error: error.response?.data?.message || error.message || "Lỗi khi tạo template",
@@ -627,7 +636,7 @@ getVersionByModelId: async function (modelId) {
         `/EVTemplate/update-template-vehicle/${templateId}`,
         templateData
       );
-      
+
       if (response.data?.isSuccess) {
         return {
           success: true,
@@ -655,7 +664,7 @@ getVersionByModelId: async function (modelId) {
       const response = await api.delete(
         `/EVTemplate/delete-template/${templateId}`
       );
-      
+
       if (response.data?.isSuccess) {
         return {
           success: true,

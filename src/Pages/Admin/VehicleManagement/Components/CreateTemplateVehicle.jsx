@@ -18,7 +18,9 @@ import {
   Steps,
   Upload,
   Tooltip,
+  ConfigProvider,
 } from "antd";
+import viVN from 'antd/lib/locale/vi_VN';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -31,7 +33,6 @@ import {
   SortAscendingOutlined,
 } from "@ant-design/icons";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
-
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -66,15 +67,15 @@ const getColorNameByCode = (colorCode) => {
 /** ---- Helper: Get color HEX from colorName ---- */
 const getColorHexByName = (colorName) => {
   if (!colorName) return "#cccccc"; // Default gray
-  
+
   // Tìm trong popularColors
   const found = popularColors.find(
     (c) => c.name.toLowerCase().includes(colorName.toLowerCase()) ||
-           colorName.toLowerCase().includes(c.name.toLowerCase())
+      colorName.toLowerCase().includes(c.name.toLowerCase())
   );
-  
+
   if (found) return found.code;
-  
+
   // Map một số màu phổ biến khác
   const colorMap = {
     'đỏ': '#DC143C',
@@ -89,13 +90,13 @@ const getColorHexByName = (colorName) => {
     'hồng': '#FF69B4',
     'nâu': '#8B4513',
   };
-  
+
   for (const [key, value] of Object.entries(colorMap)) {
     if (colorName.toLowerCase().includes(key)) {
       return value;
     }
   }
-  
+
   return "#cccccc"; // Default gray if not found
 };
 
@@ -121,7 +122,7 @@ const extractErrorMessage = (err) => {
         else if (typeof v === "string") parts.push(v);
       });
       if (parts.length) return parts.join("\n");
-    } catch {}
+    } catch { }
   }
 
   if (err?.code === "ECONNABORTED")
@@ -152,22 +153,22 @@ function CreateTemplateVehicle() {
   const [uploadedImages, setUploadedImages] = useState([]);
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewImage, setPreviewImage] = useState("");
-  
+
   // View detail state
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
-  
+
   // Edit state
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editUploadedImages, setEditUploadedImages] = useState([]);
-  
+
   // Filter state for template list
   const [templateSearchKeyword, setTemplateSearchKeyword] = useState("");
   const [templateFilterModel, setTemplateFilterModel] = useState("");
   const [templateFilterColor, setTemplateFilterColor] = useState("");
   const [templateSortBy, setTemplateSortBy] = useState("price-asc"); // price-asc, price-desc, model-asc, version-asc, color-asc
-  
+
   // Delete state
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [deletingTemplateId, setDeletingTemplateId] = useState(null);
@@ -200,25 +201,45 @@ function CreateTemplateVehicle() {
     }
   };
 
-  // ✅ Load tất cả TEMPLATES
+  // ✅ Load tất cả TEMPLATES với pagination
   const loadAllTemplates = async (showNotification = false) => {
     try {
       setLoading(true);
       console.log("🔄 Loading all templates...");
-      
-      const result = await vehicleApi.getAllTemplateVehicles(); // ✅ SỬA: Gọi đúng tên hàm
 
-      console.log("📥 Template API Result:", result);
+      // Sử dụng pagination params giống VehicleManagement
+      const params = {
+        pageNumber: 1,
+        pageSize: 100, // Lấy nhiều để hiển thị trong table
+      };
 
-      if (result.isSuccess || result.success) {
-        const templatesData = result.result || result.data || [];
-        console.log(`✅ Loaded ${templatesData.length} templates:`, templatesData);
-        
+      console.log("📤 [Template] Loading with params:", params);
+
+      const result = await vehicleApi.getAllTemplateVehicles(params);
+
+      console.log("📥 Template API Response:", result);
+
+      if (result.success) {
+        // Xử lý cả 2 trường hợp: result.data.data (nested) hoặc result.data (flat)
+        let templatesData = [];
+
+        if (result.data && result.data.data && Array.isArray(result.data.data)) {
+          // Trường hợp nested: result.data.data
+          templatesData = result.data.data;
+          console.log("✅ Using nested data structure:", templatesData.length, "templates");
+        } else if (Array.isArray(result.data)) {
+          // Trường hợp flat: result.data
+          templatesData = result.data;
+          console.log("✅ Using flat data structure:", templatesData.length, "templates");
+        }
+
+        console.log("✅ Final templates data:", templatesData);
+
         // Log chi tiết về isActive
         const activeCount = templatesData.filter(t => t.isActive === true || t.isActive === 1).length;
         const inactiveCount = templatesData.filter(t => t.isActive === false || t.isActive === 0).length;
         console.log(`📊 Templates status: Active=${activeCount}, Inactive=${inactiveCount}`);
-        
+
         // 🔍 Debug màu sắc
         console.log("🎨 Color Debug - First template:", templatesData[0]);
         if (templatesData[0]) {
@@ -229,9 +250,9 @@ function CreateTemplateVehicle() {
             hexCode: templatesData[0].color?.hexCode
           });
         }
-        
+
         setTemplatesList(templatesData);
-        
+
         // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
         if (showNotification) {
           if (templatesData.length === 0) {
@@ -260,7 +281,7 @@ function CreateTemplateVehicle() {
 
   const handleDelete = async (id) => {
     console.log("🗑️ DELETE BUTTON CLICKED! ID:", id);
-    
+
     if (!id) {
       message.error("Không tìm thấy ID template để xóa!");
       return;
@@ -274,19 +295,19 @@ function CreateTemplateVehicle() {
   // Xác nhận xóa template
   const confirmDelete = async () => {
     if (!deletingTemplateId) return;
-    
+
     console.log("🗑️ Confirming delete for ID:", deletingTemplateId);
     setLoading(true);
     setIsDeleteModalVisible(false);
-    
+
     try {
       message.loading({ content: "Đang xóa template...", key: "deleting", duration: 0 });
-      
+
       const res = await vehicleApi.deleteTemplateVehicle(deletingTemplateId);
       console.log("🗑️ Delete API response:", res);
-      
+
       message.destroy("deleting");
-      
+
       // Xử lý response trực tiếp
       if (res?.success || res?.isSuccess) {
         message.success("Đã xóa template thành công!");
@@ -308,13 +329,13 @@ function CreateTemplateVehicle() {
   const handleEdit = (record) => {
     console.log("✏️ Editing template:", record);
     setEditingTemplate(record);
-    
+
     // Set form values
     form.setFieldsValue({
       price: record.price,
       description: record.description,
     });
-    
+
     // Load existing images into editUploadedImages
     const existingImages = Array.isArray(record.imgUrl) ? record.imgUrl : [];
     const imageFileList = existingImages.map((url, index) => ({
@@ -325,7 +346,7 @@ function CreateTemplateVehicle() {
       thumbUrl: url,
     }));
     setEditUploadedImages(imageFileList);
-    
+
     setIsEditModalVisible(true);
   };
 
@@ -333,7 +354,7 @@ function CreateTemplateVehicle() {
   const handleSubmitEdit = async () => {
     if (loading) return;
     setLoading(true);
-    
+
     try {
       await form.validateFields();
       const values = form.getFieldsValue(true);
@@ -346,7 +367,7 @@ function CreateTemplateVehicle() {
         const existingImageUrls = editUploadedImages
           .filter(img => img.uid.startsWith('existing-') && img.url)
           .map(img => img.url);
-        
+
         // Upload ảnh mới
         if (newImages.length > 0) {
           const uploadPromises = newImages.map((f) =>
@@ -355,7 +376,7 @@ function CreateTemplateVehicle() {
           const newAttachmentKeys = (await Promise.all(uploadPromises)).filter(Boolean);
           attachmentKeys = [...attachmentKeys, ...newAttachmentKeys];
         }
-        
+
         // Giữ lại ảnh cũ bằng cách lấy attachmentKeys từ URL hiện tại
         // Nếu API trả về attachmentKeys trong record, sử dụng chúng
         // Nếu không, có thể cần map từ URL sang key hoặc để trống
@@ -376,7 +397,7 @@ function CreateTemplateVehicle() {
       console.log("📤 Updating template:", editingTemplate.id, payload);
 
       message.loading({ content: "Đang cập nhật template...", key: "updating", duration: 0 });
-      
+
       const res = await vehicleApi.updateTemplateVehicle(editingTemplate.id, payload);
       message.destroy("updating");
 
@@ -405,17 +426,17 @@ function CreateTemplateVehicle() {
     // Filter
     let filtered = templatesList.filter((template) => {
       const keyword = templateSearchKeyword.toLowerCase();
-      const modelMatch = !templateFilterModel || 
+      const modelMatch = !templateFilterModel ||
         template.version?.modelName?.toLowerCase().includes(templateFilterModel.toLowerCase());
-      const colorMatch = !templateFilterColor || 
+      const colorMatch = !templateFilterColor ||
         template.color?.colorName?.toLowerCase().includes(templateFilterColor.toLowerCase());
-      
-      const keywordMatch = !keyword || 
+
+      const keywordMatch = !keyword ||
         template.version?.modelName?.toLowerCase().includes(keyword) ||
         template.version?.versionName?.toLowerCase().includes(keyword) ||
         template.color?.colorName?.toLowerCase().includes(keyword) ||
         template.description?.toLowerCase().includes(keyword);
-      
+
       return modelMatch && colorMatch && keywordMatch;
     });
 
@@ -476,31 +497,31 @@ function CreateTemplateVehicle() {
       render: (_, record) => {
         // 🔍 Debug: Log toàn bộ color object
         console.log("🎨 Full color object:", record.color);
-        
+
         const colorName = record.color?.colorName || "N/A";
-        
+
         // ✅ Ưu tiên lấy từ API, nếu không có thì tìm từ colorName
         let hexCode = record.color?.colorCode || record.color?.hexCode;
-        
+
         if (!hexCode) {
           // Nếu API không trả về hex code, tìm từ colorName
           hexCode = getColorHexByName(colorName);
           console.log("🎨 Generated hex from colorName:", colorName, "=>", hexCode);
         }
-        
+
         // 🔍 Debug log để kiểm tra
-        console.log("🎨 Color Debug:", { 
+        console.log("🎨 Color Debug:", {
           record: record,
           colorObject: record.color,
           colorName,
-          hexCode, 
+          hexCode,
           rawColorCode: record.color?.colorCode,
           rawHexCode: record.color?.hexCode,
         });
-        
+
         // ✅ Lấy tên màu đẹp từ popularColors nếu có
         const prettyName = getColorNameByCode(hexCode) || colorName;
-        
+
         return (
           <div className="flex items-center gap-2">
             <div
@@ -526,7 +547,7 @@ function CreateTemplateVehicle() {
       title: "Giá bán",
       dataIndex: "price",
       key: "price",
-      width: 130,
+      width: 100,
       align: "right",
       render: (price) => (
         <Text strong style={{ color: "#52c41a", fontSize: 13 }}>
@@ -563,7 +584,7 @@ function CreateTemplateVehicle() {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
-      width: 200,
+      width: 100,
       ellipsis: true,
       render: (text) => (
         <Tooltip title={text || "Chưa có mô tả"}>
@@ -695,7 +716,7 @@ function CreateTemplateVehicle() {
       console.log("📤 Creating template with payload:", payload);
 
       message.loading({ content: "Đang tạo template...", key: "creating", duration: 0 });
-      
+
       const res = await vehicleApi.createTemplateVehicle(payload);
       message.destroy("creating");
 
@@ -720,163 +741,164 @@ function CreateTemplateVehicle() {
   };
 
   return (
-    <div>
-      {/* Header với các nút action */}
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <Title level={4} className="m-0">🎨 Tạo & Quản lý Template Xe Điện</Title>
-          <Text type="secondary">Quản lý các template xe điện (version + color)</Text>
+    <ConfigProvider locale={viVN}>
+      <div>
+        {/* Header với các nút action */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <Title level={4} className="m-0"> Tạo & Quản lý Template Xe Điện</Title>
+            <Text type="secondary">Quản lý các template xe điện (version + color)</Text>
+          </div>
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => loadAllTemplates(true)}
+              loading={loading}
+            >
+              Làm mới
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleCreateModal}
+              size="large"
+            >
+              Tạo Template Mới
+            </Button>
+          </Space>
         </div>
-        <Space>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => loadAllTemplates(true)}
+
+        <Card className="shadow-sm">
+          <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
+            <Col span={24}>
+              <Title level={4} className="!mb-1">
+
+                Danh sách Templates
+              </Title>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                Tổng cộng: {templatesList.length} template &nbsp;•&nbsp; Hiển thị: {filteredAndSortedTemplates.length}
+              </Text>
+            </Col>
+          </Row>
+          <Divider className="!mt-2" />
+
+          {/* Filter and Sort Section */}
+          <Row gutter={[16, 16]} className="mb-4">
+            <Col xs={24} sm={12} md={8}>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="Tìm theo tên model/version/màu..."
+                value={templateSearchKeyword}
+                onChange={(e) => setTemplateSearchKeyword(e.target.value)}
+                size="large"
+              />
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                allowClear
+                placeholder="Lọc theo Model..."
+                value={templateFilterModel || undefined}
+                onChange={setTemplateFilterModel}
+                size="large"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children ?? "")
+                    .toString()
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                style={{ width: "100%" }}
+              >
+                {[...new Set(models.map(m => m.modelName))].map((modelName) => (
+                  <Option key={modelName} value={modelName}>
+                    {modelName}
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Select
+                allowClear
+                placeholder="Lọc theo Màu..."
+                value={templateFilterColor || undefined}
+                onChange={setTemplateFilterColor}
+                size="large"
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children ?? "")
+                    .toString()
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+                style={{ width: "100%" }}
+              >
+                {colors.map((color) => (
+                  <Option key={color.id} value={color.colorName}>
+                    <Space>
+                      <span
+                        style={{
+                          width: 16,
+                          height: 16,
+                          background: color.colorCode,
+                          borderRadius: "50%",
+                          border: "1px solid #d9d9d9",
+                          display: "inline-block",
+                        }}
+                      />
+                      {color.colorName}
+                    </Space>
+                  </Option>
+                ))}
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={4}>
+              <Select
+                value={templateSortBy}
+                onChange={setTemplateSortBy}
+                size="large"
+                style={{ width: "100%" }}
+                suffixIcon={<SortAscendingOutlined />}
+              >
+                <Option value="price-asc">Giá thấp → cao</Option>
+                <Option value="price-desc">Giá cao → thấp</Option>
+                <Option value="model-asc">Model A-Z</Option>
+                <Option value="version-asc">Version A-Z</Option>
+                <Option value="color-asc">Màu A-Z</Option>
+              </Select>
+            </Col>
+          </Row>
+
+          <Table
+            columns={templateColumns}
+            dataSource={filteredAndSortedTemplates}
+            rowKey="id"
             loading={loading}
-          >
-            Làm mới
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleCreateModal}
-            size="large"
-          >
-            Tạo Template Mới
-          </Button>
-        </Space>
-      </div>
-
-      <Card className="shadow-sm">
-        <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
-          <Col span={24}>
-            <Title level={4} className="!mb-1">
-              <CarOutlined style={{ color: "#1890ff", marginRight: 8 }} />
-              Danh sách Templates
-            </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Tổng cộng: {templatesList.length} template &nbsp;•&nbsp; Hiển thị: {filteredAndSortedTemplates.length}
-            </Text>
-          </Col>
-        </Row>
-        <Divider className="!mt-2" />
-        
-        {/* Filter and Sort Section */}
-        <Row gutter={[16, 16]} className="mb-4">
-          <Col xs={24} sm={12} md={8}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="Tìm theo tên model/version/màu..."
-              value={templateSearchKeyword}
-              onChange={(e) => setTemplateSearchKeyword(e.target.value)}
-              size="large"
-            />
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Select
-              allowClear
-              placeholder="Lọc theo Model..."
-              value={templateFilterModel || undefined}
-              onChange={setTemplateFilterModel}
-              size="large"
-              showSearch
-              filterOption={(input, option) =>
-                (option?.children ?? "")
-                  .toString()
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              style={{ width: "100%" }}
-            >
-              {[...new Set(models.map(m => m.modelName))].map((modelName) => (
-                <Option key={modelName} value={modelName}>
-                  {modelName}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Select
-              allowClear
-              placeholder="Lọc theo Màu..."
-              value={templateFilterColor || undefined}
-              onChange={setTemplateFilterColor}
-              size="large"
-              showSearch
-              filterOption={(input, option) =>
-                (option?.children ?? "")
-                  .toString()
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-              style={{ width: "100%" }}
-            >
-              {colors.map((color) => (
-                <Option key={color.id} value={color.colorName}>
-                  <Space>
-                    <span
-                      style={{
-                        width: 16,
-                        height: 16,
-                        background: color.colorCode,
-                        borderRadius: "50%",
-                        border: "1px solid #d9d9d9",
-                        display: "inline-block",
-                      }}
-                    />
-                    {color.colorName}
-                  </Space>
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              value={templateSortBy}
-              onChange={setTemplateSortBy}
-              size="large"
-              style={{ width: "100%" }}
-              suffixIcon={<SortAscendingOutlined />}
-            >
-              <Option value="price-asc">Giá thấp → cao</Option>
-              <Option value="price-desc">Giá cao → thấp</Option>
-              <Option value="model-asc">Model A-Z</Option>
-              <Option value="version-asc">Version A-Z</Option>
-              <Option value="color-asc">Màu A-Z</Option>
-            </Select>
-          </Col>
-        </Row>
-
-        <Table
-          columns={templateColumns}
-          dataSource={filteredAndSortedTemplates}
-          rowKey="id"
-          loading={loading}
-          size="middle"
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} templates`,
-            pageSizeOptions: ['10', '20', '50'],
-          }}
-          locale={{
-            emptyText: (
-              <div className="py-12 text-center">
-                <CarOutlined style={{ fontSize: 56, color: "#d9d9d9" }} />
-                <p className="text-gray-500 mt-3 text-base">Chưa có template nào</p>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />} 
-                  onClick={handleCreateModal}
-                  className="mt-2"
-                >
-                  Tạo template đầu tiên
-                </Button>
-              </div>
-            ),
-          }}
-        />
-      </Card>
+            size="middle"
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} templates`,
+              pageSizeOptions: ['10', '20', '50'],
+            }}
+            locale={{
+              emptyText: (
+                <div className="py-12 text-center">
+                  <CarOutlined style={{ fontSize: 56, color: "#d9d9d9" }} />
+                  <p className="text-gray-500 mt-3 text-base">Chưa có template nào</p>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={handleCreateModal}
+                    className="mt-2"
+                  >
+                    Tạo template đầu tiên
+                  </Button>
+                </div>
+              ),
+            }}
+          />
+        </Card>
 
         {/* Modal tạo template */}
         <Modal
@@ -1183,7 +1205,7 @@ function CreateTemplateVehicle() {
               {/* Thông tin cơ bản */}
               <Card size="small" className="bg-gray-50 mb-4">
                 <Row gutter={[12, 8]}>
-               
+
                   <Col span={8}>
                     <div>
                       <Text type="secondary" style={{ fontSize: 11 }}>Model:</Text>
@@ -1202,7 +1224,7 @@ function CreateTemplateVehicle() {
                       </Text>
                     </div>
                   </Col>
-                  
+
                   <Col span={12}>
                     <div>
                       <Text type="secondary" style={{ fontSize: 11 }}>Màu sắc:</Text>
@@ -1211,7 +1233,7 @@ function CreateTemplateVehicle() {
                           style={{
                             width: 36,
                             height: 36,
-                            backgroundColor: selectedTemplate.color?.colorCode || selectedTemplate.color?.hexCode ,
+                            backgroundColor: selectedTemplate.color?.colorCode || selectedTemplate.color?.hexCode,
                             borderRadius: "6px",
                             border: "2px solid #d9d9d9",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
@@ -1230,7 +1252,7 @@ function CreateTemplateVehicle() {
                       </div>
                     </div>
                   </Col>
-                  
+
                   <Col span={12}>
                     <div>
                       <Text type="secondary" style={{ fontSize: 11 }}>Giá bán:</Text>
@@ -1240,7 +1262,7 @@ function CreateTemplateVehicle() {
                       </Text>
                     </div>
                   </Col>
-                  
+
                   <Col span={24}>
                     <div className="mt-1">
                       <Text type="secondary" style={{ fontSize: 11 }}>Mô tả:</Text>
@@ -1255,10 +1277,10 @@ function CreateTemplateVehicle() {
 
               {/* Hình ảnh */}
               {(() => {
-                const imgUrls = Array.isArray(selectedTemplate.imgUrl) 
-                  ? selectedTemplate.imgUrl 
+                const imgUrls = Array.isArray(selectedTemplate.imgUrl)
+                  ? selectedTemplate.imgUrl
                   : [];
-                
+
                 console.log("📸 Template images:", imgUrls);
                 console.log("🎨 Color data:", selectedTemplate.color);
 
@@ -1269,17 +1291,17 @@ function CreateTemplateVehicle() {
                         Hình ảnh ({imgUrls.length} ảnh)
                       </Text>
                     </Divider>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(3, 1fr)', 
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
                       gap: '12px',
                       maxHeight: '400px',
                       overflowY: 'auto',
                       padding: '4px'
                     }}>
                       {imgUrls.map((url, idx) => (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className="cursor-pointer hover:opacity-80 transition-opacity group relative"
                           onClick={() => {
                             console.log("🖼️ Opening image:", url);
@@ -1302,17 +1324,17 @@ function CreateTemplateVehicle() {
                               e.target.src = 'https://via.placeholder.com/300x160?text=No+Image';
                             }}
                           />
-                          <div 
+                          <div
                             className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center"
                             style={{ borderRadius: '8px' }}
                           >
-                            <ZoomInOutlined 
+                            <ZoomInOutlined
                               className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
                               style={{ fontSize: 28 }}
                             />
                           </div>
-                          <Text 
-                            type="secondary" 
+                          <Text
+                            type="secondary"
                             style={{ fontSize: 10, display: 'block', textAlign: 'center', marginTop: '4px' }}
                           >
                             Ảnh {idx + 1}
@@ -1364,7 +1386,7 @@ function CreateTemplateVehicle() {
                 showIcon
                 className="mb-4"
               />
-              
+
               <Card size="small" className="bg-gray-50 mb-4">
                 <Row gutter={[12, 8]}>
                   <Col span={12}>
@@ -1502,14 +1524,14 @@ function CreateTemplateVehicle() {
           width={700}
           centered
         >
-          <img 
-            alt="preview" 
-            style={{ 
-              width: "100%", 
+          <img
+            alt="preview"
+            style={{
+              width: "100%",
               maxHeight: "70vh",
               objectFit: "contain"
-            }} 
-            src={previewImage} 
+            }}
+            src={previewImage}
           />
         </Modal>
 
@@ -1566,6 +1588,7 @@ function CreateTemplateVehicle() {
           </div>
         </Modal>
       </div>
+    </ConfigProvider>
   );
 }
 

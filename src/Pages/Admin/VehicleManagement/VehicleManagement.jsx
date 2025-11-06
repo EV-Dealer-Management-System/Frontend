@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+// import { useNavigate } from "react-router-dom"; // Chưa sử dụng
 import {
   Card,
   Table,
@@ -25,6 +25,7 @@ import {
   Tabs,
   Spin,
   Alert,
+  Pagination,
 } from "antd";
 import {
   PageContainer,
@@ -103,7 +104,7 @@ class ErrorBoundary extends React.Component {
 
 function VehicleManagement() {
   const { message } = App.useApp();
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Chưa sử dụng
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeTab, setActiveTab] = useState("overview");
@@ -113,30 +114,71 @@ function VehicleManagement() {
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState(null);
 
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 12, // Hiển thị 12 templates mỗi trang (3x4 grid)
+    total: 0,
+    showSizeChanger: true,
+    showQuickJumper: true,
+    showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} templates`,
+    pageSizeOptions: ['8', '12', '16', '24', '48'],
+  });
 
-  // Load templates khi vào tab overview
-  useEffect(() => {
-    if (activeTab === "overview") {
-      loadAllTemplates();
-    }
-  }, [activeTab]);
-
-  const loadAllTemplates = async () => {
+  // Load tất cả templates từ API với search và pagination
+  const loadAllTemplates = useCallback(async (page, size) => {
     try {
       setLoading(true);
-      const result = await vehicleApi.getAllTemplateVehicles();
+
+      // Tham số API với search keyword và pagination
+      const params = {
+        pageNumber: page || 1,
+        pageSize: size || 12,
+        ...(searchKeyword && { search: searchKeyword })
+      };
+
+      console.log("📤 [Template] Loading with params:", params);
+
+      const result = await vehicleApi.getAllTemplateVehicles(params);
 
       console.log("📥 Template API Response:", result);
 
       if (result.success) {
-        const templatesData = result.data || [];
-        console.log(" Loaded templates:", templatesData);
+        // Xử lý cả 2 trường hợp: result.data.data (nested) hoặc result.data (flat)
+        let templatesData = [];
+
+        if (result.data && result.data.data && Array.isArray(result.data.data)) {
+          // Trường hợp nested: result.data.data
+          templatesData = result.data.data;
+          console.log("✅ Using nested data structure:", templatesData.length, "templates");
+        } else if (Array.isArray(result.data)) {
+          // Trường hợp flat: result.data
+          templatesData = result.data;
+          console.log("✅ Using flat data structure:", templatesData.length, "templates");
+        }
+
+        console.log("✅ Final templates data:", templatesData);
         setTemplates(templatesData);
+
+        // Cập nhật pagination info từ API response
+        if (result.data && result.data.pagination) {
+          const apiPagination = result.data.pagination;
+          setPagination(prev => ({
+            ...prev,
+            current: apiPagination.pageNumber || params.pageNumber,
+            pageSize: apiPagination.pageSize || params.pageSize,
+            total: apiPagination.totalItems || 0,
+          }));
+          console.log("📊 Updated pagination:", apiPagination);
+        } else {
+          // Fallback nếu không có pagination info
+          setPagination(prev => ({
+            ...prev,
+            current: params.pageNumber,
+            pageSize: params.pageSize,
+            total: templatesData.length,
+          }));
+        }
 
         if (templatesData.length === 0) {
           message.info("Chưa có template nào.");
@@ -144,14 +186,58 @@ function VehicleManagement() {
       } else {
         message.error(result.error || "Không thể tải danh sách templates!");
         setTemplates([]);
+        setPagination(prev => ({ ...prev, total: 0 }));
       }
     } catch (error) {
-      console.error(" Error loading templates:", error);
+      console.error("❌ Error loading templates:", error);
       message.error("Lỗi khi tải danh sách templates!");
       setTemplates([]);
+      setPagination(prev => ({ ...prev, total: 0 }));
     } finally {
       setLoading(false);
     }
+  }, [searchKeyword, message]); // Dependencies cho useCallback
+
+  // Function để reload với pagination hiện tại
+  const reloadTemplates = () => {
+    loadAllTemplates(pagination.current, pagination.pageSize);
+  };
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Unified effect để handle cả tab change và search
+  useEffect(() => {
+    if (activeTab !== "overview") return;
+
+    // Nếu không có searchKeyword, load ngay lập tức (tab change hoặc clear search)
+    if (!searchKeyword.trim()) {
+      setPagination(prev => ({ ...prev, current: 1 }));
+      loadAllTemplates(1, 12);
+      return;
+    }
+
+    // Nếu có searchKeyword, debounce search
+    setPagination(prev => ({ ...prev, current: 1 }));
+    const timeoutId = setTimeout(() => {
+      loadAllTemplates(1, pagination.pageSize);
+    }, 500); // Delay 500ms sau khi user dừng gõ
+
+    return () => clearTimeout(timeoutId);
+  }, [activeTab, searchKeyword, loadAllTemplates, pagination.pageSize]);
+
+  // Xử lý thay đổi pagination
+  const handlePaginationChange = (page, pageSize) => {
+    console.log("📄 Pagination changed:", { page, pageSize });
+    setPagination(prev => ({
+      ...prev,
+      current: page,
+      pageSize: pageSize,
+    }));
+    loadAllTemplates(page, pageSize);
   };
 
   // Xử lý khi click xem chi tiết
@@ -200,7 +286,7 @@ function VehicleManagement() {
                   <div className="w-full">
                     <PageContainer
                       title="Tổng Quan Xe Điện"
-                      subTitle={`${templates.filter(t => t.isActive !== false && t.status !== 0).length} mẫu xe điện có sẵn`}
+                      subTitle={`Hiển thị ${templates.length} trong tổng số ${pagination.total} templates`}
                       extra={[
                         <Search
                           key="search"
@@ -213,7 +299,7 @@ function VehicleManagement() {
                         <Button
                           key="refresh"
                           icon={<ReloadOutlined />}
-                          onClick={loadAllTemplates}
+                          onClick={reloadTemplates}
                           loading={loading}
                           type="primary"
                         >
@@ -229,7 +315,7 @@ function VehicleManagement() {
                       )}
 
                       {/* Empty State */}
-                      {!loading && templates.length === 0 && (
+                      {!loading && Array.isArray(templates) && templates.length === 0 && (
                         <Card className="text-center py-20">
                           <CarOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />
                           <Text type="secondary" className="block mt-4">
@@ -239,41 +325,59 @@ function VehicleManagement() {
                       )}
 
                       {/* Template Grid */}
-                      {!loading && templates.length > 0 && (
-                        <Row gutter={[16, 16]}>
-                          {templates
-                            .filter((template) => {
-                              // Ẩn những template có status ngừng hoạt động
-                              const isActive = template.isActive !== false && template.status !== 0;
+                      {!loading && Array.isArray(templates) && templates.length > 0 && (
+                        <>
+                          <Row gutter={[16, 16]}>
+                            {templates
+                              .filter((template) => {
+                                // Ẩn những template có status ngừng hoạt động
+                                const isActive = template.isActive !== false && template.status !== 0;
 
-                              const keyword = searchKeyword.toLowerCase();
-                              const matchKeyword = (
-                                template.version?.modelName?.toLowerCase().includes(keyword) ||
-                                template.version?.versionName?.toLowerCase().includes(keyword) ||
-                                template.color?.colorName?.toLowerCase().includes(keyword)
-                              );
+                                // Search filtering - vì đã search từ API nên không cần filter ở đây nữa
+                                // Chỉ cần filter theo active status
+                                return isActive;
+                              })
+                              .map((template) => {
+                                // Chuẩn hóa data để khớp với VehicleCard
+                                const vehicleData = {
+                                  ...template,
+                                  modelName: template.version?.modelName,
+                                  versionName: template.version?.versionName,
+                                  colorName: template.color?.colorName,
+                                };
 
-                              return isActive && matchKeyword;
-                            })
-                            .map((template) => {
-                              // Chuẩn hóa data để khớp với VehicleCard
-                              const vehicleData = {
-                                ...template,
-                                modelName: template.version?.modelName,
-                                versionName: template.version?.versionName,
-                                colorName: template.color?.colorName,
-                              };
+                                return (
+                                  <Col xs={24} sm={12} md={8} lg={6} key={template.id}>
+                                    <VehicleCard
+                                      vehicle={vehicleData}
+                                      onViewDetails={handleViewDetails}
+                                    />
+                                  </Col>
+                                );
+                              })}
+                          </Row>
 
-                              return (
-                                <Col xs={24} sm={12} md={8} lg={6} key={template.id}>
-                                  <VehicleCard
-                                    vehicle={vehicleData}
-                                    onViewDetails={handleViewDetails}
-                                  />
-                                </Col>
-                              );
-                            })}
-                        </Row>
+                          {/* Pagination */}
+                          {pagination.total > 0 && (
+                            <div className="flex justify-center mt-8">
+                              <Pagination
+                                current={pagination.current}
+                                total={pagination.total}
+                                pageSize={pagination.pageSize}
+                                showSizeChanger={pagination.showSizeChanger}
+                                showQuickJumper={pagination.showQuickJumper}
+                                showTotal={pagination.showTotal}
+                                pageSizeOptions={pagination.pageSizeOptions}
+                                onChange={handlePaginationChange}
+                                onShowSizeChange={handlePaginationChange}
+                                style={{
+                                  marginTop: '24px',
+                                  textAlign: 'center'
+                                }}
+                              />
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Modal chi tiết template */}
@@ -314,7 +418,6 @@ function VehicleManagement() {
   );
 }
 
-// ✅ GIỮ NGUYÊN: ErrorBoundary
 function VehicleManagementWithErrorBoundary() {
   return (
     <App>

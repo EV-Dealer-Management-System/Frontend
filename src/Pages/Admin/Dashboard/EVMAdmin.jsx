@@ -3,6 +3,7 @@ import { Button, message, Spin } from 'antd';
 import { PageContainer } from '@ant-design/pro-components';
 import { ReloadOutlined, DashboardOutlined } from '@ant-design/icons';
 import AdminLayout from '../../../Components/Admin/AdminLayout';
+import { getAdminDashboard } from '../../../App/EVMAdmin/Dashboard/GetAdminDashboard';
 import { getAllEVInventory } from '../../../App/EVMAdmin/Dashboard/GetAllEVCInventory';
 import { getAllEVBookings } from '../../../App/EVMAdmin/Dashboard/GetAllEVBooking';
 import { EVMStaffAccountService } from '../../../App/EVMAdmin/Dashboard/GetAllEVMStaff';
@@ -22,14 +23,23 @@ function EVMAdmin() {
   const [staffData, setStaffData] = useState([]);
   const [dealerData, setDealerData] = useState([]);
   const [warehouseData, setWarehouseData] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
 
   // Fetch dữ liệu từ API
   const fetchData = async () => {
     try {
       setLoading(true);
 
-      // Gọi song song 5 API với error handling riêng biệt
-      const [inventoryResponse, bookingResponse, staffResponse, dealerResponse, warehouseResponse] = await Promise.allSettled([
+      // Gọi song song 6 API với error handling riêng biệt
+      const [
+        dashboardResponse,
+        inventoryResponse,
+        bookingResponse,
+        staffResponse,
+        dealerResponse,
+        warehouseResponse
+      ] = await Promise.allSettled([
+        getAdminDashboard(),
         getAllEVInventory(),
         getAllEVBookings(),
         EVMStaffAccountService.getAllStaffAccounts({}),
@@ -37,12 +47,23 @@ function EVMAdmin() {
         getAllEVInventories()
       ]);
 
+      // Xử lý dữ liệu dashboard
+      if (dashboardResponse.status === 'fulfilled' && dashboardResponse.value?.isSuccess && dashboardResponse.value?.result) {
+        setDashboardData(dashboardResponse.value.result);
+        console.log('Dashboard Data:', dashboardResponse.value.result);
+      } else {
+        console.warn('Dashboard API failed:', dashboardResponse.reason || dashboardResponse.value);
+        setDashboardData(null);
+      }
+
       // Xử lý dữ liệu inventory
-      if (inventoryResponse.status === 'fulfilled' && inventoryResponse.value?.isSuccess && inventoryResponse.value?.result) {
-        setInventoryData(Array.isArray(inventoryResponse.value.result) ? inventoryResponse.value.result : []);
+      if (inventoryResponse.status === 'fulfilled' && inventoryResponse.value?.isSuccess) {
+        // Lưu toàn bộ response để component có thể truy cập result.data
+        setInventoryData(inventoryResponse.value);
+        console.log('Inventory Data:', inventoryResponse.value);
       } else {
         console.warn('Inventory API failed:', inventoryResponse.reason || inventoryResponse.value);
-        setInventoryData([]);
+        setInventoryData(null);
       }
 
       // Xử lý dữ liệu booking
@@ -83,12 +104,13 @@ function EVMAdmin() {
     } catch (error) {
       console.error('Lỗi khi tải dữ liệu dashboard:', error);
       message.error('Không thể tải dữ liệu dashboard. Vui lòng thử lại!');
-      // Đảm bảo tất cả state đều là array rỗng khi có lỗi
-      setInventoryData([]);
+      // Đảm bảo tất cả state đều được reset khi có lỗi
+      setInventoryData(null);
       setBookingData([]);
       setStaffData([]);
       setDealerData([]);
       setWarehouseData([]);
+      setDashboardData(null);
     } finally {
       setLoading(false);
     }
@@ -166,6 +188,7 @@ function EVMAdmin() {
                 staffData={staffData}
                 dealerData={dealerData}
                 warehouseData={warehouseData}
+                dashboardData={dashboardData}
                 loading={loading}
               />
 

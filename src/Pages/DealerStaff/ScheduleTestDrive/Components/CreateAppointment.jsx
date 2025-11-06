@@ -16,8 +16,8 @@ import {
 } from "antd";
 import { ScheduleOutlined, ClockCircleOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { CreateAppointment } from "../../../../App/DealerManager/ScheduleManagement/CreateAppointment";
-import { GetAllCustomers } from "../../../../App/DealerManager/ScheduleManagement/GetAllCustomers";
-import { GetAllTemplates } from "../../../../App/DealerManager/ScheduleManagement/GetAllTemplates";
+import { GetAllCustomers } from "../../../../App/DealerStaff/ScheduleManagement/GetAllCustomers";
+import { GetAllTemplates } from "../../../../App/DealerStaff/ScheduleManagement/GetAllTemplates";
 import { GetAvailableAppointments } from "../../../../App/DealerManager/ScheduleManagement/GetAvailableAppointments";
 import { useToast } from "./ToastContainer";
 import { translateSuccessMessage, translateErrorMessage } from "./translateMessage";
@@ -47,27 +47,42 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         setTemplateLoading(true);
 
         const [customersResponse, templatesResponse] = await Promise.all([
-          GetAllCustomers.getAllCustomers(),
-          GetAllTemplates.getAllTemplates(),
+          GetAllCustomers.getAllCustomers(1, 100), // Lấy 100 customer đầu tiên cho dropdown
+          GetAllTemplates.getAllTemplates(1, 100), // Lấy 100 template đầu tiên cho dropdown
         ]);
 
         if (customersResponse.isSuccess) {
-          setCustomers(customersResponse.result || []);
+          // Xử lý cấu trúc response với pagination
+          const customersData = customersResponse.result;
+
+          // Nếu có pagination, lấy data từ result.data, nếu không thì lấy result trực tiếp
+          const customers = customersData?.data ? customersData.data : customersData;
+          setCustomers(Array.isArray(customers) ? customers : []);
         } else {
+          setCustomers([]); // Set empty array nếu không thành công
           toast.error(
             translateErrorMessage(customersResponse.message, "Không thể tải danh sách khách hàng")
           );
         }
 
         if (templatesResponse.isSuccess) {
-          setTemplates(templatesResponse.result || []);
+          // Xử lý cấu trúc response với pagination
+          const templatesData = templatesResponse.result;
+
+          // Nếu có pagination, lấy data từ result.data, nếu không thì lấy result trực tiếp
+          const templates = templatesData?.data ? templatesData.data : templatesData;
+          setTemplates(Array.isArray(templates) ? templates : []);
         } else {
+          setTemplates([]); // Set empty array nếu không thành công
           toast.error(
             translateErrorMessage(templatesResponse.message, "Không thể tải danh sách template")
           );
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+        // Set empty arrays để tránh lỗi map
+        setCustomers([]);
+        setTemplates([]);
         toast.error("Đã xảy ra lỗi khi tải dữ liệu");
       } finally {
         setCustomerLoading(false);
@@ -76,7 +91,70 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Hàm search customers với debounce và logging
+  const searchCustomers = async (searchText) => {
+    console.log("🔍 Searching customers with text:", searchText);
+
+    if (!searchText || searchText.length < 2) {
+      console.log("⚠️ Search text too short, skipping search");
+      return; // Không search nếu text quá ngắn
+    }
+
+    try {
+      setCustomerLoading(true);
+      console.log("📡 Making API call to search customers");
+
+      const response = await GetAllCustomers.getAllCustomers(1, 50, searchText);
+      console.log("📥 Search response:", response);
+
+      if (response.isSuccess) {
+        const customersData = response.result;
+        const customers = customersData?.data ? customersData.data : customersData;
+        console.log("✅ Found customers:", customers);
+        setCustomers(Array.isArray(customers) ? customers : []);
+      } else {
+        console.log("❌ Search failed:", response.message);
+      }
+    } catch (error) {
+      console.error("❌ Error searching customers:", error);
+    } finally {
+      setCustomerLoading(false);
+    }
+  };
+
+  // Hàm search templates với debounce và logging
+  const searchTemplates = async (searchText) => {
+    console.log("🔍 Searching templates with text:", searchText);
+
+    if (!searchText || searchText.length < 2) {
+      console.log("⚠️ Search text too short, skipping search");
+      return; // Không search nếu text quá ngắn
+    }
+
+    try {
+      setTemplateLoading(true);
+      console.log("📡 Making API call to search templates");
+
+      const response = await GetAllTemplates.getAllTemplates(1, 50, searchText);
+      console.log("📥 Search response:", response);
+
+      if (response.isSuccess) {
+        const templatesData = response.result;
+        const templates = templatesData?.data ? templatesData.data : templatesData;
+        console.log("✅ Found templates:", templates);
+        setTemplates(Array.isArray(templates) ? templates : []);
+      } else {
+        console.log("❌ Search failed:", response.message);
+      }
+    } catch (error) {
+      console.error("❌ Error searching templates:", error);
+    } finally {
+      setTemplateLoading(false);
+    }
+  };
 
   const handleTemplateChange = (templateId) => {
     const template = templates.find((t) => t.id === templateId);
@@ -86,7 +164,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
   const handleDateChange = async (date) => {
     setSelectedDate(date);
     setSelectedSlot(null);
-    
+
     if (!date) {
       setAvailableSlots([]);
       return;
@@ -94,15 +172,15 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
 
     try {
       setSlotsLoading(true);
-      
+
       // Format date theo yêu cầu của backend: 2025-10-30T00:00:00Z
       const formattedDate = date.format('YYYY-MM-DD') + 'T00:00:00Z';
       console.log('📅 Fetching slots for date:', formattedDate);
-      
+
       const response = await GetAvailableAppointments.getAvailableAppointments(formattedDate);
-      
+
       console.log('📥 Response:', response);
-      
+
       if (response.isSuccess) {
         setAvailableSlots(response.result || []);
         console.log('✅ Available slots:', response.result);
@@ -125,38 +203,38 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
 
   const handleSubmit = async (values) => {
     console.log("🚀 handleSubmit called with values:", values);
-    
+
     try {
       setLoading(true);
       console.log("⏳ Loading state set to true");
 
-            // Validate: Phải chọn ngày
-            if (!selectedDate) {
-              console.log("❌ Validation failed: No date selected");
-              toast.error("Vui lòng chọn ngày hẹn!");
-              setLoading(false);
-              return;
-            }
+      // Validate: Phải chọn ngày
+      if (!selectedDate) {
+        console.log("❌ Validation failed: No date selected");
+        toast.error("Vui lòng chọn ngày hẹn!");
+        setLoading(false);
+        return;
+      }
 
-            // Validate: Phải chọn khung giờ
-            if (!selectedSlot) {
-              console.log("❌ Validation failed: No slot selected");
-              toast.error("Vui lòng chọn khung giờ!");
-              setLoading(false);
-              return;
-            }
-      
+      // Validate: Phải chọn khung giờ
+      if (!selectedSlot) {
+        console.log("❌ Validation failed: No slot selected");
+        toast.error("Vui lòng chọn khung giờ!");
+        setLoading(false);
+        return;
+      }
+
       console.log("✅ Validation passed");
 
       // Tạo startTime và endTime từ selectedDate và selectedSlot
       const year = selectedDate.year();
       const month = selectedDate.month(); // 0-11
       const day = selectedDate.date();
-      
+
       // Parse time từ slot (format: "HH:mm:ss")
       const startTimeParts = selectedSlot.openTime.split(':');
       const endTimeParts = selectedSlot.closeTime.split(':');
-      
+
       // Tạo moment object với date và time cụ thể
       let startTime = moment({
         year: year,
@@ -166,7 +244,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         minute: parseInt(startTimeParts[1]),
         second: parseInt(startTimeParts[2] || 0)
       });
-      
+
       let endTime = moment({
         year: year,
         month: month,
@@ -180,12 +258,12 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
       console.log("🕐 Selected Slot:", selectedSlot);
       console.log("⏰ Start Time:", startTime.format("YYYY-MM-DD HH:mm:ss"));
       console.log("⏰ End Time:", endTime.format("YYYY-MM-DD HH:mm:ss"));
-      
+
       // Format thành ISO string với local timezone (YYYY-MM-DDTHH:mm:ss.sssZ)
       // Sử dụng format ISO để backend parse đúng
       const startTimeISO = startTime.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
       const endTimeISO = endTime.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
-      
+
       console.log("🌍 Start Time (ISO):", startTimeISO);
       console.log("🌍 End Time (ISO):", endTimeISO);
 
@@ -215,9 +293,9 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         console.log("✅ Success branch");
         const successMessage = translateSuccessMessage(response.message, "Đặt lịch hẹn thành công!");
         console.log("💬 Showing success message:", successMessage);
-        
+
         toast.success(successMessage);
-        
+
         form.resetFields();
         setSelectedTemplate(null);
         setSelectedDate(null);
@@ -232,7 +310,7 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         console.log("❌ Error branch - isSuccess is false");
         const errorMessage = translateErrorMessage(response?.message, "Đặt lịch hẹn thất bại!");
         console.log("💬 Showing error message:", errorMessage);
-        
+
         toast.error(`Đặt lịch thất bại: ${errorMessage}`);
       }
     } catch (error) {
@@ -251,10 +329,10 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
           errorData?.message || errorData?.error || errorData?.title,
           "Lỗi từ máy chủ"
         );
-        
+
         console.log("💬 Showing error message:", errorMessage);
         toast.error(`Đặt lịch thất bại: ${errorMessage}`);
-        
+
         // Log chi tiết để debug
         console.error("Error response data:", errorData);
       } else if (error.request) {
@@ -283,182 +361,180 @@ const CreateAppointmentForm = ({ onAppointmentCreated }) => {
         status: 1, // Mặc định trạng thái hoạt động
       }}
     >
-        <Form.Item
-          name="customerId"
-          label="Khách Hàng"
-          rules={[{ required: true, message: "Vui lòng chọn khách hàng" }]}
+      <Form.Item
+        name="customerId"
+        label="Khách Hàng"
+        rules={[{ required: true, message: "Vui lòng chọn khách hàng" }]}
+      >
+        <Select
+          placeholder="Chọn khách hàng"
+          showSearch
+          loading={customerLoading}
+          filterOption={false} // Tắt filter client-side để dùng server search
+          onSearch={searchCustomers} // Search thông qua API
+          notFoundContent={customerLoading ? <Spin size="small" /> : "Không tìm thấy khách hàng"}
         >
-          <Select
-            placeholder="Chọn khách hàng"
-            showSearch
-            loading={customerLoading}
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
-            notFoundContent={customerLoading ? <Spin size="small" /> : null}
-          >
-            {customers.map((customer) => (
-              <Option key={customer.id} value={customer.id}>
-                {customer.fullName} - {customer.phoneNumber}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+          {Array.isArray(customers) && customers.map((customer) => (
+            <Option key={customer.id} value={customer.id}>
+              {customer.fullName} - {customer.phoneNumber}
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
 
-        <Form.Item
-          name="evTemplateId"
-          label="Template Xe"
-          rules={[{ required: true, message: "Vui lòng chọn template xe" }]}
+      <Form.Item
+        name="evTemplateId"
+        label="Template Xe"
+        rules={[{ required: true, message: "Vui lòng chọn template xe" }]}
+      >
+        <Select
+          placeholder="Chọn template xe"
+          showSearch
+          loading={templateLoading}
+          onChange={handleTemplateChange}
+          filterOption={false} // Tắt filter client-side để dùng server search
+          onSearch={searchTemplates} // Search thông qua API
+          notFoundContent={templateLoading ? <Spin size="small" /> : "Không tìm thấy template"}
         >
-          <Select
-            placeholder="Chọn template xe"
-            showSearch
-            loading={templateLoading}
-            onChange={handleTemplateChange}
-            filterOption={(input, option) =>
-              option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-            }
-            notFoundContent={templateLoading ? <Spin size="small" /> : null}
-          >
-            {templates.map((template) => (
-              <Option key={template.id} value={template.id}>
-                {template.version?.versionName} - {template.version?.modelName}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+          {Array.isArray(templates) && templates.map((template) => (
+            <Option key={template.id} value={template.id}>
+              {template.version?.versionName} - {template.version?.modelName}
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
 
-        {selectedTemplate && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
-            <Text strong className="block mb-2">
-              Chi Tiết Template
-            </Text>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Text type="secondary" className="block">
-                  Phiên Bản:
-                </Text>
-                <Text strong>{selectedTemplate.version?.versionName}</Text>
-              </div>
-              <div>
-                <Text type="secondary" className="block">
-                  Mẫu Xe:
-                </Text>
-                <Text strong>{selectedTemplate.version?.modelName}</Text>
-              </div>
-              <div>
-                <Text type="secondary" className="block">
-                  Màu Sắc:
-                </Text>
-                <Text strong>{selectedTemplate.color?.colorName}</Text>
-              </div>
-              {selectedTemplate.imgUrl && (
-                <div>
-                  <Text type="secondary" className="block mb-1">
-                    Hình Ảnh:
-                  </Text>
-                  <Image
-                    src={selectedTemplate.imgUrl[0]}
-                    width={100}
-                    height={100}
-                    className="object-cover rounded"
-                  />
-                </div>
-              )}
+      {selectedTemplate && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+          <Text strong className="block mb-2">
+            Chi Tiết Template
+          </Text>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Text type="secondary" className="block">
+                Phiên Bản:
+              </Text>
+              <Text strong>{selectedTemplate.version?.versionName}</Text>
             </div>
-          </div>
-        )}
-
-        <Form.Item
-          label="Chọn Ngày Hẹn"
-          required
-        >
-          <DatePicker
-            value={selectedDate}
-            onChange={handleDateChange}
-            format="DD/MM/YYYY"
-            placeholder="Chọn ngày hẹn"
-            style={{ width: "100%" }}
-            disabledDate={(current) => {
-              // Không cho chọn ngày trong quá khứ
-              return current && current < moment().startOf('day');
-            }}
-          />
-        </Form.Item>
-
-        {selectedDate && (
-          <Form.Item label="Chọn Khung Giờ" required>
-            {slotsLoading ? (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <Spin tip="Đang tải khung giờ..." />
-              </div>
-            ) : availableSlots.length > 0 ? (
-              <Row gutter={[8, 8]}>
-                {availableSlots.map((slot, index) => (
-                  <Col span={12} key={index}>
-                    <Card
-                      size="small"
-                      hoverable={slot.isAvailable}
-                      onClick={() => slot.isAvailable && handleSlotSelect(slot)}
-                      style={{
-                        cursor: slot.isAvailable ? 'pointer' : 'not-allowed',
-                        border: selectedSlot === slot ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                        backgroundColor: !slot.isAvailable ? '#f5f5f5' : 
-                                       selectedSlot === slot ? '#e6f7ff' : 'white',
-                        opacity: slot.isAvailable ? 1 : 0.6,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          <ClockCircleOutlined style={{ marginRight: 8, fontSize: 16 }} />
-                          <Text strong>
-                            {slot.openTime?.substring(0, 5)} - {slot.closeTime?.substring(0, 5)}
-                          </Text>
-                        </div>
-                        {slot.isAvailable ? (
-                          selectedSlot === slot ? (
-                            <CheckCircleOutlined style={{ color: '#1890ff', fontSize: 18 }} />
-                          ) : (
-                            <Tag color="green">Có sẵn</Tag>
-                          )
-                        ) : (
-                          <Tag color="red">Đã đặt</Tag>
-                        )}
-                      </div>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
-                Không có khung giờ nào trong ngày này
+            <div>
+              <Text type="secondary" className="block">
+                Mẫu Xe:
+              </Text>
+              <Text strong>{selectedTemplate.version?.modelName}</Text>
+            </div>
+            <div>
+              <Text type="secondary" className="block">
+                Màu Sắc:
+              </Text>
+              <Text strong>{selectedTemplate.color?.colorName}</Text>
+            </div>
+            {selectedTemplate.imgUrl && (
+              <div>
+                <Text type="secondary" className="block mb-1">
+                  Hình Ảnh:
+                </Text>
+                <Image
+                  src={selectedTemplate.imgUrl[0]}
+                  width={100}
+                  height={100}
+                  className="object-cover rounded"
+                />
               </div>
             )}
-          </Form.Item>
-        )}
-
-        {selectedSlot && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-            <Text strong className="block mb-2">
-              ✓ Đã Chọn Khung Giờ
-            </Text>
-            <Text>
-              {selectedDate.format("DD/MM/YYYY")} từ {selectedSlot.openTime?.substring(0, 5)} đến {selectedSlot.closeTime?.substring(0, 5)}
-            </Text>
           </div>
-        )}
+        </div>
+      )}
 
-        <Form.Item name="note" label="Ghi Chú">
-          <Input.TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
-        </Form.Item>
+      <Form.Item
+        label="Chọn Ngày Hẹn"
+        required
+      >
+        <DatePicker
+          value={selectedDate}
+          onChange={handleDateChange}
+          format="DD/MM/YYYY"
+          placeholder="Chọn ngày hẹn"
+          style={{ width: "100%" }}
+          disabledDate={(current) => {
+            // Không cho chọn ngày trong quá khứ
+            return current && current < moment().startOf('day');
+          }}
+        />
+      </Form.Item>
 
-        <Form.Item name="status" label="Trạng Thái">
-          <Select placeholder="Chọn trạng thái">
-            <Option value={1}>
-              <span className="mr-2"></span>Hoạt Động
-            </Option>
-          </Select>
+      {selectedDate && (
+        <Form.Item label="Chọn Khung Giờ" required>
+          {slotsLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <Spin tip="Đang tải khung giờ..." />
+            </div>
+          ) : Array.isArray(availableSlots) && availableSlots.length > 0 ? (
+            <Row gutter={[8, 8]}>
+              {availableSlots.map((slot, index) => (
+                <Col span={12} key={index}>
+                  <Card
+                    size="small"
+                    hoverable={slot.isAvailable}
+                    onClick={() => slot.isAvailable && handleSlotSelect(slot)}
+                    style={{
+                      cursor: slot.isAvailable ? 'pointer' : 'not-allowed',
+                      border: selectedSlot === slot ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                      backgroundColor: !slot.isAvailable ? '#f5f5f5' :
+                        selectedSlot === slot ? '#e6f7ff' : 'white',
+                      opacity: slot.isAvailable ? 1 : 0.6,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <ClockCircleOutlined style={{ marginRight: 8, fontSize: 16 }} />
+                        <Text strong>
+                          {slot.openTime?.substring(0, 5)} - {slot.closeTime?.substring(0, 5)}
+                        </Text>
+                      </div>
+                      {slot.isAvailable ? (
+                        selectedSlot === slot ? (
+                          <CheckCircleOutlined style={{ color: '#1890ff', fontSize: 18 }} />
+                        ) : (
+                          <Tag color="green">Có sẵn</Tag>
+                        )
+                      ) : (
+                        <Tag color="red">Đã đặt</Tag>
+                      )}
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
+              Không có khung giờ nào trong ngày này
+            </div>
+          )}
         </Form.Item>
+      )}
+
+      {selectedSlot && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
+          <Text strong className="block mb-2">
+            ✓ Đã Chọn Khung Giờ
+          </Text>
+          <Text>
+            {selectedDate.format("DD/MM/YYYY")} từ {selectedSlot.openTime?.substring(0, 5)} đến {selectedSlot.closeTime?.substring(0, 5)}
+          </Text>
+        </div>
+      )}
+
+      <Form.Item name="note" label="Ghi Chú">
+        <Input.TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
+      </Form.Item>
+
+      <Form.Item name="status" label="Trạng Thái">
+        <Select placeholder="Chọn trạng thái">
+          <Option value={1}>
+            <span className="mr-2"></span>Hoạt Động
+          </Option>
+        </Select>
+      </Form.Item>
 
       <Form.Item>
         <Button

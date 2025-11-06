@@ -11,8 +11,8 @@ import {
 } from '@ant-design/icons';
 import AdminLayout from '../../../Components/Admin/AdminLayout';
 import { updateAllDepositSettings } from '../../../App/DealerManager/DepositSettings/UpdateDepositSettings';
-import GlobalStatsCards from './components/GlobalStatsCards';
-import GlobalUpdateForm from './components/GlobalUpdateForm';
+import GlobalStatsCards from '../DepositSettings/Components/GlobalStatsCards';
+import GlobalUpdateForm from '../DepositSettings/Components/GlobalUpdateForm';
 
 function UpdateAllEVDepositSettings() {
     const [form] = Form.useForm();

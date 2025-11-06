@@ -7,11 +7,22 @@ function InventoryOverview({ inventoryData, loading }) {
 
     // Tính toán dữ liệu tổng hợp theo model
     const modelSummary = useMemo(() => {
-        if (!inventoryData || !Array.isArray(inventoryData)) return [];
+        // Xử lý dữ liệu từ API - kiểm tra cấu trúc result.data
+        let dataArray = [];
+
+        if (inventoryData?.result?.data && Array.isArray(inventoryData.result.data)) {
+            dataArray = inventoryData.result.data;
+        } else if (Array.isArray(inventoryData)) {
+            dataArray = inventoryData;
+        } else {
+            return [];
+        }
+
+        if (dataArray.length === 0) return [];
 
         const modelStats = {};
 
-        inventoryData.forEach(item => {
+        dataArray.forEach(item => {
             const modelName = item.modelName;
             if (!modelStats[modelName]) {
                 modelStats[modelName] = {
@@ -23,14 +34,22 @@ function InventoryOverview({ inventoryData, loading }) {
                 };
             }
 
-            modelStats[modelName].totalQuantity += item.quantity;
-            modelStats[modelName].versions.add(item.versionName);
-            modelStats[modelName].colors.add(item.colorName);
+            modelStats[modelName].totalQuantity += (item.quantity || 0);
+            if (item.versionName) {
+                modelStats[modelName].versions.add(item.versionName);
+            }
+            if (item.colorName) {
+                modelStats[modelName].colors.add(item.colorName);
+            }
 
             // Thêm warehouse từ vehicles
-            item.vehicles?.forEach(vehicle => {
-                modelStats[modelName].warehouses.add(vehicle.warehouseName);
-            });
+            if (item.vehicles && Array.isArray(item.vehicles)) {
+                item.vehicles.forEach(vehicle => {
+                    if (vehicle.warehouseName) {
+                        modelStats[modelName].warehouses.add(vehicle.warehouseName);
+                    }
+                });
+            }
         });
 
         // Chuyển đổi Set thành số lượng và tạo array

@@ -123,22 +123,18 @@ function EVVersionDetails() {
         return <ErrorState error={error} onRetry={fetchAllVehicleData} />;
     }
 
-    // Tính toán thống kê
-    const totalVehicles = vehicleTemplates.length;
-    const availableVehicles = vehicleTemplates.filter(
+    // Tính toán thống kê - chỉ tính xe còn đang bán
+    const activeVehicles = vehicleTemplates.filter((v) => v.isActive !== false);
+    const totalVehicles = activeVehicles.length;
+    const availableVehicles = activeVehicles.filter(
         (v) => v.quantity > 0
     ).length;
-    // const activeVehicles = vehicleTemplates.filter((v) => v.isActive).length;
-    // const totalInventory = vehicleTemplates.reduce(
-    //     (sum, v) => sum + v.quantity,
-    //     0
-    // );
 
     return (
         <DealerStaffLayout>
             <PageContainer
                 title="Danh Sách Xe Điện"
-                subTitle={`${totalVehicles} mẫu xe | ${availableVehicles} có sẵn`}
+                subTitle={`${totalVehicles} mẫu xe còn bán | ${availableVehicles} có sẵn`}
                 extra={[
                     <Button
                         key="refresh"
@@ -159,7 +155,7 @@ function EVVersionDetails() {
                 /> */}
 
                 {/* Danh sách xe */}
-                {vehicleTemplates.length === 0 ? (
+                {activeVehicles.length === 0 ? (
                     <EmptyState onReload={fetchAllVehicleData} />
                 ) : (
                     <VehicleGrid
