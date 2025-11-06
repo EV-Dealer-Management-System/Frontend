@@ -18,6 +18,7 @@ function GetAllEVDealerPage() {
     filterQuery: "",
     sortBy: "",
     isAscending: true,
+    status: undefined, // Thêm status vào searchParams để gọi API
   });
   const [searchKeyword, setSearchKeyword] = useState('');
   const [originalDealerData, setOriginalDealerData] = useState([]);
@@ -42,7 +43,10 @@ function GetAllEVDealerPage() {
         const response = await GetAllEVDealer(queryParams);
         if (response.isSuccess) {
           setDealerData(response.result.data);
-          setOriginalDealerData(response.result.data);
+          // Chỉ cập nhật originalDealerData khi không có filter để search hoạt động đúng
+          if (!queryParams.status) {
+            setOriginalDealerData(response.result.data);
+          }
           setPagination((prev) => ({
             ...prev,
             total: response.result.pagination.totalItems,
@@ -261,7 +265,7 @@ function GetAllEVDealerPage() {
               pageSize: pagination.pageSize,
               total: pagination.total,
               showSizeChanger: true,
-              showQuickJumper: true,
+              
               showTotal: (total, range) =>
                 `Hiển thị ${range[0]}-${range[1]} trong tổng số ${total} đại lý`,
               pageSizeOptions: ["10", "20", "50", "100"],
@@ -304,12 +308,23 @@ function GetAllEVDealerPage() {
                   const value = e.target.value.toLowerCase();
                   setSearchKeyword(value);
 
+                  // Nếu đang có filter status thì tìm kiếm trong dữ liệu đã được filter
+                  // Nếu không có filter status thì tìm trong originalDealerData
+                  const dataToSearch = filterStatus !== null ? dealerData : originalDealerData;
+
                   if (!value) {
-                    setDealerData(originalDealerData);
-                    return;
+                    // Nếu xóa hết từ khóa search
+                    if (filterStatus !== null) {
+                      // Nếu đang filter status thì giữ nguyên dữ liệu đã filter
+                      return;
+                    } else {
+                      // Nếu không filter status thì hiển thị lại toàn bộ
+                      setDealerData(originalDealerData);
+                      return;
+                    }
                   }
 
-                  const filtered = originalDealerData.filter(
+                  const filtered = dataToSearch.filter(
                     (item) =>
                       item.name?.toLowerCase().includes(value) ||
                       item.managerName?.toLowerCase().includes(value) ||
@@ -328,22 +343,21 @@ function GetAllEVDealerPage() {
                 onChange={(value) => {
                   setFilterStatus(value);
 
-                  const filterVal = value !== null ? Number(value) : null;
+                  // Cập nhật searchParams với status filter
+                  const newSearchParams = {
+                    ...searchParams,
+                    status: value !== null ? Number(value) : undefined,
+                  };
+                  setSearchParams(newSearchParams);
 
-                  setSearchParams((prev) => ({
-                    ...prev,
-                    filterOn: filterVal !== null ? "dealerStatus" : "",
-                    filterQuery: filterVal !== null ? filterVal : "",
-                  }));
-
-                  // reset về trang đầu khi filter
+                  // Reset về trang đầu khi filter
                   setPagination((prev) => ({ ...prev, current: 1 }));
 
+                  // Gọi API với status filter
                   loadDealerData({
                     pageNumber: 1,
                     pageSize: pagination.pageSize,
-                    filterOn: filterVal !== null ? "dealerStatus" : "",
-                    filterQuery: filterVal !== null ? filterVal : "",
+                    status: value !== null ? Number(value) : undefined,
                   });
                 }}
                 options={[

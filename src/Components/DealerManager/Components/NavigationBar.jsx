@@ -69,12 +69,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         icon: <ShoppingCartOutlined />,
         routes: [
           {
-            path: "/dealer/sales/orders",
-            name: "Đơn hàng",
-            icon: <FileTextOutlined />,
-            component: "./Orders",
-          },
-          {
             path: "/dealer-manager/ev/all-ev-quotes",
             name: "Đơn báo giá xe",
             icon: <DollarOutlined />,

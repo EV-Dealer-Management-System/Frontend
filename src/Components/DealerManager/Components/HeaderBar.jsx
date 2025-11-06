@@ -9,9 +9,10 @@ import {
     InfoCircleOutlined,
 } from "@ant-design/icons";
 import * as signalR from "@microsoft/signalr";
-import api from "../../../api/api";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { getAllNotification } from "../../../App/DealerManager/Notification/GetAllNotification";
+import { readNotification, readAllNotifications } from "../../../App/DealerManager/Notification/NotificationReaded";
 function HeaderBar({ collapsed, isMobile }) {
 
     const navigate = useNavigate();
@@ -91,9 +92,9 @@ function HeaderBar({ collapsed, isMobile }) {
 
         const fetchNotifications = async () => {
             try {
-                const res = await api.get('/Notification/get-all-notification', { params: { pageNumber: 1, pageSize: 10 } });
-                if (res.data?.isSuccess) {
-                    setItems(res.data.result?.data || []);
+                const response = await getAllNotification(1, 50);
+                if (response?.isSuccess) {
+                    setItems(response.result?.data || []);
                 }
             } catch (err) {
                 console.error('Error fetching notifications', err);
@@ -125,29 +126,28 @@ function HeaderBar({ collapsed, isMobile }) {
             };
         }, []);
 
-        // Placeholder: send read update to backend when API is available
+        // Gọi API để đánh dấu thông báo đã đọc
         const sendReadUpdate = async (notificationId) => {
-            // TODO: when the backend endpoint is available, call it here, e.g.:
-            // await api.put(`/Notification/mark-read/${notificationId}`);
-            // For now, keep this as a no-op so UI is responsive and doesn't fail.
             try {
-                // noop / placeholder
+                await readNotification(notificationId);
                 return Promise.resolve();
             } catch (err) {
                 console.error('Failed to send read update for notification', notificationId, err);
+                throw err;
             }
         };
 
-        // Mark all notifications as read in UI and attempt to notify the backend
-        const markAll = () => {
-            // capture unread ids from the current items state
-            const unreadIds = items.filter(n => !n.isRead).map(n => n.id).filter(Boolean);
-            // optimistic UI update
-            setItems(prev => prev.map(n => ({ ...n, isRead: true })));
-            // Attempt to update backend for unread notifications (fire-and-forget)
-            unreadIds.forEach(id => {
-                sendReadUpdate(id).catch(() => {});
-            });
+        // Đánh dấu tất cả thông báo đã đọc
+        const markAll = async () => {
+            try {
+                // Gọi API đánh dấu tất cả đã đọc
+                await readAllNotifications();
+                // Cập nhật UI sau khi API thành công
+                setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+            } catch (err) {
+                console.error('Error marking all notifications as read:', err);
+                // Có thể hiển thị thông báo lỗi cho user nếu cần
+            }
         };
 
         return (
