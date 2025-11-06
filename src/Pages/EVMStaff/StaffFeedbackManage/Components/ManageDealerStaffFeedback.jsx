@@ -102,7 +102,7 @@ const ManageDealerStaffFeedback = () => {
       0: { text: 'Chờ xử lý', color: 'gold' },
       1: { text: 'Đã chấp nhận', color: 'cyan' },
       2: { text: 'Đã từ chối', color: 'red' },
-      3: { text: 'Đã trả lời', color: 'green' },
+      3: { text: 'Đã giải quyết', color: 'green' },
       4: { text: 'Đã hủy', color: 'default' },
     };
     const statusInfo = statusMap[statusNum] || { text: `Không xác định (${status})`, color: 'default' };
@@ -236,31 +236,22 @@ const ManageDealerStaffFeedback = () => {
       title: 'Cập nhật trạng thái',
       key: 'updateStatus',
       align: 'center',
-      width: 200,
-      render: (_, record) => {
-        // Đảm bảo status là number
-        const recordStatus = typeof record.status === 'string' ? parseInt(record.status, 10) : record.status;
-        // Nếu feedback đã được xử lý (status != 0), disable select
-        const isProcessed = recordStatus !== 0 && recordStatus !== null && recordStatus !== undefined;
-        
-        return (
-          <Select
-            value={recordStatus}
-            onChange={(value) => handleUpdateStatus(record.id, value, recordStatus)}
-            loading={updatingId === record.id}
-            disabled={updatingId === record.id || isProcessed}
-            style={{ width: 170 }}
-            placeholder="Chọn trạng thái"
-          >
-            {/* Chỉ hiển thị option 0 nếu chưa được xử lý, và các option 1-4 luôn hiển thị */}
-            {!isProcessed && <Option value={0}>Chờ xử lý</Option>}
-            <Option value={1}>Đã chấp nhận</Option>
-            <Option value={2}>Đã từ chối</Option>
-            <Option value={3}>Đã trả lời</Option>
-            <Option value={4}>Đã hủy</Option>
-          </Select>
-        );
-      },
+      width: 180,
+      render: (_, record) => (
+        <Select
+          value={record.status}
+          onChange={(value) => handleUpdateStatus(record.id, value)}
+          loading={updatingId === record.id}
+          disabled={updatingId === record.id}
+          style={{ width: 150 }}
+        >
+          <Option value={0}>Chờ xử lý</Option>
+          <Option value={1}>Đã chấp nhận</Option>
+          <Option value={2}>Đã từ chối</Option>
+          <Option value={3}>Đã giải quyết</Option>
+          {/* <Option value={4}>Đã hủy</Option> */}
+        </Select>
+      ),
     },
     {
       title: 'Ngày tạo',

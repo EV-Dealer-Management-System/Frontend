@@ -5,7 +5,7 @@ export const getAllEVBookings = async () => {
     const response = await api.get("/BookingEV/get-all-bookings", {
       params: {
         pageNumber: 1,
-        pageSize: 100, 
+        pageSize: 100000, 
       }
     });
     console.log("DealerManager API response:", response.data);
