@@ -22,13 +22,22 @@ const GetStaffFeedbackComponent = () => {
       setLoading(true);
       const res = await GetStaffFeedback.getStaffFeedback();
       if (res?.isSuccess) {
-        setData(res.result || []);
+        // Đảm bảo status là number (parse từ string nếu cần)
+        const validData = (res.result || [])
+          .filter(item => item && item.id)
+          .map(item => ({
+            ...item,
+            status: typeof item.status === 'string' ? parseInt(item.status, 10) : item.status
+          }));
+        setData(validData);
       } else {
         message.error(res?.message || 'Không tải được feedback!');
+        setData([]);
       }
     } catch (err) {
       message.error('Đã xảy ra lỗi khi tải feedback');
       console.error(err);
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -44,13 +53,18 @@ const GetStaffFeedbackComponent = () => {
   });
 
   const getStatusBadge = (status) => {
+    // Đảm bảo status là number
+    const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
+    
     const statusMap = {
       0: { text: 'Chờ xử lý', color: 'gold' },
-      1: { text: 'Đã xử lý', color: 'green' },
-      2: { text: 'Đã đóng', color: 'default' },
+      1: { text: 'Đã chấp nhận', color: 'cyan' },
+      2: { text: 'Đã từ chối', color: 'red' },
+      3: { text: 'Đã trả lời', color: 'green' },
+      4: { text: 'Đã hủy', color: 'default' },
     };
-    const info = statusMap[status] || { text: 'Không xác định', color: 'default' };
-    return <Tag color={info.color}>{info.text}</Tag>;
+    const statusInfo = statusMap[statusNum] || { text: `Không xác định (${status})`, color: 'default' };
+    return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
   };
 
   const columns = [
@@ -68,7 +82,18 @@ const GetStaffFeedbackComponent = () => {
         {imgUrls.length > 3 && <Text type="secondary">+{imgUrls.length - 3}</Text>}
       </Space>;
     }},
-    { title: 'Trạng thái', dataIndex: 'status', key: 'status', width: 100, render: getStatusBadge, align: 'center' },
+    { 
+      title: 'Trạng thái', 
+      dataIndex: 'status', 
+      key: 'status', 
+      width: 120, 
+      align: 'center',
+      render: (status, record) => {
+        // Đảm bảo status được parse đúng
+        const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
+        return getStatusBadge(statusNum);
+      }
+    },
     { title: 'Ngày tạo', dataIndex: 'createdAt', key: 'createdAt', render: (date) => new Date(date).toLocaleDateString('vi-VN'), width: 130 },
   ];
 
