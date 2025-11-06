@@ -17,40 +17,105 @@ function EVMGetAllInventory() {
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [selectedVehicle, setSelectedVehicle] = useState(null);
 
-    // Từ khóa tìm kiếm & bộ lọc trạng thái
+    // Từ khóa tìm kiếm & bộ lọc
     const [searchKeyword, setSearchKeyword] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [warehouseFilter, setWarehouseFilter] = useState('');
+    const [warehouseOptions, setWarehouseOptions] = useState([]);
 
     // Fetch dữ liệu kho xe của hãng
-    const fetchInventoryData = useCallback(async () => {
+    const fetchInventoryData = useCallback(async (warehouseId = null) => {
         setLoading(true);
         try {
-            const response = await getAllEVInventory();
+            const params = {};
+            if (warehouseId) {
+                params.warehouseId = warehouseId;
+            }
 
-            if (response.isSuccess) {
+            console.log("Fetching inventory data with params:", params);
+            const response = await getAllEVInventory(params);
+            console.log("API Response:", response); // Debug log
+            console.log("Response result:", response?.result); // Debug log
+            console.log("Response result data:", response?.result?.data); // Debug log
+            console.log("Is result.data array?", Array.isArray(response?.result?.data)); // Debug log
+
+            if (response?.isSuccess) {
+                // Xử lý cả cấu trúc cũ và mới của API
+                let resultData = [];
+
+                if (Array.isArray(response?.result?.data)) {
+                    // Cấu trúc mới: response.result.data
+                    resultData = response.result.data;
+                } else if (Array.isArray(response?.result)) {
+                    // Cấu trúc cũ: response.result
+                    resultData = response.result;
+                }
+
                 // Thêm key cho mỗi item để Table hoạt động tốt
-                const dataWithKeys = response.result.map((item, index) => ({
+                const dataWithKeys = resultData.map((item, index) => ({
                     ...item,
                     key: index,
                     id: index + 1
                 }));
 
+                // Extract unique warehouses từ dữ liệu (chỉ khi chưa có hoặc đang load tất cả kho)
+                if (warehouseOptions.length === 0 || !warehouseId) {
+                    const warehouseMap = new Map();
+                    resultData.forEach(item => {
+                        if (item.vehicles && Array.isArray(item.vehicles)) {
+                            item.vehicles.forEach(vehicle => {
+                                if (vehicle.warehouseId && vehicle.warehouseName) {
+                                    warehouseMap.set(vehicle.warehouseId, vehicle.warehouseName);
+                                }
+                            });
+                        }
+                    });
+
+                    // Chuyển đổi thành array options cho Select
+                    const warehouseOptionsArray = Array.from(warehouseMap, ([id, name]) => ({
+                        value: id,
+                        label: name
+                    })).sort((a, b) => a.label.localeCompare(b.label));
+
+                    setWarehouseOptions(warehouseOptionsArray);
+                    console.log("Warehouse options updated:", warehouseOptionsArray);
+                }
                 setInventoryData(dataWithKeys);
+                console.log("Processed data:", dataWithKeys);
                 message.success("Tải dữ liệu kho xe hãng thành công!");
             } else {
-                message.error(response.message || "Có lỗi xảy ra khi tải dữ liệu");
+                console.log("API returned unsuccessful response:", response);
+                message.error(response?.message || "Có lỗi xảy ra khi tải dữ liệu");
+                setInventoryData([]);
             }
         } catch (error) {
             console.error("Error fetching company inventory:", error);
+            console.log("Error details:", error.response || error.message);
             message.error("Không thể tải dữ liệu kho xe. Vui lòng thử lại!");
+            // Đặt dữ liệu về mảng rỗng nếu có lỗi
+            setInventoryData([]);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [warehouseOptions.length]);
 
     // Làm mới dữ liệu
     const handleRefresh = () => {
-        fetchInventoryData();
+        console.log("Refreshing data with current warehouse filter:", warehouseFilter);
+        fetchInventoryData(warehouseFilter || null);
+    };
+
+    // Xử lý thay đổi bộ lọc kho
+    const handleWarehouseChange = (value) => {
+        console.log("Warehouse filter changed:", value);
+        setWarehouseFilter(value);
+
+        // Reset các filter khác khi chuyển kho để tránh xung đột
+        setSearchKeyword('');
+        setStatusFilter('');
+
+        // Fetch dữ liệu mới với warehouse được chọn
+        fetchInventoryData(value || null);
     };
 
     // Mở modal xem chi tiết
@@ -78,14 +143,30 @@ function EVMGetAllInventory() {
                 extra={[
                     <>
                         <Select
+                            key="warehouse-filter"
+                            placeholder="Chọn kho"
+                            value={warehouseFilter || undefined}
+                            style={{ width: 200 }}
+                            allowClear
+                            onChange={handleWarehouseChange}
+                            loading={loading}
+                        >
+                            <Option value="">Tất cả kho</Option>
+                            {warehouseOptions.map(option => (
+                                <Option key={option.value} value={option.value}>
+                                    {option.label}
+                                </Option>
+                            ))}
+                        </Select>
+                        <Select
                             key="status-filter"
-                            showSearch                     // ✅ Cho phép nhập từ khóa
+                            showSearch                     //  Cho phép nhập từ khóa
                             placeholder="Chọn hoặc nhập tình trạng"
                             value={statusFilter || undefined}
                             style={{ width: 280 }}
                             allowClear
-                            onSearch={(value) => setStatusFilter(value)}  // ✅ Gõ -> cập nhật
-                            onChange={(value) => setStatusFilter(value)}  // ✅ Chọn -> cập nhật
+                            onSearch={(value) => setStatusFilter(value)}  //  Gõ -> cập nhật
+                            onChange={(value) => setStatusFilter(value)}  //  Chọn -> cập nhật
                             filterOption={false}                          // Không giới hạn khi gõ
                             options={[
                                 { label: "Dồi Dào", value: "dồi dào" },
@@ -94,7 +175,7 @@ function EVMGetAllInventory() {
                                 { label: "Ít", value: "ít" },
                                 { label: "Hết Hàng", value: "hết hàng" },
                             ]}
-                         />
+                        />
                         <Search
                             key="search"
                             placeholder="Tìm kiếm theo tên xe, phiên bản hoặc màu..."
@@ -113,7 +194,7 @@ function EVMGetAllInventory() {
                         >
                             Làm Mới Dữ Liệu
                         </Button>
-                        </>
+                    </>
                 ]}
                 className="bg-white"
             >
@@ -138,13 +219,13 @@ function EVMGetAllInventory() {
 
                             // Lọc theo từ khóa và tình trạng
                             const matchesKeyword =
-                            !keyword ||
-                            item.modelName.toLowerCase().includes(keyword) ||
-                            item.versionName.toLowerCase().includes(keyword) ||
-                            item.colorName.toLowerCase().includes(keyword);
+                                !keyword ||
+                                item.modelName.toLowerCase().includes(keyword) ||
+                                item.versionName.toLowerCase().includes(keyword) ||
+                                item.colorName.toLowerCase().includes(keyword);
 
                             const matchesStatus =
-                            !status || computedStatus.includes(status);
+                                !status || computedStatus.includes(status);
 
                             return matchesKeyword && matchesStatus;
                         })}

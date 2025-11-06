@@ -15,7 +15,9 @@ import {
   Typography,
   Divider,
   Select,
+  ConfigProvider,
 } from "antd";
+import viVN from 'antd/lib/locale/vi_VN';
 import {
   PlusOutlined,
   EditOutlined,
@@ -232,136 +234,138 @@ function ManageModel() {
   ];
 
   return (
-    <PageContainer
-      className="!p-0"
-      childrenContentStyle={{ padding: 0, margin: 0 }}
-      header={{
-        title: "Quản lý Model Xe Điện",
-        subTitle: "Tạo và quản lý các model xe điện",
-        extra: [
-          <Button key="reload" icon={<ReloadOutlined />} onClick={loadModels} loading={loading}>
-            Tải lại
-          </Button>,
-          <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            Tạo Model mới
-          </Button>,
-        ],
-      }}
-    >
-      <div className="w-full px-4 md:px-6 lg:px-8 pb-6">
-        <Card className="shadow-sm">
-          <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
-            <Col span={24}>
-              <Title level={4} className="!mb-1">
-                <CarOutlined style={{ color: "#1890ff", marginRight: 8 }} />
-                Danh sách Models
-              </Title>
-              <Text type="secondary">
-                Tổng cộng: {models.length} model &nbsp;•&nbsp; Hiển thị: {filteredAndSortedModels.length}
-              </Text>
-            </Col>
-          </Row>
-          <Divider className="!mt-2" />
-          
-          {/* Search and Sort Section */}
-          <Row gutter={[16, 16]} className="mb-4">
-            <Col xs={24} sm={16} md={12}>
-              <Input
-                allowClear
-                prefix={<SearchOutlined />}
-                placeholder="Tìm theo tên/mô tả model..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
-                size="large"
-              />
-            </Col>
-            <Col xs={24} sm={8} md={6}>
-              <Select
-                value={sortBy}
-                onChange={setSortBy}
-                size="large"
-                style={{ width: "100%" }}
-                suffixIcon={<SortAscendingOutlined />}
-              >
-                <Option value="name-asc">Tên A-Z</Option>
-                <Option value="name-desc">Tên Z-A</Option>
-                <Option value="date-desc">Mới nhất</Option>
-                <Option value="date-asc">Cũ nhất</Option>
-                <Option value="status-desc">Hoạt động trước</Option>
-                <Option value="status-asc">Ngừng trước</Option>
-              </Select>
-            </Col>
-          </Row>
-
-          <Table
-            size="middle"
-            columns={columns}
-            dataSource={filteredAndSortedModels}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              total: filteredAndSortedModels.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} model`,
-            }}
-
-            sticky
-          />
-        </Card>
-      </div>
-
-      {/* Modal tạo/sửa */}
-      <Modal
-        title={isEditing ? "Chỉnh sửa Model" : "Tạo Model mới"}
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          form.resetFields();
+    <ConfigProvider locale={viVN}>
+      <PageContainer
+        className="!p-0"
+        childrenContentStyle={{ padding: 0, margin: 0 }}
+        header={{
+          title: "Quản lý Model Xe Điện",
+          subTitle: "Tạo và quản lý các model xe điện",
+          extra: [
+            <Button key="reload" icon={<ReloadOutlined />} onClick={loadModels} loading={loading}>
+              Tải lại
+            </Button>,
+            <Button key="create" type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              Tạo Model mới
+            </Button>,
+          ],
         }}
-        footer={null}
-        width={560}
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
-          <Form.Item
-            label="Tên Model"
-            name="modelName"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên model!" },
-              { min: 2, message: "Tên model phải có ít nhất 2 ký tự!" },
-              { max: 100, message: "Tên model không được quá 100 ký tự!" },
-            ]}
-          >
-            <Input placeholder="VD: E-Scooter Pro Max" size="large" />
-          </Form.Item>
+        <div className="w-full px-4 md:px-6 lg:px-8 pb-6">
+          <Card className="shadow-sm">
+            <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
+              <Col span={24}>
+                <Title level={4} className="!mb-1">
+                  <CarOutlined style={{ color: "#1890ff", marginRight: 8 }} />
+                  Danh sách Models
+                </Title>
+                <Text type="secondary">
+                  Tổng cộng: {models.length} model &nbsp;•&nbsp; Hiển thị: {filteredAndSortedModels.length}
+                </Text>
+              </Col>
+            </Row>
+            <Divider className="!mt-2" />
 
-          <Form.Item
-            label="Mô tả"
-            name="description"
-            rules={[{ max: 1000, message: "Mô tả không được quá 1000 ký tự!" }]}
-          >
-            <TextArea placeholder="Mô tả chi tiết về model..." rows={4} showCount maxLength={1000} />
-          </Form.Item>
+            {/* Search and Sort Section */}
+            <Row gutter={[16, 16]} className="mb-4">
+              <Col xs={24} sm={16} md={12}>
+                <Input
+                  allowClear
+                  prefix={<SearchOutlined />}
+                  placeholder="Tìm theo tên/mô tả model..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  size="large"
+                />
+              </Col>
+              <Col xs={24} sm={8} md={6}>
+                <Select
+                  value={sortBy}
+                  onChange={setSortBy}
+                  size="large"
+                  style={{ width: "100%" }}
+                  suffixIcon={<SortAscendingOutlined />}
+                >
+                  <Option value="name-asc">Tên A-Z</Option>
+                  <Option value="name-desc">Tên Z-A</Option>
+                  <Option value="date-desc">Mới nhất</Option>
+                  <Option value="date-asc">Cũ nhất</Option>
+                  <Option value="status-desc">Hoạt động trước</Option>
+                  <Option value="status-asc">Ngừng trước</Option>
+                </Select>
+              </Col>
+            </Row>
 
-          <div style={{ textAlign: "right" }}>
-            <Space>
-              <Button
-                onClick={() => {
-                  setIsModalVisible(false);
-                  form.resetFields();
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {isEditing ? "Cập nhật" : "Tạo Model"}
-              </Button>
-            </Space>
-          </div>
-        </Form>
-      </Modal>
-    </PageContainer>
+            <Table
+              size="middle"
+              columns={columns}
+              dataSource={filteredAndSortedModels}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                total: filteredAndSortedModels.length,
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} model`,
+              }}
+
+              sticky
+            />
+          </Card>
+        </div>
+
+        {/* Modal tạo/sửa */}
+        <Modal
+          title={isEditing ? "Chỉnh sửa Model" : "Tạo Model mới"}
+          open={isModalVisible}
+          onCancel={() => {
+            setIsModalVisible(false);
+            form.resetFields();
+          }}
+          footer={null}
+          width={560}
+        >
+          <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+            <Form.Item
+              label="Tên Model"
+              name="modelName"
+              rules={[
+                { required: true, message: "Vui lòng nhập tên model!" },
+                { min: 2, message: "Tên model phải có ít nhất 2 ký tự!" },
+                { max: 100, message: "Tên model không được quá 100 ký tự!" },
+              ]}
+            >
+              <Input placeholder="VD: E-Scooter Pro Max" size="large" />
+            </Form.Item>
+
+            <Form.Item
+              label="Mô tả"
+              name="description"
+              rules={[{ max: 1000, message: "Mô tả không được quá 1000 ký tự!" }]}
+            >
+              <TextArea placeholder="Mô tả chi tiết về model..." rows={4} showCount maxLength={1000} />
+            </Form.Item>
+
+            <div style={{ textAlign: "right" }}>
+              <Space>
+                <Button
+                  onClick={() => {
+                    setIsModalVisible(false);
+                    form.resetFields();
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button type="primary" htmlType="submit" loading={loading}>
+                  {isEditing ? "Cập nhật" : "Tạo Model"}
+                </Button>
+              </Space>
+            </div>
+          </Form>
+        </Modal>
+      </PageContainer>
+    </ConfigProvider>
   );
 }
 
