@@ -95,13 +95,15 @@ function DealerStaffCreateModal({ visible, onCancel, onSuccess }) {
         okText: "Tạo mới",
         cancelText: "Hủy",
         confirmLoading: loading,
-        destroyOnClose: true,
+        destroyOnHidden: true,
         centered: true,
         maskClosable: false,
-        bodyStyle: {
-          backgroundColor: "#fafafa",
-          borderRadius: 14,
-          padding: "16px 28px",
+        styles: {
+          body: {
+            backgroundColor: "#fafafa",
+            borderRadius: 14,
+            padding: "16px 28px",
+          },
         },
       }}
     >

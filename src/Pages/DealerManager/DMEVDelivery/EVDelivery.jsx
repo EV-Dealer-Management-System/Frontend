@@ -6,6 +6,8 @@ import { getAllEVDelivery } from '../../../App/DealerManager/EVDelivery/GetAllEV
 import DeliveryTable from './Components/DeliveryTable';
 import StatusFilter from './Components/StatusFilter';
 import DeliveryDetailModal from './Components/DeliveryDetailModal';
+import { ConfigProvider } from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
 
 const { Search } = Input;
 
@@ -82,6 +84,7 @@ function DMEVDelivery() {
 
     return (
         <DealerManagerLayout>
+            <ConfigProvider locale={viVN}>
             <PageContainer
                 title="Theo dõi giao xe"
                 subTitle="Theo dõi tiến trình giao xe từ nhà sản xuất đến đại lý"
@@ -122,6 +125,7 @@ function DMEVDelivery() {
                     onStatusUpdated={handleStatusUpdated}
                 />
             </PageContainer>
+            </ConfigProvider>
         </DealerManagerLayout>
     );
 }
