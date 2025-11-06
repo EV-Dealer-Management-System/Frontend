@@ -148,21 +148,17 @@ const GetStaffFeedbackComponent = () => {
       >
         <CreateStaffFeedback
           onSuccess={(responseMessage) => {
-            console.log('🎯 onSuccess được gọi, message:', responseMessage);
             setCreateVisible(false);
             fetchFeedback();
-            // Hiển thị message từ component cha sau khi modal đóng
+            // Hiển thị message tiếng Việt sau khi modal đóng
             setTimeout(() => {
-              console.log('⏰ Sau 200ms, gọi message.success');
               try {
                 message.success({
-                  content: responseMessage || 'Tạo feedback thành công!',
+                  content: 'Tạo feedback thành công! Feedback của bạn đã được gửi.',
                   duration: 5,
                 });
-                console.log('✅ message.success đã được gọi');
               } catch (err) {
-                console.error('❌ Lỗi khi gọi message.success:', err);
-                alert('✅ ' + (responseMessage || 'Tạo feedback thành công!'));
+                console.error('Lỗi khi gọi message.success:', err);
               }
             }, 200);
           }}

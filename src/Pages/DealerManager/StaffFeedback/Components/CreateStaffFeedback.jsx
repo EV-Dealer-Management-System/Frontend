@@ -76,13 +76,14 @@ const CreateStaffFeedback = ({ onSuccess, onCancel }) => {
         form.resetFields();
         setFileList([]);
         
-        // Gọi callback onSuccess với message từ API
-        const successMessage = res?.message || 'Tạo feedback thành công! Feedback của bạn đã được gửi.';
+        // Luôn hiển thị thông báo tiếng Việt
+        const successMessage = 'Tạo feedback thành công! Feedback của bạn đã được gửi.';
         onSuccess && onSuccess(successMessage);
         onCancel && onCancel();
       } else {
+        // Luôn hiển thị thông báo tiếng Việt
         message.error({
-          content: res?.message || res?.error || 'Tạo feedback thất bại. Vui lòng thử lại!',
+          content: 'Tạo feedback thất bại. Vui lòng thử lại!',
           duration: 4,
         });
       }

@@ -47,13 +47,47 @@ const ManageDealerStaffFeedback = () => {
     }
   };
 
-  const handleUpdateStatus = async (feedbackId, newStatus) => {
+  const handleUpdateStatus = async (feedbackId, newStatus, currentStatus) => {
+    // Đảm bảo status là number
+    const currentStatusNum = typeof currentStatus === 'string' ? parseInt(currentStatus, 10) : currentStatus;
+    const newStatusNum = typeof newStatus === 'string' ? parseInt(newStatus, 10) : newStatus;
+
+    // Kiểm tra nếu feedback đã được xử lý rồi (status != 0)
+    if (currentStatusNum !== 0 && currentStatusNum !== null && currentStatusNum !== undefined) {
+      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
+      return;
+    }
+
+    // Kiểm tra nếu đang cập nhật từ trạng thái đã xử lý
+    const feedback = data.find(item => item.id === feedbackId);
+    const feedbackStatus = typeof feedback?.status === 'string' ? parseInt(feedback.status, 10) : feedback?.status;
+    if (feedback && feedbackStatus !== 0) {
+      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
+      return;
+    }
+
+    // EVM Staff chỉ có thể cập nhật từ Chờ xử lý (0) sang các trạng thái: Đã chấp nhận (1), Đã từ chối (2), Đã trả lời (3), hoặc Đã hủy (4)
+    if (newStatusNum !== 1 && newStatusNum !== 2 && newStatusNum !== 3 && newStatusNum !== 4) {
+      message.warning('Chỉ có thể cập nhật từ trạng thái "Chờ xử lý" sang các trạng thái khác!');
+      return;
+    }
+
     try {
       setUpdatingId(feedbackId);
-      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatus);
+      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatusNum);
 
       if (response?.isSuccess || response?.success) {
         message.success('Cập nhật trạng thái thành công!');
+        // Thêm feedback ID vào danh sách vừa cập nhật
+        setRecentlyUpdatedIds(prev => new Set([...prev, feedbackId]));
+        // Xóa khỏi danh sách sau 30 giây
+        setTimeout(() => {
+          setRecentlyUpdatedIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(feedbackId);
+            return newSet;
+          });
+        }, 30000);
         fetchFeedbacks();
       } else {
         message.error(response?.message || 'Cập nhật trạng thái thất bại');
@@ -71,11 +105,11 @@ const ManageDealerStaffFeedback = () => {
     const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
     
     const statusMap = {
-      0: { text: 'Chờ xử lý', color: 'gold' },
-      1: { text: 'Đã chấp nhận', color: 'cyan' },
-      2: { text: 'Đã từ chối', color: 'red' },
-      3: { text: 'Đã giải quyết', color: 'green' },
-      4: { text: 'Đã hủy', color: 'default' },
+      0: { text: 'Chờ xử lý', color: 'gold' },      // Pending
+      1: { text: 'Đã chấp nhận', color: 'cyan' },   // Accepted
+      2: { text: 'Đã từ chối', color: 'red' },      // Rejected
+      3: { text: 'Đã trả lời', color: 'green' },    // Replied
+      4: { text: 'Đã hủy', color: 'default' },      // Cancelled
     };
     const statusInfo = statusMap[statusNum] || { text: `Không xác định (${status})`, color: 'default' };
     return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
@@ -103,8 +137,8 @@ const ManageDealerStaffFeedback = () => {
     }
 
     // Sắp xếp theo thứ tự ưu tiên:
-    // 1. Chờ xử lý (status = 0)
-    // 2. Vừa cập nhật (trong recentlyUpdatedIds) - ngay sau chờ xử lý
+    // 1. Vừa cập nhật (trong recentlyUpdatedIds) - LUÔN LÊN ĐẦU
+    // 2. Chờ xử lý (status = 0)
     // 3. Các trạng thái khác
     result.sort((a, b) => {
       const statusA = typeof a.status === 'string' ? parseInt(a.status, 10) : a.status;
@@ -112,24 +146,20 @@ const ManageDealerStaffFeedback = () => {
       const isRecentlyUpdatedA = recentlyUpdatedIds.has(a.id);
       const isRecentlyUpdatedB = recentlyUpdatedIds.has(b.id);
 
-      // Ưu tiên 1: Chờ xử lý (status = 0) - luôn lên đầu
-      if (statusA === 0 && statusB !== 0) return -1;
-      if (statusB === 0 && statusA !== 0) return 1;
+      // Ưu tiên 1: Vừa cập nhật - LUÔN LÊN ĐẦU TRANG
+      if (isRecentlyUpdatedA && !isRecentlyUpdatedB) return -1;
+      if (isRecentlyUpdatedB && !isRecentlyUpdatedA) return 1;
 
-      // Nếu cả hai đều là chờ xử lý, ưu tiên vừa cập nhật
-      if (statusA === 0 && statusB === 0) {
-        if (isRecentlyUpdatedA && !isRecentlyUpdatedB) return -1;
-        if (isRecentlyUpdatedB && !isRecentlyUpdatedA) return 1;
-        // Nếu cả hai đều không hoặc đều vừa cập nhật, sắp xếp theo ngày tạo
+      // Nếu cả hai đều vừa cập nhật, sắp xếp theo ngày tạo (mới nhất trước)
+      if (isRecentlyUpdatedA && isRecentlyUpdatedB) {
         const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dateB - dateA;
       }
 
-      // Ưu tiên 2: Vừa cập nhật (ngay sau chờ xử lý)
-      // Nếu a vừa cập nhật và b không vừa cập nhật, a lên trước
-      if (isRecentlyUpdatedA && !isRecentlyUpdatedB) return -1;
-      if (isRecentlyUpdatedB && !isRecentlyUpdatedA) return 1;
+      // Ưu tiên 2: Chờ xử lý (status = 0) - sau feedback vừa cập nhật
+      if (statusA === 0 && statusB !== 0) return -1;
+      if (statusB === 0 && statusA !== 0) return 1;
 
       // Ưu tiên 3: Sắp xếp theo ngày tạo (mới nhất trước)
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -209,21 +239,28 @@ const ManageDealerStaffFeedback = () => {
       key: 'updateStatus',
       align: 'center',
       width: 180,
-      render: (_, record) => (
-        <Select
-          value={record.status}
-          onChange={(value) => handleUpdateStatus(record.id, value)}
-          loading={updatingId === record.id}
-          disabled={updatingId === record.id}
-          style={{ width: 150 }}
-        >
-          <Option value={0}>Chờ xử lý</Option>
-          <Option value={1}>Đã chấp nhận</Option>
-          <Option value={2}>Đã từ chối</Option>
-          <Option value={3}>Đã giải quyết</Option>
-          {/* <Option value={4}>Đã hủy</Option> */}
-        </Select>
-      ),
+      render: (_, record) => {
+        // Đảm bảo status là number
+        const recordStatus = typeof record.status === 'string' ? parseInt(record.status, 10) : record.status;
+        // Chỉ cho phép cập nhật từ Chờ xử lý (0)
+        const isDisabled = recordStatus !== 0 || updatingId === record.id;
+        
+        return (
+          <Select
+            value={recordStatus}
+            onChange={(value) => handleUpdateStatus(record.id, value, recordStatus)}
+            loading={updatingId === record.id}
+            disabled={isDisabled}
+            style={{ width: 150 }}
+          >
+            <Option value={0}>Chờ xử lý</Option>
+            <Option value={1} disabled={recordStatus !== 0}>Đã chấp nhận</Option>
+            <Option value={2} disabled={recordStatus !== 0}>Đã từ chối</Option>
+            <Option value={3} disabled={recordStatus !== 0}>Đã trả lời</Option>
+            <Option value={4} disabled={recordStatus !== 0}>Đã hủy</Option>
+          </Select>
+        );
+      },
     },
     {
       title: 'Ngày tạo',
@@ -264,6 +301,7 @@ const ManageDealerStaffFeedback = () => {
             allowClear
             suffixIcon={<FilterOutlined />}
           >
+            <Option value={null}>Tất cả</Option>
             <Option value={0}>Chờ xử lý</Option>
             <Option value={1}>Đã chấp nhận</Option>
             <Option value={2}>Đã từ chối</Option>
