@@ -42,7 +42,7 @@ function EVMStaffLayout({ children }) {
         }}
         className={`${isMobile ? 'pt-16' : ''}`}
       >
-        <Content className="p-4 md:p-6">
+        <Content className="p-0" style={{ width: '100%', minWidth: 0 }}>
           {children}
         </Content>
       </div>

@@ -63,7 +63,7 @@ const ManageDealerStaffFeedback = () => {
       0: { text: 'Chờ xử lý', color: 'gold' },
       1: { text: 'Đã chấp nhận', color: 'cyan' },
       2: { text: 'Đã từ chối', color: 'red' },
-      3: { text: 'Đã trả lời', color: 'green' },
+      3: { text: 'Đã giải quyết', color: 'green' },
       4: { text: 'Đã hủy', color: 'default' },
     };
     const statusInfo = statusMap[status] || { text: 'Không xác định', color: 'default' };
@@ -155,8 +155,8 @@ const ManageDealerStaffFeedback = () => {
           <Option value={0}>Chờ xử lý</Option>
           <Option value={1}>Đã chấp nhận</Option>
           <Option value={2}>Đã từ chối</Option>
-          <Option value={3}>Đã trả lời</Option>
-          <Option value={4}>Đã hủy</Option>
+          <Option value={3}>Đã giải quyết</Option>
+          {/* <Option value={4}>Đã hủy</Option> */}
         </Select>
       ),
     },
