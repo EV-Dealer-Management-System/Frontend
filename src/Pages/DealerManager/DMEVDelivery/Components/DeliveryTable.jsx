@@ -2,6 +2,8 @@ import React from 'react';
 import { Table, Button } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import DeliveryStatusTag from './DeliveryStatusTag';
+import { ConfigProvider } from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
 
 // Component bảng danh sách giao xe
 function DeliveryTable({
@@ -84,6 +86,7 @@ function DeliveryTable({
     ];
 
     return (
+        <ConfigProvider locale={viVN}>
         <Table
             columns={columns}
             dataSource={data}
@@ -100,6 +103,7 @@ function DeliveryTable({
             onChange={onTableChange}
             className="delivery-table"
         />
+        </ConfigProvider>
     );
 }
 

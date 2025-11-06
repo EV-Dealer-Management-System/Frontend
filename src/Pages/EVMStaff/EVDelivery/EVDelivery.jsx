@@ -5,7 +5,8 @@ import EVMStaffLayout from '../../../Components/EVMStaff/EVMStaffLayout';
 import { getAllEVDelivery } from '../../../App/EVMStaff/EVDelivery/GetAllEVDelivery';
 import DeliveryTable from './Components/DeliveryTable';
 import StatusFilter from './Components/StatusFilter';
-
+import { ConfigProvider } from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
 const { Search } = Input;
 
 import DeliveryDetailModal from './Components/DeliveryDetailModal';
@@ -83,6 +84,7 @@ function EVDelivery() {
 
     return (
         <EVMStaffLayout>
+            <ConfigProvider locale={viVN}>
             <PageContainer
                 title="Theo dõi giao xe"
                 subTitle="Quản lý và theo dõi tiến trình giao xe đến đại lý"
@@ -123,6 +125,7 @@ function EVDelivery() {
                     onStatusUpdated={handleStatusUpdated}
                 />
             </PageContainer>
+            </ConfigProvider>
         </EVMStaffLayout>
     );
 }

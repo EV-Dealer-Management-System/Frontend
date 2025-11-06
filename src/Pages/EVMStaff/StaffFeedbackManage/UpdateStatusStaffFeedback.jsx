@@ -3,11 +3,14 @@ import { Typography } from 'antd';
 import { CommentOutlined } from '@ant-design/icons';
 import EVMStaffLayout from '../../../Components/EVMStaff/EVMStaffLayout';
 import ManageDealerStaffFeedback from './Components/ManageDealerStaffFeedback';
+import { ConfigProvider } from 'antd';
+import viVN from 'antd/lib/locale/vi_VN';
 
 const { Title } = Typography;
 
 const UpdateStatusStaffFeedback = () => {
   return (
+    <ConfigProvider locale={viVN}>
     <EVMStaffLayout>
       <div style={{
         position: 'fixed',
@@ -42,6 +45,7 @@ const UpdateStatusStaffFeedback = () => {
         </div>
       </div>
     </EVMStaffLayout>
+    </ConfigProvider>
   );
 };
 
