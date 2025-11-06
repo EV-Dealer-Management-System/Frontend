@@ -9,6 +9,7 @@ import {
   SyncOutlined,
   AuditOutlined,
   CarOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import EVBookingUpdateStatus from "../../../../App/DealerManager/EVBooking/EVBookingUpdateStatus";
 import BookingReviewModal from "./BookingReviewModal";
@@ -23,6 +24,7 @@ function BookingTable({
   onViewDetail,
   formatDateTime,
   onStatusUpdate,
+  onOpenPdf,
 }) {
   const [updatingStatus, setUpdatingStatus] = useState({});
   const [reviewModal, setReviewModal] = useState({
@@ -401,6 +403,22 @@ function BookingTable({
                 }}
               />
             </Tooltip>
+
+            {/* Xem hợp đồng (PDF) nếu có eContract */}
+            {record?.eContract && onOpenPdf && (
+              <Tooltip title="Xem Hợp đồng">
+                <Button
+                  type="default"
+                  icon={<FileTextOutlined />}
+                  onClick={() => onOpenPdf(record)}
+                  size="small"
+                  style={{
+                    borderRadius: 6,
+                    fontSize: 12,
+                  }}
+                />
+              </Tooltip>
+            )}
 
             {isDraft && (
               <Button
