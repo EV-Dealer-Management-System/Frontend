@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProTable } from "@ant-design/pro-components";
-import { Tag, Badge, message, Input } from "antd";
+import { Tag, Badge, message, Input, Switch, Modal, App } from "antd";
 import AdminLayout from "../../../Components/Admin/AdminLayout";
-import { GetAllEVDealer } from "../../../App/EVMAdmin/GetAllEVDealer/GetAllEVDealer";
+import { GetAllEVDealer, updateDealerStatus } from "../../../App/EVMAdmin/GetAllEVDealer/GetAllEVDealer";
 import { ConfigProvider } from "antd";
 import viVN from "antd/lib/locale/vi_VN";
 function GetAllEVDealerPage() {
@@ -21,7 +21,9 @@ function GetAllEVDealerPage() {
   });
   const [searchKeyword, setSearchKeyword] = useState('');
   const [originalDealerData, setOriginalDealerData] = useState([]);
+  const [updatingStatus, setUpdatingStatus] = useState({});
 
+  const { modal } = App.useApp();
   const { Search } = Input;
 
   // Hàm load dữ liệu đại lý với params
@@ -145,8 +147,8 @@ function GetAllEVDealerPage() {
     },
     {
       title: "Cấp Độ",
-      dataIndex: "dealerLevel",
-      key: "dealerLevel",
+      dataIndex: "level",
+      key: "level",
       width: 100,
       align: "center",
       render: (level) => {
@@ -171,36 +173,72 @@ function GetAllEVDealerPage() {
       title: "Trạng Thái",
       dataIndex: "dealerStatus",
       key: "dealerStatus",
-      width: 140,
+      width: 180,
       align: "center",
-      render: (status) => {
-        const statusConfig = {
-          0: { color: "success", text: "Hoạt động" },
-          1: { color: "warning", text: "Tạm dừng" },
-          2: { color: "error", text: "Ngừng hoạt động" },
-        };
-        const config = statusConfig[status] || {
-          color: "default",
-          text: "Không xác định",
+      render: (status, record) => {
+        const isActive = status === 0;
+
+        const handleToggle = (checked) => {
+          const newStatus = checked ? 0 : 1; // 0 = active, 1 = inactive
+
+          // If deactivating (newStatus === 1) show confirm modal
+          if (newStatus === 1) {
+            modal.confirm({
+              title: 'Xác nhận vô hiệu hóa đại lý',
+              content: `Bạn có chắc muốn đặt đại lý "${record.name}" về trạng thái Không hoạt động?`,
+              okText: 'Vô hiệu hóa',
+              okType: 'danger',
+              cancelText: 'Hủy',
+              onOk: async () => {
+                try {
+                  setUpdatingStatus((prev) => ({ ...prev, [record.id]: true }));
+                  const res = await updateDealerStatus(record.id, newStatus);
+                  if (res && res.isSuccess !== false) {
+                    message.success('Cập nhật trạng thái thành công');
+                    loadDealerData();
+                  } else {
+                    message.error(res?.message || 'Không thể cập nhật trạng thái');
+                  }
+                } catch (err) {
+                  console.error('Error updating dealer status:', err);
+                  message.error('Lỗi khi cập nhật trạng thái');
+                } finally {
+                  setUpdatingStatus((prev) => ({ ...prev, [record.id]: false }));
+                }
+              },
+            });
+          } else {
+            // Activating - call API directly
+            (async () => {
+              try {
+                setUpdatingStatus((prev) => ({ ...prev, [record.id]: true }));
+                const res = await updateDealerStatus(record.id, newStatus);
+                if (res && res.isSuccess !== false) {
+                  message.success('Cập nhật trạng thái thành công');
+                  loadDealerData();
+                } else {
+                  message.error(res?.message || 'Không thể cập nhật trạng thái');
+                }
+              } catch (err) {
+                console.error('Error updating dealer status:', err);
+                message.error('Lỗi khi cập nhật trạng thái');
+              } finally {
+                setUpdatingStatus((prev) => ({ ...prev, [record.id]: false }));
+              }
+            })();
+          }
         };
 
         return (
-          <Badge
-            status={config.color}
-            text={
-              <span
-                className={`font-medium ${
-                  config.color === "success"
-                    ? "text-green-600"
-                    : config.color === "warning"
-                    ? "text-yellow-600"
-                    : "text-red-600"
-                }`}
-              >
-                {config.text}
-              </span>
-            }
-          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
+            <Switch
+              checked={isActive}
+              checkedChildren="Hoạt"
+              unCheckedChildren="Tạm"
+              onChange={handleToggle}
+              loading={!!updatingStatus[record.id]}
+            />
+          </div>
         );
       },
     },
