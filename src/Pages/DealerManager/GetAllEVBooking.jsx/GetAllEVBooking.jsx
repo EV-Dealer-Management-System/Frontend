@@ -35,7 +35,7 @@ import StatusDistributionChart from "./Components/StatusDistributionChart";
 import TrendChart from "./Components/TrendChart";
 import { ConfigProvider } from "antd";
 import viVN from 'antd/lib/locale/vi_VN';
-
+import HeaderBar from "../../../Components/DealerManager/Components/HeaderBar";
 const { Content } = Layout;
 
 function GetAllEVBooking() {
@@ -379,12 +379,14 @@ function GetAllEVBooking() {
   }, [bookings, searchText, activeTab, dateRange]);
 
   return (
+    
     <Layout className="min-h-screen" style={{ background: "#f0f2f5" }}>
       <NavigationBar
         collapsed={collapsed}
         onCollapse={setCollapsed}
         isMobile={isMobile}
       />
+      <HeaderBar collapsed={collapsed} isMobile={isMobile} />
       <Layout
         className="transition-all duration-200"
         style={{

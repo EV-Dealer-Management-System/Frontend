@@ -1,11 +1,15 @@
-import React from "react";
-import { Space, Badge, Dropdown, Avatar } from "antd";
+import React, { useState, useEffect } from "react";
+import { Space, Badge, Dropdown, Avatar, Button, Card, List, Typography } from "antd";
 import {
     BellOutlined,
     UserOutlined,
     LogoutOutlined,
     SettingOutlined,
+    WarningOutlined,
+    InfoCircleOutlined,
 } from "@ant-design/icons";
+import * as signalR from "@microsoft/signalr";
+import api from "../../../api/api";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 function HeaderBar({ collapsed, isMobile }) {
@@ -66,6 +70,101 @@ function HeaderBar({ collapsed, isMobile }) {
         transition: 'left 0.2s ease',
         zIndex: 30,
     };
+    // timeAgo helper
+    const timeAgo = (iso) => {
+        if (!iso) return "";
+        const d = new Date(iso);
+        const diffM = Math.floor((Date.now() - d.getTime()) / 60000);
+        if (diffM < 1) return "vừa xong";
+        if (diffM < 60) return `${diffM} phút trước`;
+        const h = Math.floor(diffM / 60);
+        if (h < 24) return `${h} giờ trước`;
+        const day = Math.floor(h / 24);
+        return `${day} ngày trước`;
+    };
+
+    // NotificationBell (in-header, shared across pages)
+    function NotificationBell() {
+        const [items, setItems] = useState([]);
+        const [open, setOpen] = useState(false);
+        const unread = items.filter((x) => !x.isRead).length;
+
+        const fetchNotifications = async () => {
+            try {
+                const res = await api.get('/Notification/get-all-notification', { params: { pageNumber: 1, pageSize: 10 } });
+                if (res.data?.isSuccess) {
+                    setItems(res.data.result?.data || []);
+                }
+            } catch (err) {
+                console.error('Error fetching notifications', err);
+            }
+        };
+
+        useEffect(() => {
+            fetchNotifications();
+            const base = import.meta.env.VITE_API_URL || 'https://localhost:7269';
+            const conn = new signalR.HubConnectionBuilder()
+                .withUrl(`${base}/api/notificationHub`, { accessTokenFactory: () => localStorage.getItem('jwt_token') || '' })
+                .withAutomaticReconnect()
+                .build();
+
+            conn.start()
+                .then(() => {
+                    conn.on('NotificationChanged', () => {
+                        fetchNotifications();
+                    });
+                })
+                .catch(() => {});
+
+            return () => conn.stop().catch(() => {});
+        }, []);
+
+        const markAll = () => setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+
+        return (
+            <Dropdown
+                open={open}
+                onOpenChange={setOpen}
+                placement="bottomRight"
+                dropdownRender={() => (
+                    <Card style={{ width: 360, maxHeight: 420, overflowY: 'auto' }}
+                          title={<Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                              <Typography.Text strong>Thông báo</Typography.Text>
+                              {items.length > 0 && (
+                                  <Button type="link" size="small" onClick={markAll}>Đã đọc hết</Button>
+                              )}
+                          </Space>}
+                    >
+                        <List
+                            dataSource={items}
+                            locale={{ emptyText: 'Không có thông báo' }}
+                            renderItem={(item, idx) => (
+                                <List.Item key={item.createdAt || idx}
+                                           style={{ background: item.isRead ? '#fff' : '#e6f7ff', borderRadius: 10, marginBottom: 6 }}>
+                                    <List.Item.Meta
+                                        avatar={item.title?.toLowerCase().includes('cảnh báo') ? (
+                                            <WarningOutlined style={{ color: '#faad14' }} />
+                                        ) : (
+                                            <InfoCircleOutlined style={{ color: '#1677ff' }} />
+                                        )}
+                                        title={<Space><Typography.Text strong>{item.title}</Typography.Text>{!item.isRead && <Badge color="blue" />}</Space>}
+                                        description={<>
+                                            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{item.message}</Typography.Text><br/>
+                                            <Typography.Text type="secondary" style={{ fontSize: 11 }}>{timeAgo(item.createdAt)}</Typography.Text>
+                                        </>}
+                                    />
+                                </List.Item>
+                            )}
+                        />
+                    </Card>
+                )}
+            >
+                <Badge count={unread} size="small" overflowCount={9}>
+                    <Button icon={<BellOutlined />} shape="circle" type="text" style={{ color: '#1677ff' }} />
+                </Badge>
+            </Dropdown>
+        );
+    }
     return (
         <div style={headerStyle}>
             {/* Left side - Dealer Name */}
@@ -75,6 +174,7 @@ function HeaderBar({ collapsed, isMobile }) {
 
             {/* Right side - User Info */}
             <Space size="large" align="center">
+                <NotificationBell />
                 <span className="text-sm text-gray-600">Xin Chào, {userFullName}</span>
                 <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
                     <Avatar
