@@ -548,38 +548,6 @@ function PDFEditMain({
                     </div>
                   )
                 },
-                {
-                  key: 'html',
-                  label: (
-                    <span>
-                      <CodeOutlined />
-                      HTML
-                    </span>
-                  ),
-                  children: (
-                    <div className="h-full overflow-hidden">
-                      <TextArea
-                        value={fullPreviewHtml} // hiển thị full HTML
-                        onChange={(e) => {
-                          setFullPreviewHtml(e.target.value); // lưu full HTML
-                          setHasUnsavedChanges(true);
-                        }}
-                        placeholder="Chỉnh sửa HTML đầy đủ (bao gồm header, meta, content, sign, footer)..."
-                        className="h-full resize-none border-gray-300 focus:border-blue-500"
-                        disabled={false}
-                        style={{ 
-                          height: 'calc(100vh - 300px)',
-                          maxHeight: 'calc(100vh - 300px)',
-                          fontFamily: 'Monaco, Consolas, "Courier New", monospace',
-                          fontSize: '14px',
-                          lineHeight: '1.5',
-                          backgroundColor: 'white',
-                          color: 'inherit'
-                        }}
-                      />
-                    </div>
-                  )
-                },
               ]}
             />
           </div>
