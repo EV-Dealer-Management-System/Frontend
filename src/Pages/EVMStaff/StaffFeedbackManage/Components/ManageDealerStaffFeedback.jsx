@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Card, Tag, Space, Input, Typography, Image, Button, Select, App } from 'antd';
 import { SearchOutlined, StarOutlined } from '@ant-design/icons';
 import { GetStaffFeedback } from '../../../../App/DealerManager/StaffFeedbackManage/GetStaffFeedback';
-import { UpdateStatusCustomerFeedback } from '../../../../App/DealerManager/ManageCustomerFeedback/UpdateStatusCustomerFeedback';
-
+import { UpdateDealerFeedbackStatus } from '../../../../App/EVMStaff/DealerFeedback/UpdateDealerFeedbackStatus';
 const { Text } = Typography;
 const { Option } = Select;
 
@@ -43,7 +42,7 @@ const ManageDealerStaffFeedback = () => {
   const handleUpdateStatus = async (feedbackId, newStatus) => {
     try {
       setUpdatingId(feedbackId);
-      const response = await UpdateStatusCustomerFeedback.updateStatusCustomerFeedback(feedbackId, newStatus);
+      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatus);
 
       if (response?.isSuccess || response?.success) {
         message.success('Cập nhật trạng thái thành công!');

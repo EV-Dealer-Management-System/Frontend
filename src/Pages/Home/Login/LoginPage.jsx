@@ -11,6 +11,7 @@ import {
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { login } from "../../../utils/auth";
+import { getLoginErrorMessage } from "./loginErrorHandler";
 
 const { Title, Text } = Typography;
 
@@ -44,7 +45,7 @@ export default function LoginPage() {
       message.error("Vui lòng nhập đầy đủ thông tin!");
       return;
     }
-     // Trim email và password
+    // Trim email và password
     const cleanedEmail = String(email).trim();
     const cleanedPassword = String(password).trim();
     try {
@@ -84,11 +85,7 @@ export default function LoginPage() {
           navigate("/customer", { replace: true });
       }
     } catch (err) {
-      const msg = err?.response?.data?.message;
-      const vi =
-        msg === "User not found"
-          ? "Người dùng không tồn tại"
-          : msg || "Đăng nhập thất bại! Vui lòng kiểm tra lại thông tin.";
+      const vi = getLoginErrorMessage(err);
       setLoginError(vi);
     } finally {
       setLoading(false);
