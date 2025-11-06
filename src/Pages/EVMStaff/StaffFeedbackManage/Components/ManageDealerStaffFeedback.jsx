@@ -47,41 +47,13 @@ const ManageDealerStaffFeedback = () => {
     }
   };
 
-  const handleUpdateStatus = async (feedbackId, newStatus, currentStatus) => {
-    // Đảm bảo status là number
-    const currentStatusNum = typeof currentStatus === 'string' ? parseInt(currentStatus, 10) : currentStatus;
-    const newStatusNum = typeof newStatus === 'string' ? parseInt(newStatus, 10) : newStatus;
-
-    // Kiểm tra nếu feedback đã được xử lý rồi (status != 0)
-    if (currentStatusNum !== 0 && currentStatusNum !== null && currentStatusNum !== undefined) {
-      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
-      return;
-    }
-
-    // Kiểm tra nếu đang cập nhật từ trạng thái đã xử lý
-    const feedback = data.find(item => item.id === feedbackId);
-    const feedbackStatus = typeof feedback?.status === 'string' ? parseInt(feedback.status, 10) : feedback?.status;
-    if (feedback && feedbackStatus !== 0) {
-      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
-      return;
-    }
-
+  const handleUpdateStatus = async (feedbackId, newStatus) => {
     try {
       setUpdatingId(feedbackId);
-      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatusNum);
+      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatus);
 
       if (response?.isSuccess || response?.success) {
         message.success('Cập nhật trạng thái thành công!');
-        // Thêm feedback ID vào danh sách vừa cập nhật
-        setRecentlyUpdatedIds(prev => new Set([...prev, feedbackId]));
-        // Xóa khỏi danh sách sau 30 giây
-        setTimeout(() => {
-          setRecentlyUpdatedIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(feedbackId);
-            return newSet;
-          });
-        }, 30000);
         fetchFeedbacks();
       } else {
         message.error(response?.message || 'Cập nhật trạng thái thất bại');
@@ -102,7 +74,7 @@ const ManageDealerStaffFeedback = () => {
       0: { text: 'Chờ xử lý', color: 'gold' },
       1: { text: 'Đã chấp nhận', color: 'cyan' },
       2: { text: 'Đã từ chối', color: 'red' },
-      3: { text: 'Đã trả lời', color: 'green' },
+      3: { text: 'Đã giải quyết', color: 'green' },
       4: { text: 'Đã hủy', color: 'default' },
     };
     const statusInfo = statusMap[statusNum] || { text: `Không xác định (${status})`, color: 'default' };
@@ -236,31 +208,22 @@ const ManageDealerStaffFeedback = () => {
       title: 'Cập nhật trạng thái',
       key: 'updateStatus',
       align: 'center',
-      width: 200,
-      render: (_, record) => {
-        // Đảm bảo status là number
-        const recordStatus = typeof record.status === 'string' ? parseInt(record.status, 10) : record.status;
-        // Nếu feedback đã được xử lý (status != 0), disable select
-        const isProcessed = recordStatus !== 0 && recordStatus !== null && recordStatus !== undefined;
-        
-        return (
-          <Select
-            value={recordStatus}
-            onChange={(value) => handleUpdateStatus(record.id, value, recordStatus)}
-            loading={updatingId === record.id}
-            disabled={updatingId === record.id || isProcessed}
-            style={{ width: 170 }}
-            placeholder="Chọn trạng thái"
-          >
-            {/* Chỉ hiển thị option 0 nếu chưa được xử lý, và các option 1-4 luôn hiển thị */}
-            {!isProcessed && <Option value={0}>Chờ xử lý</Option>}
-            <Option value={1}>Đã chấp nhận</Option>
-            <Option value={2}>Đã từ chối</Option>
-            <Option value={3}>Đã trả lời</Option>
-            <Option value={4}>Đã hủy</Option>
-          </Select>
-        );
-      },
+      width: 180,
+      render: (_, record) => (
+        <Select
+          value={record.status}
+          onChange={(value) => handleUpdateStatus(record.id, value)}
+          loading={updatingId === record.id}
+          disabled={updatingId === record.id}
+          style={{ width: 150 }}
+        >
+          <Option value={0}>Chờ xử lý</Option>
+          <Option value={1}>Đã chấp nhận</Option>
+          <Option value={2}>Đã từ chối</Option>
+          <Option value={3}>Đã giải quyết</Option>
+          {/* <Option value={4}>Đã hủy</Option> */}
+        </Select>
+      ),
     },
     {
       title: 'Ngày tạo',

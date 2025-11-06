@@ -28,7 +28,7 @@ import AdminRoute from "./Router/AdminRoute";
 import DealerStaffRoute from "./Router/DealerStaffRoute";
 import EVMStaffRoute from "./Router/EVMStaffRoute";
 import ContractViewer from "./Pages/PublicPage/ContractView";
-import EVMStaff from "./Pages/EVMStaff/EVMStaff";
+import EVMStaff from "./Pages/EVMStaff/Dashboard/EVMStaff";
 import ChangePassword from "./Pages/Admin/ChangePassword/ChangePassword";
 import ChangePasswordEVMStaff from "./Pages/EVMStaff/ChangePassword/ChangePassword";
 import ChangePasswordDealerManager from "./Pages/DealerManager/ChangePassword/ChangePassword";
@@ -317,7 +317,7 @@ function App() {
                   element={<ScheduleTestDrive />}
                 />
                 <Route path="orders/all-orders" element={<OrderListStaffView />} />
-                <Route path="orders/create-order" element={<CreateEVOrder />} /> 
+                <Route path="orders/create-order" element={<CreateEVOrder />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ Dealer Staff */}
                 <Route
                   path="*"
