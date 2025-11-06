@@ -18,6 +18,7 @@ import dayjs from "dayjs";
 import DealerStaffLayout from "../../../Components/DealerStaff/DealerStaffLayout";
 import { ConfigProvider } from "antd";
 import viVN from "antd/lib/locale/vi_VN";
+import { list } from "postcss";
 
 const { Statistic } = StatisticCard;
 const { Search } = Input;
@@ -34,7 +35,7 @@ function GetAllEVCustomer() {
       try {
         const data = await getAllEVCustomer();
         if (data.isSuccess) {
-          setCustomers(data.result);
+          setCustomers(data.result?.data ?? []);
         } else {
           message.error("Không thể tải dữ liệu khách hàng");
         }

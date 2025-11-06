@@ -9,6 +9,9 @@ export const GetAllEVDealer = async (params = {}) => {
         if (params.isAscending !== undefined) queryParams.append('isAscending', params.isAscending);
         if (params.pageNumber) queryParams.append('pageNumber', params.pageNumber);
         if (params.pageSize) queryParams.append('pageSize', params.pageSize);
+        // Sử dụng status filter trực tiếp từ API backend
+        if (params.status !== undefined) queryParams.append('status', params.status);
+        
         const url = `/Dealer/get-all-dealers${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
         const response = await api.get(url);
         return response.data;

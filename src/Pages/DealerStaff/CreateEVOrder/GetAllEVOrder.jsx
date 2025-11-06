@@ -906,31 +906,82 @@ useEffect(() => {
 
               <Divider />
 
-              <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Space direction="vertical" size={8} style={{ width: "100%" }}>
                 <Text strong>
-                  <FileTextOutlined /> Báo giá
+                  <FileTextOutlined /> Chi tiết báo giá
                 </Text>
-                {detailOrder.quoteDetails?.[0] ? (
-                  <>
-                    <Text>
-                      {detailOrder.quoteDetails[0].version?.modelName} –{" "}
-                      {detailOrder.quoteDetails[0].version?.versionName}
-                    </Text>
-                    {detailOrder.quoteDetails[0].color?.colorName && (
-                      <Text type="secondary">
-                        Màu: {detailOrder.quoteDetails[0].color.colorName}
+                
+                {detailOrder.quoteDetails?.length ? (
+                  <div style={{ 
+                    border: '1px solid #f0f0f0', 
+                    borderRadius: 6, 
+                    padding: 12,
+                    background: '#fafafa'
+                  }}>
+                    {/* Header tổng quan */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: 12,
+                      paddingBottom: 8,
+                      borderBottom: '1px solid #e0e0e0'
+                    }}>
+                      <Text strong>
+                        Báo giá ({detailOrder.quoteDetails.length} sản phẩm)
                       </Text>
-                    )}
-                    {detailOrder.quoteDetails[0].promotion?.promotionName && (
-                      <Tag color="purple" icon={<GiftOutlined />}>
-                        {detailOrder.quoteDetails[0].promotion.promotionName}
-                      </Tag>
-                    )}
-                    <Text type="secondary">
-                      SL: {detailOrder.quoteDetails[0].quantity} • Đơn giá:{" "}
-                      {formatVnd(detailOrder.quoteDetails[0].unitPrice)}
-                    </Text>
-                  </>
+                      <Text strong style={{ color: '#1890ff', fontSize: 14 }}>
+                        {formatVnd(
+                          detailOrder.totalAmount && detailOrder.totalAmount > 0
+                            ? detailOrder.totalAmount
+                            : calcQuoteTotal(detailOrder)
+                        )}
+                      </Text>
+                    </div>
+                    
+                    {/* Danh sách sản phẩm */}
+                    {detailOrder.quoteDetails.map((detail, index) => (
+                      <div 
+                        key={detail.id || index}
+                        style={{
+                          marginBottom: index < detailOrder.quoteDetails.length - 1 ? 12 : 0,
+                          paddingBottom: index < detailOrder.quoteDetails.length - 1 ? 12 : 0,
+                          borderBottom: index < detailOrder.quoteDetails.length - 1 ? '1px dashed #d9d9d9' : 'none'
+                        }}
+                      >
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'flex-start',
+                          marginBottom: 4 
+                        }}>
+                          <Text strong style={{ fontSize: 13 }}>
+                            {detail.version?.modelName} - {detail.version?.versionName}
+                          </Text>
+                          <Text strong style={{ color: '#1890ff', fontSize: 13 }}>
+                            {formatVnd(detail.totalPrice)}
+                          </Text>
+                        </div>
+                        
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                          Màu: {detail.color?.colorName || '—'} • 
+                          Số lượng: {detail.quantity} • 
+                          Đơn giá: {formatVnd(detail.unitPrice)}
+                        </div>
+                        
+                        {detail.promotion?.promotionName && (
+                          <Tag 
+                            color="purple" 
+                            icon={<GiftOutlined />}
+                            size="small"
+                            style={{ fontSize: 11 }}
+                          >
+                            {detail.promotion.promotionName}
+                          </Tag>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <Text type="secondary">Không có chi tiết báo giá</Text>
                 )}
