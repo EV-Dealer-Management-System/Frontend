@@ -23,11 +23,12 @@ export default function OrderQuoteSelect({ value, onChange, customerId }) {
       try {
         setLoading(true);
         const res = await api.get("/Quote/get-all-quote?status=1");
-        const items = Array.isArray(res?.data)
-          ? res.data
-          : res?.data?.result || res?.data?.items || [];
+        const items =
+          res?.data?.result?.data && Array.isArray(res.data.result.data)
+            ? res.data.result.data
+            : [];
 
-        if (alive) setQuotes(items || []);
+        if (alive) setQuotes(items);
       } catch (e) {
         console.error("Fetch quotes failed:", e);
         message.error("Không tải được danh sách báo giá");
