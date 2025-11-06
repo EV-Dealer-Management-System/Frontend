@@ -67,7 +67,8 @@ import DMEVDelivery from "./Pages/DealerManager/DMEVDelivery/EVDelivery";
 import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
 import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
 import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
-
+import DepositSettings from "./Pages/DealerManager/DepositSettings/DepositSettings";
+import UpdateAllEVDepositSettings from "./Pages/Admin/DepositSettings/UpdatAllEVDepositSettings";
 function App() {
   return (
     <BrowserRouter>
@@ -167,6 +168,7 @@ function App() {
                   path="settings/change-password"
                   element={<ChangePassword />}
                 />
+                <Route path ="settings/deposit-settings" element={<UpdateAllEVDepositSettings />} />
                 <Route
                   path="promotions/all-promotions"
                   element={<GetAllPromotion />}
@@ -203,7 +205,8 @@ function App() {
                 />
                 <Route path="ev/inventory" element={<GetAllEVInventory />} />
 
-                <Route path="settings/dealer-profile" element={<DealerProfile />} />
+                <Route path="settings/dealer-profile" element={<DealerProfile />} /> 
+                
                 <Route path="staff/staff-list" element={<DealerStaffList />} />
                 <Route
                   path="customers/get-all-customers"
@@ -212,10 +215,11 @@ function App() {
                 <Route
                   path="settings/change-password"
                   element={<ChangePasswordDealerManager />}
-                />
+                /> 
+                <Route path="settings/deposit-settings" element={<DepositSettings />} />
                 <Route
                   path="staff/create-dealer-staff-account"
-                  element={<CreateDealerAccount />}
+                    element={<CreateDealerAccount />}
                 />
                 <Route path="customer-feedback/all" element={<UpdateStatusCustomerFeedback />} />
                 <Route path="staff-feedback/all" element={<FeedbackDealerStaff />} />

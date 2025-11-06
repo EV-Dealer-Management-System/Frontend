@@ -241,6 +241,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             component: "./ChangePassword",
           },
           {
+            path: "/admin/settings/deposit-settings",
+            name: "Cài đặt đặt cọc",
+            icon: <GlobalOutlined />,
+            component: "./DepositSettings/UpdatAllEVDepositSettings",
+          },
+          {
             path: "/admin/settings/user-management",
             name: "Quản lý người dùng",
             icon: <UserOutlined />,

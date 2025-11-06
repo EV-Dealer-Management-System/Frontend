@@ -28,8 +28,8 @@ function EVMAdmin() {
     try {
       setLoading(true);
 
-      // Gọi song song 5 API
-      const [inventoryResponse, bookingResponse, staffResponse, dealerResponse, warehouseResponse] = await Promise.all([
+      // Gọi song song 5 API với error handling riêng biệt
+      const [inventoryResponse, bookingResponse, staffResponse, dealerResponse, warehouseResponse] = await Promise.allSettled([
         getAllEVInventory(),
         getAllEVBookings(),
         EVMStaffAccountService.getAllStaffAccounts({}),
@@ -38,42 +38,57 @@ function EVMAdmin() {
       ]);
 
       // Xử lý dữ liệu inventory
-      if (inventoryResponse?.isSuccess && inventoryResponse?.result) {
-        setInventoryData(inventoryResponse.result);
+      if (inventoryResponse.status === 'fulfilled' && inventoryResponse.value?.isSuccess && inventoryResponse.value?.result) {
+        setInventoryData(Array.isArray(inventoryResponse.value.result) ? inventoryResponse.value.result : []);
+      } else {
+        console.warn('Inventory API failed:', inventoryResponse.reason || inventoryResponse.value);
+        setInventoryData([]);
       }
 
       // Xử lý dữ liệu booking
-      if (bookingResponse?.isSuccess && bookingResponse?.result?.data) {
-        setBookingData(bookingResponse.result.data);
+      if (bookingResponse.status === 'fulfilled' && bookingResponse.value?.isSuccess && bookingResponse.value?.result?.data) {
+        setBookingData(Array.isArray(bookingResponse.value.result.data) ? bookingResponse.value.result.data : []);
+      } else {
+        console.warn('Booking API failed:', bookingResponse.reason || bookingResponse.value);
+        setBookingData([]);
       }
 
       // Xử lý dữ liệu staff
-      if (staffResponse?.isSuccess && staffResponse?.result) {
-        console.log('Staff Data:', staffResponse.result);
-        setStaffData(staffResponse.result);
+      if (staffResponse.status === 'fulfilled' && staffResponse.value?.isSuccess && staffResponse.value?.result) {
+        console.log('Staff Data:', staffResponse.value.result);
+        setStaffData(Array.isArray(staffResponse.value.result) ? staffResponse.value.result : []);
       } else {
-        console.log('Staff Response Error:', staffResponse);
+        console.warn('Staff API failed:', staffResponse.reason || staffResponse.value);
+        setStaffData([]);
       }
 
       // Xử lý dữ liệu dealer
-      if (dealerResponse?.isSuccess && dealerResponse?.result?.data) {
-        console.log('Dealer Data:', dealerResponse.result.data);
-        setDealerData(dealerResponse.result.data);
+      if (dealerResponse.status === 'fulfilled' && dealerResponse.value?.isSuccess && dealerResponse.value?.result?.data) {
+        console.log('Dealer Data:', dealerResponse.value.result.data);
+        setDealerData(Array.isArray(dealerResponse.value.result.data) ? dealerResponse.value.result.data : []);
       } else {
-        console.log('Dealer Response Error:', dealerResponse);
+        console.warn('Dealer API failed:', dealerResponse.reason || dealerResponse.value);
+        setDealerData([]);
       }
 
       // Xử lý dữ liệu warehouse/kho
-      if (warehouseResponse?.isSuccess && warehouseResponse?.result) {
-        console.log('Warehouse Data:', warehouseResponse.result);
-        setWarehouseData(warehouseResponse.result);
+      if (warehouseResponse.status === 'fulfilled' && warehouseResponse.value?.isSuccess && warehouseResponse.value?.result) {
+        console.log('Warehouse Data:', warehouseResponse.value.result);
+        setWarehouseData(Array.isArray(warehouseResponse.value.result) ? warehouseResponse.value.result : []);
       } else {
-        console.log('Warehouse Response Error:', warehouseResponse);
+        console.warn('Warehouse API failed:', warehouseResponse.reason || warehouseResponse.value);
+        setWarehouseData([]);
       }
 
     } catch (error) {
       console.error('Lỗi khi tải dữ liệu dashboard:', error);
       message.error('Không thể tải dữ liệu dashboard. Vui lòng thử lại!');
+      // Đảm bảo tất cả state đều là array rỗng khi có lỗi
+      setInventoryData([]);
+      setBookingData([]);
+      setStaffData([]);
+      setDealerData([]);
+      setWarehouseData([]);
     } finally {
       setLoading(false);
     }

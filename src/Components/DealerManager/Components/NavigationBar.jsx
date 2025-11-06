@@ -113,7 +113,7 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         icon: <ShoppingCartOutlined />,
         component: "./EVDelivery",
         routes: [
-           {
+          {
             path: "/dealer-manager/ev/ev-booking",
             name: "Yêu cầu nhập hàng",
             icon: <DeploymentUnitOutlined />,
@@ -201,6 +201,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             name: "Thông tin đại lý",
             icon: <UserAddOutlined />,
             component: "./UserProfile",
+          },
+          {
+            path: "/dealer-manager/settings/deposit-settings",
+            name: "Cài đặt đặt cọc",
+            icon: <DollarOutlined />,
+            component: "./DepositSettings",
           },
           {
             path: "/dealer-manager/settings/change-password",
