@@ -33,13 +33,9 @@ export const createAccountApi = {
       return response.data;
     } catch (error) {
       console.error('Error creating dealer contract:', error);
-      
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Có lỗi xảy ra khi tạo hợp đồng đại lý',
-        details: error.response?.data || error.message
-      };
+      throw error; // ✅ QUAN TRỌNG: ném lỗi để FE bắt được
     }
+
   },
 
   deleteDealerContract: async function(contractId) {

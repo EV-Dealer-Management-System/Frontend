@@ -391,11 +391,33 @@ const CreateContract = () => {
         message.error(response.data?.message || 'Có lỗi khi tạo hợp đồng mới');
       }
     } catch (error) {
-      console.error('API Error:', error);
-      message.error( error?.message || 'Không thể tạo hợp đồng');
-    } finally {
-      setUpdatingEdit(false);
-    }
+        console.error("API Error:", error);
+
+        // 🎯 BẮT LỖI TÊN ĐẠI LÝ TRÙNG (409)
+        if (error.response?.status === 409 || error.response?.data?.message === "Dealer name is exist") {
+          message.error("Tên Đại Lý đã tồn tại");
+          form.setFields([
+          {
+            name: "brandName",
+            errors: ["Tên đại lý đã tồn tại. Vui lòng chọn tên khác!"]
+          }
+        ]);
+
+        setLoading(false);
+        return;
+        }
+        
+
+        // ❗ Lỗi khác từ BE
+        if (error.response?.data?.message) {
+          message.error(error.response.data.message);
+        } else {
+          message.error("Có lỗi không mong muốn xảy ra. Vui lòng liên hệ bộ phận hỗ trợ.");
+        }
+      } finally {
+        setLoading(false);
+      }
+
   };
 
   // Xác nhận hợp đồng

@@ -17,3 +17,15 @@ export const GetAllEVDealer = async (params = {}) => {
         throw error;
     }
 };
+
+// Cập nhật trạng thái dealer: status = 0 (hoạt động), 1 (không hoạt động)
+export const updateDealerStatus = async (dealerId, status) => {
+    try {
+        const url = `/Dealer/update-dealer-status/${dealerId}?status=${status}`;
+        const response = await api.put(url);
+        return response.data;
+    } catch (error) {
+        console.error("Error updating dealer status:", error);
+        throw error;
+    }
+};
