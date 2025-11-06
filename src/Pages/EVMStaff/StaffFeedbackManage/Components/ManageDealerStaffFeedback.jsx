@@ -47,41 +47,13 @@ const ManageDealerStaffFeedback = () => {
     }
   };
 
-  const handleUpdateStatus = async (feedbackId, newStatus, currentStatus) => {
-    // Đảm bảo status là number
-    const currentStatusNum = typeof currentStatus === 'string' ? parseInt(currentStatus, 10) : currentStatus;
-    const newStatusNum = typeof newStatus === 'string' ? parseInt(newStatus, 10) : newStatus;
-
-    // Kiểm tra nếu feedback đã được xử lý rồi (status != 0)
-    if (currentStatusNum !== 0 && currentStatusNum !== null && currentStatusNum !== undefined) {
-      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
-      return;
-    }
-
-    // Kiểm tra nếu đang cập nhật từ trạng thái đã xử lý
-    const feedback = data.find(item => item.id === feedbackId);
-    const feedbackStatus = typeof feedback?.status === 'string' ? parseInt(feedback.status, 10) : feedback?.status;
-    if (feedback && feedbackStatus !== 0) {
-      message.warning('Feedback này đã được xử lý rồi và không thể thay đổi trạng thái!');
-      return;
-    }
-
+  const handleUpdateStatus = async (feedbackId, newStatus) => {
     try {
       setUpdatingId(feedbackId);
-      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatusNum);
+      const response = await UpdateDealerFeedbackStatus.updateStatusDealerFeedback(feedbackId, newStatus);
 
       if (response?.isSuccess || response?.success) {
         message.success('Cập nhật trạng thái thành công!');
-        // Thêm feedback ID vào danh sách vừa cập nhật
-        setRecentlyUpdatedIds(prev => new Set([...prev, feedbackId]));
-        // Xóa khỏi danh sách sau 30 giây
-        setTimeout(() => {
-          setRecentlyUpdatedIds(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(feedbackId);
-            return newSet;
-          });
-        }, 30000);
         fetchFeedbacks();
       } else {
         message.error(response?.message || 'Cập nhật trạng thái thất bại');
