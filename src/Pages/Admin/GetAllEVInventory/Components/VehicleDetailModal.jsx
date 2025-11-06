@@ -185,7 +185,7 @@ function VehicleDetailModal({ visible, onClose, vehicle }) {
             render: (_, record) => {
                 // Tìm trạng thái hiện tại để hiển thị
                 const currentStatus = statusOptions.find(option => option.value === record.status);
-                
+
                 return (
                     <Select
                         value={record.status}
@@ -218,7 +218,7 @@ function VehicleDetailModal({ visible, onClose, vehicle }) {
                                 </div>
                             </Option>
                         )}
-                        
+
                         {/* Hiển thị các trạng thái cho phép chọn */}
                         {statusOptions
                             .filter(option => allowedStatusIds.includes(option.value))

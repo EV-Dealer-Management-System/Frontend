@@ -4,6 +4,7 @@ import { ReloadOutlined } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import AdminLayout from "../../../Components/Admin/AdminLayout";
 import { getAllEVInventory } from "../../../App/EVMAdmin/GetAllEVInventory/GetAllEVInventory";
+import { getAllWarehouses } from "../../../App/EVMAdmin/GetAllEVInventory/GetAllEVWarehouse";
 import VehicleDetailModal from "./Components/VehicleDetailModal";
 import StatisticsCards from "./Components/StatisticsCards";
 import InventoryTable from "./Components/InventoryTable";
@@ -23,6 +24,37 @@ function EVMGetAllInventory() {
     const [warehouseFilter, setWarehouseFilter] = useState('');
     const [warehouseOptions, setWarehouseOptions] = useState([]);
 
+    // Fetch danh sách warehouses từ API
+    const fetchWarehouses = useCallback(async () => {
+        try {
+            console.log("Fetching warehouses...");
+            const response = await getAllWarehouses();
+            console.log("Warehouses API response:", response);
+            
+            if (response?.isSuccess && Array.isArray(response.result)) {
+                // Chuyển đổi dữ liệu warehouse thành options cho Select
+                const warehouseOptionsArray = response.result.map(warehouse => ({
+                    value: warehouse.id,
+                    label: warehouse.warehouseName,
+                    warehouseType: warehouse.warehouseType,
+                    dealerId: warehouse.dealerId,
+                    evcInventoryId: warehouse.evcInventoryId
+                })).sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+
+                setWarehouseOptions(warehouseOptionsArray);
+                console.log("Warehouse options updated:", warehouseOptionsArray);
+            } else {
+                console.log("Failed to fetch warehouses:", response);
+                message.error("Không thể tải danh sách kho hàng");
+                setWarehouseOptions([]);
+            }
+        } catch (error) {
+            console.error("Error fetching warehouses:", error);
+            message.error("Lỗi khi tải danh sách kho hàng");
+            setWarehouseOptions([]);
+        }
+    }, []);
+
     // Fetch dữ liệu kho xe của hãng
     const fetchInventoryData = useCallback(async (warehouseId = null) => {
         setLoading(true);
@@ -35,9 +67,6 @@ function EVMGetAllInventory() {
             console.log("Fetching inventory data with params:", params);
             const response = await getAllEVInventory(params);
             console.log("API Response:", response); // Debug log
-            console.log("Response result:", response?.result); // Debug log
-            console.log("Response result data:", response?.result?.data); // Debug log
-            console.log("Is result.data array?", Array.isArray(response?.result?.data)); // Debug log
 
             if (response?.isSuccess) {
                 // Xử lý cả cấu trúc cũ và mới của API
@@ -58,28 +87,6 @@ function EVMGetAllInventory() {
                     id: index + 1
                 }));
 
-                // Extract unique warehouses từ dữ liệu (chỉ khi chưa có hoặc đang load tất cả kho)
-                if (warehouseOptions.length === 0 || !warehouseId) {
-                    const warehouseMap = new Map();
-                    resultData.forEach(item => {
-                        if (item.vehicles && Array.isArray(item.vehicles)) {
-                            item.vehicles.forEach(vehicle => {
-                                if (vehicle.warehouseId && vehicle.warehouseName) {
-                                    warehouseMap.set(vehicle.warehouseId, vehicle.warehouseName);
-                                }
-                            });
-                        }
-                    });
-
-                    // Chuyển đổi thành array options cho Select
-                    const warehouseOptionsArray = Array.from(warehouseMap, ([id, name]) => ({
-                        value: id,
-                        label: name
-                    })).sort((a, b) => a.label.localeCompare(b.label));
-
-                    setWarehouseOptions(warehouseOptionsArray);
-                    console.log("Warehouse options updated:", warehouseOptionsArray);
-                }
                 setInventoryData(dataWithKeys);
                 console.log("Processed data:", dataWithKeys);
                 message.success("Tải dữ liệu kho xe hãng thành công!");
@@ -97,7 +104,7 @@ function EVMGetAllInventory() {
         } finally {
             setLoading(false);
         }
-    }, [warehouseOptions.length]);
+    }, []);
 
     // Làm mới dữ liệu
     const handleRefresh = () => {
@@ -133,8 +140,16 @@ function EVMGetAllInventory() {
 
 
     useEffect(() => {
-        fetchInventoryData();
-    }, [fetchInventoryData]);
+        // Load warehouses và inventory data song song
+        const initializeData = async () => {
+            await Promise.all([
+                fetchWarehouses(),
+                fetchInventoryData()
+            ]);
+        };
+        
+        initializeData();
+    }, [fetchWarehouses, fetchInventoryData]);
 
     return (
         <AdminLayout>
@@ -146,17 +161,24 @@ function EVMGetAllInventory() {
                             key="warehouse-filter"
                             placeholder="Chọn kho"
                             value={warehouseFilter || undefined}
-                            style={{ width: 200 }}
+                            style={{ width: 250 }}
                             allowClear
                             onChange={handleWarehouseChange}
                             loading={loading}
+                            showSearch
+                            filterOption={(input, option) =>
+                                (option?.children ?? '').toString().toLowerCase().includes(input.toLowerCase())
+                            }
                         >
                             <Option value="">Tất cả kho</Option>
-                            {warehouseOptions.map(option => (
-                                <Option key={option.value} value={option.value}>
-                                    {option.label}
-                                </Option>
-                            ))}
+                            {warehouseOptions.map(option => {
+                                const warehouseTypeText = option.warehouseType === 1 ? "Đại lý" : "Hãng";
+                                return (
+                                    <Option key={option.value} value={option.value}>
+                                        {option.label} ({warehouseTypeText})
+                                    </Option>
+                                );
+                            })}
                         </Select>
                         <Select
                             key="status-filter"
