@@ -12,9 +12,8 @@ import {
 } from '@ant-design/icons';
 import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
 import { getDepositSettings, createDepositSettings } from '../../../App/DealerManager/DepositSettings/GetDepositSettings';
-import DealerInfoCard from './components/DealerInfoCard';
-import DepositStatsCards from './components/DepositStatsCards';
-import DepositUpdateForm from './components/DepositUpdateForm';
+import DepositStatsCards from './Components/DepositStatsCards';
+import DepositUpdateForm from './Components/DepositUpdateForm';
 
 function DepositSettings() {
     const [form] = Form.useForm();
