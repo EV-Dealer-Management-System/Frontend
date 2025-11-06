@@ -10,15 +10,21 @@ import {
     HomeOutlined
 } from '@ant-design/icons';
 
-function DashboardStats({ inventoryData, bookingData, staffData, dealerData, warehouseData, loading }) {
+function DashboardStats({ inventoryData, bookingData, staffData, dealerData, warehouseData, dashboardData, loading }) {
 
     // Tính toán thống kê từ dữ liệu thực
     const stats = useMemo(() => {
-        // Kiểm tra dữ liệu đầu vào có hợp lệ không
-        const validInventoryData = Array.isArray(inventoryData) ? inventoryData : [];
+        // Xử lý inventory data từ API response
+        let validInventoryData = [];
+        if (inventoryData?.result?.data && Array.isArray(inventoryData.result.data)) {
+            validInventoryData = inventoryData.result.data;
+        } else if (Array.isArray(inventoryData)) {
+            validInventoryData = inventoryData;
+        }
+
         const validBookingData = Array.isArray(bookingData) ? bookingData : [];
 
-        if (validInventoryData.length === 0 && validBookingData.length === 0) {
+        if (validInventoryData.length === 0 && validBookingData.length === 0 && !dashboardData) {
             return {
                 totalBookings: 0,
                 totalVehicles: 0,
@@ -27,11 +33,11 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
             };
         }
 
-        // Tổng số booking
-        const totalBookings = validBookingData.length;
+        // Tổng số booking - ưu tiên từ dashboardData
+        const totalBookings = dashboardData?.totalBookings || validBookingData.length;
 
-        // Tổng số xe trong kho (kiểm tra an toàn)
-        const totalVehicles = validInventoryData.reduce((sum, item) => {
+        // Tổng số xe - ưu tiên từ dashboardData
+        const totalVehicles = dashboardData?.totalVehicles || validInventoryData.reduce((sum, item) => {
             return sum + (item?.quantity || 0);
         }, 0);
 
@@ -51,7 +57,7 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
             approvalRate,
             avgVehiclesPerBooking
         };
-    }, [inventoryData, bookingData]);
+    }, [inventoryData, bookingData, dashboardData]);
 
     return (
         <>
@@ -60,7 +66,7 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
                 <Col xs={24} sm={12} lg={6}>
                     <Card bordered={false} hoverable loading={loading}>
                         <Statistic
-                            title="Tổng Booking"
+                            title="Tổng eContract"
                             value={stats.totalBookings}
                             prefix={<FileTextOutlined />}
                             valueStyle={{ color: '#1890ff' }}
@@ -138,7 +144,7 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
                     <Card bordered={false} hoverable loading={loading}>
                         <Statistic
                             title="Tổng Nhân Viên EVM"
-                            value={staffData?.length || 0}
+                            value={dashboardData?.totalEVMStaff || staffData?.length || 0}
                             prefix={<UserOutlined />}
                             valueStyle={{ color: '#eb2f96' }}
                             suffix="người"
@@ -156,7 +162,7 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
                     <Card bordered={false} hoverable loading={loading}>
                         <Statistic
                             title="Tổng Đại Lý"
-                            value={dealerData?.length || 0}
+                            value={dashboardData?.totalDealers || dealerData?.length || 0}
                             prefix={<ShopOutlined />}
                             valueStyle={{ color: '#13c2c2' }}
                             suffix="đại lý"
@@ -173,8 +179,8 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
                 <Col xs={24} sm={12} lg={6}>
                     <Card bordered={false} hoverable loading={loading}>
                         <Statistic
-                            title="Tổng Kho Hãng"
-                            value={warehouseData?.length || 0}
+                            title="Tổng Kho EVC"
+                            value={dashboardData?.totalEVCInventory || warehouseData?.length || 0}
                             prefix={<HomeOutlined />}
                             valueStyle={{ color: '#f5222d' }}
                             suffix="kho"

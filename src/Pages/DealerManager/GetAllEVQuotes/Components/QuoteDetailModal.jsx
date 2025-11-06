@@ -39,9 +39,9 @@ function QuoteDetailModal({
             key: "modelName",
             render: (text, record) => (
                 <div className="space-y-1">
-                    <div className="font-semibold text-gray-800">{text}</div>
+                    <div className="font-semibold text-gray-800">{text || "Chưa có thông tin"}</div>
                     <div className="text-sm text-gray-500">
-                        {record.version.versionName}
+                        {record?.version?.versionName || "Chưa có phiên bản"}
                     </div>
                 </div>
             ),
@@ -50,7 +50,7 @@ function QuoteDetailModal({
             title: "Màu sắc",
             dataIndex: ["color", "colorName"],
             key: "colorName",
-            render: (text) => <Tag color="blue">{text}</Tag>,
+            render: (text) => <Tag color="blue">{text || "Chưa có màu"}</Tag>,
         },
         {
             title: "Khuyến mãi",
@@ -133,7 +133,7 @@ function QuoteDetailModal({
                             }
                         >
                             <Text code copyable className="text-blue-600 font-mono text-sm">
-                                {quote.id}
+                                {quote?.id || "Chưa có mã"}
                             </Text>
                         </Descriptions.Item>
 
@@ -183,7 +183,7 @@ function QuoteDetailModal({
                             span={2}
                         >
                             <Text strong className="text-green-600 text-lg">
-                                {formatCurrency(quote.totalAmount)}
+                                {formatCurrency(quote?.totalAmount || 0)}
                             </Text>
                         </Descriptions.Item>
 
@@ -210,7 +210,7 @@ function QuoteDetailModal({
                 {/* Quote Details Table */}
                 <Table
                     columns={columns}
-                    dataSource={quote.quoteDetails}
+                    dataSource={quote?.quoteDetails || []}
                     rowKey="id"
                     pagination={false}
                     bordered
@@ -256,7 +256,7 @@ function QuoteDetailModal({
                 />
 
                 {/* Promotion Details if any */}
-                {quote.quoteDetails.some((detail) => detail.promotion) && (
+                {Array.isArray(quote?.quoteDetails) && quote.quoteDetails.some((detail) => detail?.promotion) && (
                     <>
                         <Divider orientation="left" className="border-gray-300">
                             <Space className="bg-white px-3">
@@ -267,10 +267,10 @@ function QuoteDetailModal({
                             </Space>
                         </Divider>
                         <div className="bg-pink-50 p-4 rounded-lg border border-pink-100">
-                            {quote.quoteDetails.map((detail, index) => {
-                                if (detail.promotion) {
+                            {Array.isArray(quote?.quoteDetails) && quote.quoteDetails.map((detail, index) => {
+                                if (detail?.promotion) {
                                     const discount =
-                                        detail.unitPrice * detail.quantity - detail.totalPrice;
+                                        (detail?.unitPrice || 0) * (detail?.quantity || 0) - (detail?.totalPrice || 0);
                                     return (
                                         <div
                                             key={index}
@@ -279,7 +279,7 @@ function QuoteDetailModal({
                                             <div className="flex items-center gap-2">
                                                 <GiftOutlined className="text-pink-500" />
                                                 <Text strong className="text-gray-800 text-base">
-                                                    {detail.promotion.promotionName}
+                                                    {detail?.promotion?.promotionName || "Chưa có khuyến mãi"}
                                                 </Text>
                                             </div>
                                             <div className="flex items-center gap-2 pl-6">
