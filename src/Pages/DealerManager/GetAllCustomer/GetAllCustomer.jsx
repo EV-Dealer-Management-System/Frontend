@@ -27,13 +27,20 @@ function GetAllCustomer() {
             try {
                 const data = await getAllCustomer();
                 if (data.isSuccess) {
-                    setCustomers(data.result);
+                    // Đảm bảo customers luôn là array
+                    const customersList = Array.isArray(data.result)
+                        ? data.result
+                        : (data.result?.data || []);
+                    setCustomers(customersList);
+                    message.success(`Đã tải ${customersList.length} khách hàng thành công`);
                 } else {
                     message.error('Không thể tải dữ liệu khách hàng');
+                    setCustomers([]);
                 }
             } catch (err) {
                 console.error('Error fetching customers:', err);
                 message.error('Lỗi khi tải dữ liệu khách hàng');
+                setCustomers([]);
             } finally {
                 setLoading(false);
             }
@@ -44,13 +51,13 @@ function GetAllCustomer() {
 
     // Tính toán thống kê
     const stats = {
-        total: customers.length,
-        newToday: customers.filter(c =>
+        total: Array.isArray(customers) ? customers.length : 0,
+        newToday: Array.isArray(customers) ? customers.filter(c =>
             dayjs(c.createdAt).isAfter(dayjs().startOf('day'))
-        ).length,
-        newThisWeek: customers.filter(c =>
+        ).length : 0,
+        newThisWeek: Array.isArray(customers) ? customers.filter(c =>
             dayjs(c.createdAt).isAfter(dayjs().startOf('week'))
-        ).length,
+        ).length : 0,
     };
 
     // Define table columns
@@ -134,106 +141,106 @@ function GetAllCustomer() {
     return (
         <DealerManagerLayout>
             <ConfigProvider locale={viVN}>
-            <PageContainer
-                title="Quản Lý Khách Hàng"
-                subTitle="Hệ thống quản lý khách hàng xe máy điện"
-                className="bg-gradient-to-br from-blue-50 to-indigo-50"
-            >
-                {/* Thống kê tổng quan */}
-                <Row gutter={[16, 16]} className="mb-6">
-                    <Col xs={24} sm={8}>
-                        <StatisticCard
-                            statistic={{
-                                title: 'Tổng Khách Hàng',
-                                value: stats.total,
-                                icon: (
-                                    <TeamOutlined
-                                        style={{
-                                            fontSize: 40,
-                                            color: '#1890ff'
-                                        }}
-                                    />
-                                ),
-                            }}
-                            className="shadow-sm hover:shadow-md transition-shadow"
-                        />
-                    </Col>
-                    <Col xs={24} sm={8}>
-                        <StatisticCard
-                            statistic={{
-                                title: 'Khách Hàng Mới Hôm Nay',
-                                value: stats.newToday,
-                                icon: (
-                                    <UserAddOutlined
-                                        style={{
-                                            fontSize: 40,
-                                            color: '#52c41a'
-                                        }}
-                                    />
-                                ),
-                            }}
-                            className="shadow-sm hover:shadow-md transition-shadow"
-                        />
-                    </Col>
-                    <Col xs={24} sm={8}>
-                        <StatisticCard
-                            statistic={{
-                                title: 'Khách Hàng Tuần Này',
-                                value: stats.newThisWeek,
-                                icon: (
-                                    <SmileOutlined
-                                        style={{
-                                            fontSize: 40,
-                                            color: '#faad14'
-                                        }}
-                                    />
-                                ),
-                            }}
-                            className="shadow-sm hover:shadow-md transition-shadow"
-                        />
-                    </Col>
-                </Row>
-
-                {/* Bảng dữ liệu */}
-                <Card
-                    className="shadow-md rounded-lg"
-                    bordered={false}
+                <PageContainer
+                    title="Quản Lý Khách Hàng"
+                    subTitle="Hệ thống quản lý khách hàng xe máy điện"
+                    className="bg-gradient-to-br from-blue-50 to-indigo-50"
                 >
-                    
-                    <ProTable
-                        dataSource={customers}
-                        columns={columns}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={{
-                            pageSize: 10,
-                            showSizeChanger: true,
-                            showQuickJumper: true,
-                            showTotal: (total) => (
-                                <span className="text-gray-600">
-                                    <TeamOutlined /> Tổng số <strong>{total}</strong> khách hàng
-                                </span>
-                            ),
-                        }}
-                        search={false}
-                        options={{
-                            reload: () => {
-                                window.location.reload();
-                            },
-                            density: true,
-                            setting: true,
-                        }}
-                        cardProps={false}
-                        tableLayout="fixed"
-                        headerTitle={
-                            <Space className="text-lg font-semibold text-gray-800">
-                                <TeamOutlined />
-                                Danh Sách Khách Hàng Xe Máy Điện
-                            </Space>
-                        }
-                    />
-                </Card>
-            </PageContainer>
+                    {/* Thống kê tổng quan */}
+                    <Row gutter={[16, 16]} className="mb-6">
+                        <Col xs={24} sm={8}>
+                            <StatisticCard
+                                statistic={{
+                                    title: 'Tổng Khách Hàng',
+                                    value: stats.total,
+                                    icon: (
+                                        <TeamOutlined
+                                            style={{
+                                                fontSize: 40,
+                                                color: '#1890ff'
+                                            }}
+                                        />
+                                    ),
+                                }}
+                                className="shadow-sm hover:shadow-md transition-shadow"
+                            />
+                        </Col>
+                        <Col xs={24} sm={8}>
+                            <StatisticCard
+                                statistic={{
+                                    title: 'Khách Hàng Mới Hôm Nay',
+                                    value: stats.newToday,
+                                    icon: (
+                                        <UserAddOutlined
+                                            style={{
+                                                fontSize: 40,
+                                                color: '#52c41a'
+                                            }}
+                                        />
+                                    ),
+                                }}
+                                className="shadow-sm hover:shadow-md transition-shadow"
+                            />
+                        </Col>
+                        <Col xs={24} sm={8}>
+                            <StatisticCard
+                                statistic={{
+                                    title: 'Khách Hàng Tuần Này',
+                                    value: stats.newThisWeek,
+                                    icon: (
+                                        <SmileOutlined
+                                            style={{
+                                                fontSize: 40,
+                                                color: '#faad14'
+                                            }}
+                                        />
+                                    ),
+                                }}
+                                className="shadow-sm hover:shadow-md transition-shadow"
+                            />
+                        </Col>
+                    </Row>
+
+                    {/* Bảng dữ liệu */}
+                    <Card
+                        className="shadow-md rounded-lg"
+                        bordered={false}
+                    >
+
+                        <ProTable
+                            dataSource={customers}
+                            columns={columns}
+                            rowKey="id"
+                            loading={loading}
+                            pagination={{
+                                pageSize: 10,
+                                showSizeChanger: true,
+                                showQuickJumper: true,
+                                showTotal: (total) => (
+                                    <span className="text-gray-600">
+                                        <TeamOutlined /> Tổng số <strong>{total}</strong> khách hàng
+                                    </span>
+                                ),
+                            }}
+                            search={false}
+                            options={{
+                                reload: () => {
+                                    window.location.reload();
+                                },
+                                density: true,
+                                setting: true,
+                            }}
+                            cardProps={false}
+                            tableLayout="fixed"
+                            headerTitle={
+                                <Space className="text-lg font-semibold text-gray-800">
+                                    <TeamOutlined />
+                                    Danh Sách Khách Hàng Xe Máy Điện
+                                </Space>
+                            }
+                        />
+                    </Card>
+                </PageContainer>
             </ConfigProvider>
         </DealerManagerLayout>
     );
