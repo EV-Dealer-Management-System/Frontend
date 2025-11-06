@@ -23,12 +23,6 @@ function HeaderBar({ collapsed, isMobile }) {
 
     const userMenuItems = [
         {
-            key: "profile",
-            icon: <UserOutlined />,
-            label: "Thông tin cá nhân",
-            onClick: () => navigate("/evm-staff/profile"),
-        },
-        {
             key: "settings",
             icon: <SettingOutlined />,
             label: "Cài đặt",
