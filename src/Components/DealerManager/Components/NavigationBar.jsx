@@ -212,12 +212,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/dealer-manager/customer-feedback",
-        name: "Feedback Customer",
+        name: "Feedback Khách Hàng",
         icon: <CommentOutlined />,
         routes: [
           {
             path: "/dealer-manager/customer-feedback/all",
-            name: "Quản lý Feedback Customer",
+            name: "Danh sách Feedback Khách ",
             icon: <CommentOutlined />,
             component: "./ManageCusFeedback/UpdateStatusCustomerFeedback",
           },
@@ -238,12 +238,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/dealer-manager/staff-feedback",
-        name: "Feedback DealerStaff",
+        name: "Feedback Hãng ",
         icon: <CommentOutlined />,
         routes: [
           {
             path: "/dealer-manager/staff-feedback/all",
-            name: "Quản lý Feedback DealerStaff",
+            name: "Danh sách Feedback Hãng",
             icon: <CommentOutlined />,
             component: "./StaffFeedback/FeedbackDealerStaff",
           },

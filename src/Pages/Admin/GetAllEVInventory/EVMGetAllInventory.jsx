@@ -30,7 +30,7 @@ function EVMGetAllInventory() {
             console.log("Fetching warehouses...");
             const response = await getAllWarehouses();
             console.log("Warehouses API response:", response);
-            
+
             if (response?.isSuccess && Array.isArray(response.result)) {
                 // Chuyển đổi dữ liệu warehouse thành options cho Select
                 const warehouseOptionsArray = response.result.map(warehouse => ({
@@ -147,7 +147,7 @@ function EVMGetAllInventory() {
                 fetchInventoryData()
             ]);
         };
-        
+
         initializeData();
     }, [fetchWarehouses, fetchInventoryData]);
 

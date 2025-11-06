@@ -7,6 +7,7 @@ import { getAllEVQuotes } from "../../../App/DealerStaff/EVQuotesManagement/GetA
 
 // Import các components
 import StatisticsCards from "./Components/StatisticsCards.jsx";
+import FilterControls from "./Components/FilterControls.jsx";
 import QuotesTable from "./Components/QuotesTable.jsx";
 import getPageHeaderConfig from "./Components/PageHeader.jsx";
 import LoadingSpinner from "./Components/LoadingSpinner.jsx";
@@ -20,52 +21,56 @@ function GetAllEVQuotes() {
   const [error, setError] = useState(null);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(null); // Filter state
 
   // Fetch quotes data
-  const fetchQuotes = async () => {
+  const fetchQuotes = async (pageNum = 1, pageSize = 10, statusFilter = null) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getAllEVQuotes();
+      const quotesData = await getAllEVQuotes(pageNum, pageSize, statusFilter);
 
-      if (response.isSuccess) {
-        setQuotes(response.result || []);
-      } else {
-        const errorMsg = response.message || "Không thể tải danh sách báo giá";
-        setError(errorMsg);
-        message.error(errorMsg);
-      }
+      // API trả về mảng trực tiếp sau khi đã xử lý trong service
+      setQuotes(Array.isArray(quotesData) ? quotesData : []);
     } catch (err) {
       console.error("Error fetching quotes:", err);
       const errorMsg = "Lỗi kết nối server. Vui lòng thử lại sau.";
       setError(errorMsg);
       message.error("Không thể tải danh sách báo giá");
+      setQuotes([]); // Set empty array khi có exception
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchQuotes();
-  }, []);
+    fetchQuotes(1, 10, currentStatus);
+  }, [currentStatus]);
+
+  // Filter handlers
+  const handleStatusFilter = (status) => {
+    setCurrentStatus(status);
+  };
 
   // Calculate statistics
   const statistics = useMemo(() => {
-    const total = quotes.length;
+    // Đảm bảo quotes là array trước khi xử lý
+    const quotesArray = Array.isArray(quotes) ? quotes : [];
+    const total = quotesArray.length;
 
     // Status: 0 = Pending, 1 = Approved, 2 = Rejected
-    const pending = quotes.filter((q) => q.status === 0).length;
-    const approved = quotes.filter((q) => q.status === 1).length;
-    const rejected = quotes.filter((q) => q.status === 2).length;
+    const pending = quotesArray.filter((q) => q.status === 0).length;
+    const approved = quotesArray.filter((q) => q.status === 1).length;
+    const rejected = quotesArray.filter((q) => q.status === 2).length;
 
     // Calculate total amount
-    const totalAmount = quotes.reduce(
+    const totalAmount = quotesArray.reduce(
       (sum, quote) => sum + (quote.totalAmount || 0),
       0
     );
 
     // Calculate approved amount
-    const approvedAmount = quotes
+    const approvedAmount = quotesArray
       .filter((q) => q.status === 1)
       .reduce((sum, quote) => sum + (quote.totalAmount || 0), 0);
 
@@ -122,7 +127,7 @@ function GetAllEVQuotes() {
 
   // Handle refresh
   const handleRefresh = () => {
-    fetchQuotes();
+    fetchQuotes(1, 10, currentStatus);
   };
 
   // Handle create new quote
@@ -168,6 +173,13 @@ function GetAllEVQuotes() {
         className="bg-gradient-to-br from-blue-50 via-white to-purple-50 min-h-screen"
       >
         <div className="space-y-6">
+          {/* Filter Controls */}
+          <FilterControls
+            onStatusFilter={handleStatusFilter}
+            onRefresh={handleRefresh}
+            loading={loading}
+          />
+
           {/* Statistics Overview */}
           <StatisticsCards
             statistics={statistics}
