@@ -24,8 +24,23 @@ const CreateFeedBack = ({ onSuccess, onCancel }) => {
       try {
         const res = await GetAllCustomer.getAllCustomer();
         if (res?.isSuccess || res?.success) {
-          setCustomers(res.result || res.data || []);
+          // Đảm bảo customers luôn là array
+          const customersData = res.result || res.data;
+          if (Array.isArray(customersData)) {
+            setCustomers(customersData);
+          } else if (customersData && Array.isArray(customersData.data)) {
+            setCustomers(customersData.data);
+          } else {
+            console.warn('API trả về dữ liệu không đúng format:', customersData);
+            setCustomers([]);
+          }
+        } else {
+          console.error('API error:', res?.message || 'Không thể tải danh sách khách hàng');
+          setCustomers([]);
         }
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        setCustomers([]);
       } finally {
         setLoadingCustomers(false);
       }
@@ -125,11 +140,15 @@ const CreateFeedBack = ({ onSuccess, onCancel }) => {
               (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
             }
           >
-            {customers.map((cus) => (
-              <Option key={cus.id} value={cus.id}>
-                {cus.fullName} {cus.phoneNumber ? `(${cus.phoneNumber})` : ''}
-              </Option>
-            ))}
+            {Array.isArray(customers) && customers.length > 0 ? (
+              customers.map((cus) => (
+                <Option key={cus.id} value={cus.id}>
+                  {cus.fullName || cus.name || 'N/A'} {cus.phoneNumber ? `(${cus.phoneNumber})` : ''}
+                </Option>
+              ))
+            ) : (
+              !loadingCustomers && <Option disabled>Không có khách hàng nào</Option>
+            )}
           </Select>
         </Form.Item>
 
