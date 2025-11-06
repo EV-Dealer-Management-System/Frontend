@@ -14,7 +14,11 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
 
     // Tính toán thống kê từ dữ liệu thực
     const stats = useMemo(() => {
-        if (!inventoryData || !bookingData) {
+        // Kiểm tra dữ liệu đầu vào có hợp lệ không
+        const validInventoryData = Array.isArray(inventoryData) ? inventoryData : [];
+        const validBookingData = Array.isArray(bookingData) ? bookingData : [];
+
+        if (validInventoryData.length === 0 && validBookingData.length === 0) {
             return {
                 totalBookings: 0,
                 totalVehicles: 0,
@@ -24,17 +28,21 @@ function DashboardStats({ inventoryData, bookingData, staffData, dealerData, war
         }
 
         // Tổng số booking
-        const totalBookings = bookingData.length;
+        const totalBookings = validBookingData.length;
 
-        // Tổng số xe trong kho
-        const totalVehicles = inventoryData.reduce((sum, item) => sum + item.quantity, 0);
+        // Tổng số xe trong kho (kiểm tra an toàn)
+        const totalVehicles = validInventoryData.reduce((sum, item) => {
+            return sum + (item?.quantity || 0);
+        }, 0);
 
         // Tính tỷ lệ phê duyệt (approved bookings - status >= 2)
-        const approvedCount = bookingData.filter(b => b.status >= 2).length;
+        const approvedCount = validBookingData.filter(b => b?.status >= 2).length;
         const approvalRate = totalBookings > 0 ? ((approvedCount / totalBookings) * 100).toFixed(1) : 0;
 
         // Trung bình xe/booking
-        const totalBookingVehicles = bookingData.reduce((sum, b) => sum + (b.totalQuantity || 0), 0);
+        const totalBookingVehicles = validBookingData.reduce((sum, b) => {
+            return sum + (b?.totalQuantity || 0);
+        }, 0);
         const avgVehiclesPerBooking = totalBookings > 0 ? (totalBookingVehicles / totalBookings).toFixed(1) : 0;
 
         return {
