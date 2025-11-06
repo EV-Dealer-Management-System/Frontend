@@ -30,11 +30,13 @@ import DealerManagerLayout from "../../../Components/DealerManager/DealerManager
 import {
   getAllDealerStaff,
   toggleDealerStaffStatus,
+  updateDealerStaffStatus,
 } from "../../../App/DealerManager/DealerStaffManagement/GetAllDealerStaff";
 import DealerStaffCreateModal from "./Components/DealerStaffCreateModal";
 
+
 const DealerStaffList = () => {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [createVisible, setCreateVisible] = useState(false);
@@ -91,7 +93,7 @@ const DealerStaffList = () => {
   }, [fetchStaff]);
 
   const handleToggleStatus = async (record) => {
-    Modal.confirm({
+    modal.confirm({
       title: `${record.isActive ? "Khóa" : "Mở khóa"} tài khoản`,
       content: `Bạn có chắc muốn ${record.isActive ? "khóa" : "mở khóa"
         } tài khoản của nhân viên "${record.fullName}" không?`,
@@ -100,8 +102,16 @@ const DealerStaffList = () => {
       centered: true,
       onOk: async () => {
         try {
-          await toggleDealerStaffStatus(record.email);
-          message.success("Cập nhật trạng thái thành công");
+          // Prefer using applicationUserId-based endpoint to explicitly set active state
+          const res = await updateDealerStaffStatus(record.applicationUserId, !record.isActive);
+          // backend may return success inside res
+          if (res && (res.isSuccess === true || res.success === true || res.code === 0)) {
+            message.success("Cập nhật trạng thái thành công");
+          } else {
+            // fallback: still show success if response indicates so, otherwise show message
+            message.info(res?.message || "Đã gửi yêu cầu cập nhật trạng thái");
+          }
+          // Refresh list
           fetchStaff(pagination.current, pagination.pageSize, searchText);
         } catch {
           message.error("Không thể cập nhật trạng thái");
@@ -159,6 +169,7 @@ const DealerStaffList = () => {
         <Space>
           <Tooltip title={record.isActive ? "Khóa tài khoản" : "Mở khóa"}>
             <Button
+              key={`btn-${record.email}`}
               type="default"
               shape="circle"
               icon={
@@ -229,7 +240,7 @@ const DealerStaffList = () => {
               columns={columns}
               dataSource={staffList}
               loading={loading}
-              rowKey="id"
+              rowKey={(record) => record.id || record.email}
               pagination={{
                 current: pagination.current,
                 pageSize: pagination.pageSize,

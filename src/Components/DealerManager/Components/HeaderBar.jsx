@@ -29,7 +29,7 @@ function HeaderBar({ collapsed, isMobile }) {
             key: "profile",
             icon: <UserOutlined />,
             label: "Thông tin cá nhân",
-            onClick: () => navigate("/dealer-manager/profile"),
+            onClick: () => navigate("/dealer-manager/settings/dealer-profile"),
         },
         {
             key: "settings",
