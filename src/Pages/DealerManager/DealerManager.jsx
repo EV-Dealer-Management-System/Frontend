@@ -33,11 +33,13 @@ import {
   UserAddOutlined,
   FileTextOutlined,
   BarChartOutlined,
+  
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import DealerManagerLayout from "../../Components/DealerManager/DealerManagerLayout";
 
 const { Title, Text } = Typography;
+
 
 function DealerManager() {
   const navigate = useNavigate();
