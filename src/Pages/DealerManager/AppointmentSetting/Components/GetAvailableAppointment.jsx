@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Table, Card, message, Spin, Tag, Input, Button, Space, Statistic, Row, Col, Typography } from 'antd';
-import { SearchOutlined, ReloadOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Table, Card, message, Spin, Tag, Button, Space, Typography } from 'antd';
+import { ReloadOutlined, ClockCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { GetAvailableSlot } from '../../../../App/DealerManager/AppointmentSetting/GetAvailableSlot';
 
-const { Search } = Input;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const GetAvailableAppointment = forwardRef((props, ref) => {
   const [loading, setLoading] = useState(false);
   const [slots, setSlots] = useState([]);
-  const [searchText, setSearchText] = useState('');
-  const [filteredSlots, setFilteredSlots] = useState([]);
 
   // Fetch dữ liệu slot có sẵn
   const fetchSlots = async () => {
@@ -24,7 +21,6 @@ const GetAvailableAppointment = forwardRef((props, ref) => {
           key: index,
         }));
         setSlots(slotsData);
-        setFilteredSlots(slotsData);
         message.success('Tải danh sách slot thành công!');
       } else {
         message.error(response.message || 'Có lỗi xảy ra khi tải dữ liệu');
@@ -48,30 +44,12 @@ const GetAvailableAppointment = forwardRef((props, ref) => {
     }
   }));
 
-  // Tìm kiếm
-  const handleSearch = (value) => {
-    setSearchText(value);
-    if (!value) {
-      setFilteredSlots(slots);
-    } else {
-      const filtered = slots.filter(slot => {
-        const timeRange = `${slot.openTime} - ${slot.closeTime}`;
-        return timeRange.toLowerCase().includes(value.toLowerCase());
-      });
-      setFilteredSlots(filtered);
-    }
-  };
-
   // Làm mới dữ liệu
   const handleRefresh = () => {
-    setSearchText('');
     fetchSlots();
   };
 
-  // Tính toán thống kê
-  const totalSlots = filteredSlots.length;
-  const availableSlots = filteredSlots.filter(slot => slot.isAvailable === true).length;
-  const unavailableSlots = filteredSlots.filter(slot => slot.isAvailable === false).length;
+  // Tính toán thống kê - đã xóa để không hiển thị cards thống kê
 
   // Format time từ "08:00:00" thành "08:00"
   const formatTime = (timeString) => {
@@ -171,83 +149,85 @@ const GetAvailableAppointment = forwardRef((props, ref) => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={4} style={{ margin: 0 }}>
-          <ClockCircleOutlined style={{ color: '#1890ff', marginRight: 8 }} />
-          Danh Sách Slot Lịch Lái Thử
-        </Title>
-        <Button
-          type="primary"
-          icon={<ReloadOutlined />}
-          onClick={handleRefresh}
-          loading={loading}
-          className="bg-blue-500 hover:bg-blue-600"
-        >
-          Làm Mới
-        </Button>
-      </div>
-        <div className="space-y-6">
-          {/* Thống kê tổng quan */}
-          <Row gutter={[16, 16]} className="mb-6">
-            <Col xs={24} sm={8}>
-              <Card className="text-center border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
-                <Statistic
-                  title="Tổng Số Slot"
-                  value={totalSlots}
-                  prefix={<ClockCircleOutlined className="text-blue-500" />}
-                  valueStyle={{ color: '#1890ff', fontSize: '28px', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="text-center border border-green-200 shadow-sm hover:shadow-md transition-shadow">
-                <Statistic
-                  title="Slot Có Sẵn"
-                  value={availableSlots}
-                  prefix={<CheckCircleOutlined className="text-green-500" />}
-                  valueStyle={{ color: '#52c41a', fontSize: '28px', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card className="text-center border border-red-200 shadow-sm hover:shadow-md transition-shadow">
-                <Statistic
-                  title="Slot Đã Đặt"
-                  value={unavailableSlots}
-                  prefix={<CloseCircleOutlined className="text-red-500" />}
-                  valueStyle={{ color: '#f5222d', fontSize: '28px', fontWeight: 'bold' }}
-                />
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Tìm kiếm */}
-          <Card className="shadow-sm border border-gray-200">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <span className="text-lg font-semibold text-gray-800">
-                Tìm kiếm slot
-              </span>
-              <Search
-                placeholder="Tìm kiếm theo khung giờ..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                size="large"
-                value={searchText}
-                onChange={(e) => handleSearch(e.target.value)}
-                onSearch={handleSearch}
-                className="max-w-md"
-              />
+      {/* Header với title và nút - Đẹp hơn */}
+      <Card
+        style={{
+          marginBottom: 24,
+          borderRadius: '12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          border: 'none',
+          background: '#fff'
+        }}
+        bodyStyle={{ padding: '20px 24px' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)'
+            }}>
+              <ClockCircleOutlined style={{ color: '#fff', fontSize: '20px' }} />
             </div>
-          </Card>
+            <div>
+              <Title level={4} style={{ margin: 0, fontWeight: 600, color: '#1f2937' }}>
+                Danh Sách Slot Lịch Lái Thử
+              </Title>
+              <Text type="secondary" style={{ fontSize: '13px' }}>
+                Xem và quản lý các khung giờ có sẵn cho lái thử
+              </Text>
+            </div>
+          </div>
+          <Button
+            type="primary"
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+            loading={loading}
+            size="large"
+            style={{
+              height: '44px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+              border: 'none',
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)',
+              transition: 'all 0.3s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(24, 144, 255, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.3)';
+            }}
+          >
+            Làm Mới
+          </Button>
+        </div>
+      </Card>
 
-          {/* Bảng dữ liệu */}
-          <Card className="shadow-lg border border-gray-200">
+      {/* Bảng dữ liệu - Đẹp hơn */}
+          <Card
+            style={{
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              border: 'none',
+              background: '#fff'
+            }}
+            bodyStyle={{ padding: '24px' }}
+          >
             <Spin spinning={loading} tip="Đang tải dữ liệu...">
               <Table
                 columns={columns}
-                dataSource={filteredSlots}
+                dataSource={slots}
                 pagination={{
-                  total: filteredSlots.length,
+                  total: slots.length,
                   pageSize: 10,
                   showSizeChanger: true,
                   showQuickJumper: true,
@@ -262,7 +242,7 @@ const GetAvailableAppointment = forwardRef((props, ref) => {
                     <div className="text-center py-8">
                       <ClockCircleOutlined className="text-4xl text-gray-300 mb-4" />
                       <p className="text-gray-500 text-lg">
-                        {searchText ? 'Không tìm thấy slot nào' : 'Chưa có slot nào'}
+                        Chưa có slot nào
                       </p>
                     </div>
                   ),
@@ -270,7 +250,6 @@ const GetAvailableAppointment = forwardRef((props, ref) => {
               />
             </Spin>
           </Card>
-        </div>
 
         <style jsx>{`
           .custom-table .ant-table-thead > tr > th {

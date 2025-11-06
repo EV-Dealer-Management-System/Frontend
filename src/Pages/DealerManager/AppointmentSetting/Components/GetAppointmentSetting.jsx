@@ -104,16 +104,19 @@ const GetAppointmentSettingComponent = forwardRef(({ onSettingChanged }, ref) =>
   return (
     <AntApp>
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Title level={4} style={{ margin: 0 }}>
-          <ClockCircleOutlined style={{ color: '#1890ff', marginRight: 8 }} />
-          Cấu Hình Appointment Setting
-        </Title>
-        <Space>
+      {/* Nút điều khiển - Đẹp hơn */}
+      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <Space size="middle">
           <Button
             icon={<ReloadOutlined />}
             onClick={fetchSetting}
             loading={loading}
+            size="large"
+            style={{
+              borderRadius: '8px',
+              height: '40px',
+              fontWeight: 500
+            }}
           >
             Làm Mới
           </Button>
@@ -122,16 +125,58 @@ const GetAppointmentSettingComponent = forwardRef(({ onSettingChanged }, ref) =>
             icon={<EditOutlined />}
             onClick={handleEdit}
             disabled={!setting || !setting.id}
+            size="large"
+            style={{
+              borderRadius: '8px',
+              height: '40px',
+              fontWeight: 600,
+              background: 'linear-gradient(135deg, #52c41a 0%, #389e0d 100%)',
+              border: 'none',
+              boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(82, 196, 26, 0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(82, 196, 26, 0.3)';
+              }
+            }}
           >
-            Sửa
+            Sửa Cấu Hình
           </Button>
         </Space>
       </div>
 
       <Spin spinning={loading}>
         {setting ? (
-          <Card>
-            <Descriptions bordered column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
+          <Card
+            style={{
+              borderRadius: '8px',
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+            }}
+          >
+            <Descriptions 
+              bordered 
+              column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
+              labelStyle={{
+                fontWeight: 600,
+                background: '#f9fafb',
+                color: '#374151',
+                width: '40%',
+                minWidth: '200px'
+              }}
+              contentStyle={{
+                background: '#fff',
+                color: '#1f2937',
+                whiteSpace: 'nowrap'
+              }}
+            >
               <Descriptions.Item label="Cho phép Lịch hẹn Trùng nhau">
                 {setting.allowOverlappingAppointments ? (
                   <Text type="success">Có</Text>
@@ -142,11 +187,31 @@ const GetAppointmentSettingComponent = forwardRef(({ onSettingChanged }, ref) =>
               <Descriptions.Item label="Số Lượng Lịch hẹn Đồng thời Tối đa">
                 {setting.maxConcurrentAppointments || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Giờ Mở Cửa">
-                {formatTime(setting.openTime) || '-'}
+              <Descriptions.Item 
+                label="Giờ Mở Cửa"
+                contentStyle={{
+                  background: '#fff',
+                  color: '#1f2937',
+                  whiteSpace: 'nowrap',
+                  minWidth: '80px'
+                }}
+              >
+                <Text strong style={{ fontSize: '15px' }}>
+                  {formatTime(setting.openTime) || '-'}
+                </Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Giờ Đóng Cửa">
-                {formatTime(setting.closeTime) || '-'}
+              <Descriptions.Item 
+                label="Giờ Đóng Cửa"
+                contentStyle={{
+                  background: '#fff',
+                  color: '#1f2937',
+                  whiteSpace: 'nowrap',
+                  minWidth: '80px'
+                }}
+              >
+                <Text strong style={{ fontSize: '15px' }}>
+                  {formatTime(setting.closeTime) || '-'}
+                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Khoảng Thời gian Tối thiểu Giữa các Lịch hẹn (phút)">
                 {setting.minIntervalBetweenAppointments || 0}
