@@ -34,7 +34,7 @@ function BankInfoCard({ dealer }) {
                 <ProDescriptions.Item
                     label={
                         <Text type="secondary" className="text-xs">
-                            Số tài khoản
+                            Số tài khoản: {dealer.bankAccount}
                         </Text>
                     }
                     copyable={!!dealer.bankAccount}

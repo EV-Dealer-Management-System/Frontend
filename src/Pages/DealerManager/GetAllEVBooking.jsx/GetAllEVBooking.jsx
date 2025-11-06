@@ -25,6 +25,8 @@ import {
 } from "@ant-design/icons";
 import { getAllEVBookings } from "../../../App/DealerManager/EVBooking/GetAllEVBooking";
 import { getBookingById } from "../../../App/DealerManager/EVBooking/GetBookingByID";
+import { getEContractById, getEContractPreview } from "../../../App/DealerManager/EVBooking/GetBookingContract";
+import PDFModal from "../../../Pages/Admin/SignContract/Components/PDF/PDFModal";
 import NavigationBar from "../../../Components/DealerManager/Components/NavigationBar";
 import BookingFilters from "./Components/BookingFilters";
 import BookingTable from "./Components/BookingTable";
@@ -45,6 +47,12 @@ function GetAllEVBooking() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  // PDF modal states
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [pdfTitle, setPdfTitle] = useState(null);
+  const [pdfBlobObjectUrl, setPdfBlobObjectUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -138,6 +146,50 @@ function GetAllEVBooking() {
       setDetailDrawerVisible(false);
     } finally {
       setDetailLoading(false);
+    }
+  };
+
+  // Mở eContract PDF: lấy eContractId -> getEContractById -> lấy downloadUrl -> gọi preview -> blob -> objectUrl -> open modal
+  const handleOpenEContractPdf = async (record) => {
+    // try multiple possible paths for eContract id
+    const eContractId = record?.eContractId || record?.eContract?.id || record?.eContract;
+    if (!eContractId) {
+      message.warning("Không có eContract liên kết cho booking này");
+      return;
+    }
+
+    setPdfLoading(true);
+    try {
+      const res = await getEContractById(eContractId);
+      // response may have data.downloadUrl
+      const downloadUrl = res?.data?.downloadUrl || res?.downloadUrl || res?.result?.data?.downloadUrl || res?.result?.downloadUrl;
+      const docNo = res?.data?.no || res?.no || res?.result?.data?.no || `EContract-${eContractId}`;
+
+      if (!downloadUrl) {
+        message.error("Không tìm thấy file PDF từ eContract");
+        return;
+      }
+
+      // Try preview endpoint to get blob
+      try {
+        const blob = await getEContractPreview(downloadUrl);
+        const objectUrl = URL.createObjectURL(blob);
+        setPdfBlobObjectUrl(objectUrl);
+        setPdfUrl(objectUrl);
+        setPdfTitle(docNo);
+      } catch (previewErr) {
+        console.warn("Preview API failed, fallback to direct downloadUrl", previewErr);
+        // fallback: use direct downloadUrl
+        setPdfUrl(downloadUrl);
+        setPdfTitle(docNo);
+      }
+
+      setPdfModalVisible(true);
+    } catch (err) {
+      console.error("Error fetching eContract:", err);
+      message.error("Lỗi khi tải eContract. Vui lòng thử lại");
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -512,6 +564,7 @@ function GetAllEVBooking() {
                   onViewDetail={handleViewDetail}
                   formatDateTime={formatDateTime}
                   onStatusUpdate={fetchBookings}
+                  onOpenPdf={handleOpenEContractPdf}
                 />
               </ProCard>
             </ConfigProvider>
@@ -528,6 +581,22 @@ function GetAllEVBooking() {
         formatDateTime={formatDateTime}
         formatCurrency={formatCurrency}
         getStatusTag={getStatusTag}
+      />
+      {/* PDF Modal for eContract */}
+      <PDFModal
+        visible={pdfModalVisible}
+        onClose={() => {
+          setPdfModalVisible(false);
+          setPdfUrl(null);
+          setPdfTitle(null);
+          if (pdfBlobObjectUrl) {
+            URL.revokeObjectURL(pdfBlobObjectUrl);
+            setPdfBlobObjectUrl(null);
+          }
+        }}
+        contractNo={pdfTitle}
+        pdfUrl={pdfUrl}
+        title={pdfTitle}
       />
     </Layout>
   );
