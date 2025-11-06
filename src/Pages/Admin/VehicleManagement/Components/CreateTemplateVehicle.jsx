@@ -196,7 +196,7 @@ function CreateTemplateVehicle() {
         setColors(colorsRes.data || colorsRes.result || []);
       }
     } catch (err) {
-      console.error("❌ Error loading dropdown data:", err);
+      console.error("Error loading dropdown data:", err);
     }
   };
 
@@ -204,51 +204,36 @@ function CreateTemplateVehicle() {
   const loadAllTemplates = async (showNotification = false) => {
     try {
       setLoading(true);
-      console.log("🔄 Loading all templates...");
-      
-      const result = await vehicleApi.getAllTemplateVehicles(); // ✅ SỬA: Gọi đúng tên hàm
-
-      console.log("📥 Template API Result:", result);
+      const result = await vehicleApi.getAllTemplateVehicles();
 
       if (result.isSuccess || result.success) {
-        const templatesData = result.result || result.data || [];
-        console.log(`✅ Loaded ${templatesData.length} templates:`, templatesData);
+        const allTemplates = result.result || result.data || [];
         
-        // Log chi tiết về isActive
-        const activeCount = templatesData.filter(t => t.isActive === true || t.isActive === 1).length;
-        const inactiveCount = templatesData.filter(t => t.isActive === false || t.isActive === 0).length;
-        console.log(`📊 Templates status: Active=${activeCount}, Inactive=${inactiveCount}`);
+        // Tự động ẩn các template không hoạt động
+        // isActive có thể là boolean (true/false) hoặc number (1/0)
+        const activeTemplates = allTemplates.filter(
+          (template) => template.isActive === true || template.isActive === 1
+        );
         
-        // 🔍 Debug màu sắc
-        console.log("🎨 Color Debug - First template:", templatesData[0]);
-        if (templatesData[0]) {
-          console.log("🎨 Color object:", templatesData[0].color);
-          console.log("🎨 Color properties:", {
-            colorName: templatesData[0].color?.colorName,
-            colorCode: templatesData[0].color?.colorCode,
-            hexCode: templatesData[0].color?.hexCode
-          });
-        }
-        
-        setTemplatesList(templatesData);
+        setTemplatesList(activeTemplates);
         
         // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
         if (showNotification) {
-          if (templatesData.length === 0) {
-            message.info("Chưa có template nào.");
+          if (activeTemplates.length === 0) {
+            message.info("Chưa có template nào đang hoạt động.");
           } else {
             message.success(`Đã tải lại danh sách templates thành công!`);
           }
         }
       } else {
-        console.warn("⚠️ API returned unsuccessful:", result);
+        // API returned unsuccessful
         if (showNotification) {
           message.error(result.error || "Không thể tải templates!");
         }
         setTemplatesList([]);
       }
     } catch (error) {
-      console.error("❌ Error loading templates:", error);
+      console.error("Error loading templates:", error);
       if (showNotification) {
         message.error("Lỗi khi tải templates!");
       }
@@ -259,7 +244,6 @@ function CreateTemplateVehicle() {
   };
 
   const handleDelete = async (id) => {
-    console.log("🗑️ DELETE BUTTON CLICKED! ID:", id);
     
     if (!id) {
       message.error("Không tìm thấy ID template để xóa!");
@@ -275,7 +259,6 @@ function CreateTemplateVehicle() {
   const confirmDelete = async () => {
     if (!deletingTemplateId) return;
     
-    console.log("🗑️ Confirming delete for ID:", deletingTemplateId);
     setLoading(true);
     setIsDeleteModalVisible(false);
     
@@ -283,7 +266,6 @@ function CreateTemplateVehicle() {
       message.loading({ content: "Đang xóa template...", key: "deleting", duration: 0 });
       
       const res = await vehicleApi.deleteTemplateVehicle(deletingTemplateId);
-      console.log("🗑️ Delete API response:", res);
       
       message.destroy("deleting");
       
@@ -296,7 +278,7 @@ function CreateTemplateVehicle() {
         message.error(res?.message || res?.error || "Xóa template thất bại");
       }
     } catch (err) {
-      console.error("❌ Delete error:", err);
+      console.error("Delete error:", err);
       message.destroy("deleting");
       message.error(extractErrorMessage(err));
     } finally {
@@ -306,7 +288,6 @@ function CreateTemplateVehicle() {
 
   // ✅ Handle Edit Template
   const handleEdit = (record) => {
-    console.log("✏️ Editing template:", record);
     setEditingTemplate(record);
     
     // Set form values
@@ -475,7 +456,6 @@ function CreateTemplateVehicle() {
       width: 150,
       render: (_, record) => {
         // 🔍 Debug: Log toàn bộ color object
-        console.log("🎨 Full color object:", record.color);
         
         const colorName = record.color?.colorName || "N/A";
         
@@ -485,18 +465,7 @@ function CreateTemplateVehicle() {
         if (!hexCode) {
           // Nếu API không trả về hex code, tìm từ colorName
           hexCode = getColorHexByName(colorName);
-          console.log("🎨 Generated hex from colorName:", colorName, "=>", hexCode);
         }
-        
-        // 🔍 Debug log để kiểm tra
-        console.log("🎨 Color Debug:", { 
-          record: record,
-          colorObject: record.color,
-          colorName,
-          hexCode, 
-          rawColorCode: record.color?.colorCode,
-          rawHexCode: record.color?.hexCode,
-        });
         
         // ✅ Lấy tên màu đẹp từ popularColors nếu có
         const prettyName = getColorNameByCode(hexCode) || colorName;
@@ -535,31 +504,6 @@ function CreateTemplateVehicle() {
       ),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 120,
-      align: "center",
-      render: (isActive) => {
-        const status = isActive === true || isActive === 1;
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                backgroundColor: status ? "#52c41a" : "#ff4d4f",
-              }}
-            />
-            <Text strong style={{ color: status ? "#52c41a" : "#ff4d4f", fontSize: 12 }}>
-              {status ? "Hoạt động" : "Không hoạt động"}
-            </Text>
-          </div>
-        );
-      },
-    },
-    {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
@@ -587,7 +531,6 @@ function CreateTemplateVehicle() {
               icon={<EyeOutlined />}
               size="small"
               onClick={() => {
-                console.log("👁️ Viewing template:", record);
                 setSelectedTemplate(record);
                 setIsViewModalVisible(true);
               }}
@@ -607,7 +550,6 @@ function CreateTemplateVehicle() {
               icon={<DeleteOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                console.log("🖱️ Delete button ONCLICK fired! Record:", record);
                 handleDelete(record.id);
               }}
             />
@@ -1207,26 +1149,37 @@ function CreateTemplateVehicle() {
                     <div>
                       <Text type="secondary" style={{ fontSize: 11 }}>Màu sắc:</Text>
                       <div className="flex items-center gap-2 mt-1">
-                        <div
-                          style={{
-                            width: 36,
-                            height: 36,
-                            backgroundColor: selectedTemplate.color?.colorCode || selectedTemplate.color?.hexCode ,
-                            borderRadius: "6px",
-                            border: "2px solid #d9d9d9",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div>
-                          <Text strong style={{ fontSize: 12 }}>
-                            {getColorNameByCode(selectedTemplate.color?.colorCode) || selectedTemplate.color?.colorName || 'Chưa rõ'}
-                          </Text>
-                          <br />
-                          <Text type="secondary" style={{ fontSize: 10 }}>
-                            {selectedTemplate.color?.colorCode || selectedTemplate.color?.hexCode || '#cccccc'}
-                          </Text>
-                        </div>
+                        {(() => {
+                          const colorCode = selectedTemplate.color?.colorCode || selectedTemplate.color?.hexCode;
+                          const colorName = selectedTemplate.color?.colorName || 'Chưa rõ';
+                          const hexCode = colorCode || getColorHexByName(colorName) || '#cccccc';
+                          const displayName = getColorNameByCode(hexCode) || colorName;
+                          
+                          return (
+                            <>
+                              <div
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  backgroundColor: hexCode,
+                                  borderRadius: "6px",
+                                  border: "2px solid #d9d9d9",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <div>
+                                <Text strong style={{ fontSize: 12 }}>
+                                  {displayName}
+                                </Text>
+                                <br />
+                                <Text type="secondary" style={{ fontSize: 10 }}>
+                                  {hexCode}
+                                </Text>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </Col>
@@ -1259,8 +1212,6 @@ function CreateTemplateVehicle() {
                   ? selectedTemplate.imgUrl 
                   : [];
                 
-                console.log("📸 Template images:", imgUrls);
-                console.log("🎨 Color data:", selectedTemplate.color);
 
                 return imgUrls.length > 0 ? (
                   <div>
@@ -1282,7 +1233,6 @@ function CreateTemplateVehicle() {
                           key={idx} 
                           className="cursor-pointer hover:opacity-80 transition-opacity group relative"
                           onClick={() => {
-                            console.log("🖼️ Opening image:", url);
                             setPreviewImage(url);
                             setPreviewVisible(true);
                           }}
@@ -1298,7 +1248,7 @@ function CreateTemplateVehicle() {
                               border: '1px solid #e0e0e0'
                             }}
                             onError={(e) => {
-                              console.error("❌ Image load error:", url);
+                              console.error("Image load error:", url);
                               e.target.src = 'https://via.placeholder.com/300x160?text=No+Image';
                             }}
                           />

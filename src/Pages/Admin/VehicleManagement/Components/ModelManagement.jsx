@@ -15,6 +15,8 @@ import {
   Typography,
   Divider,
   Select,
+  Statistic,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -25,6 +27,7 @@ import {
   CheckCircleOutlined,
   SearchOutlined,
   SortAscendingOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
@@ -141,11 +144,9 @@ function ManageModel() {
   const filteredAndSortedModels = React.useMemo(() => {
     // Filter
     let filtered = models.filter((model) => {
-      const keyword = searchKeyword.toLowerCase();
-      return (
-        model.modelName?.toLowerCase().includes(keyword) ||
-        model.description?.toLowerCase().includes(keyword)
-      );
+      if (!searchKeyword) return true;
+      // So sánh chính xác với tên model đã chọn
+      return model.modelName === searchKeyword;
     });
 
     // Sort
@@ -176,46 +177,60 @@ function ManageModel() {
       title: "STT",
       width: 70,
       align: "center",
-      render: (_, __, index) => index + 1,
+      render: (_, __, index) => (
+        <Text strong style={{ color: "#1890ff", fontSize: 13 }}>{index + 1}</Text>
+      ),
     },
     {
       title: "Tên Model",
       dataIndex: "modelName",
-      width: 260,
+      width: 220,
       render: (text) => (
         <Space>
-          <CarOutlined style={{ color: "#1890ff" }} />
-          <Text strong>{text}</Text>
+          <CarOutlined style={{ color: "#1890ff", fontSize: 14 }} />
+          <Text strong style={{ fontSize: 13 }}>{text}</Text>
         </Space>
       ),
     },
     {
       title: "Mô tả",
       dataIndex: "description",
-      width: 100,
-      render: (text) => <Text type="secondary">{text || "Chưa có mô tả"}</Text>,
+      width: 250,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text || "Chưa có mô tả"}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {text || "Chưa có mô tả"}
+          </Text>
+        </Tooltip>
+      ),
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
-      width: 160,
-      render: (date) => (date ? new Date(date).toLocaleDateString("vi-VN") : "N/A"),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
       width: 140,
-      render: (val) => (
-        <Tag color={val ? "success" : "default"}>{val ? "Đang hoạt động" : "Ngừng"}</Tag>
+      render: (date) => (
+        <Text style={{ fontSize: 12 }}>
+          {date ? new Date(date).toLocaleDateString("vi-VN") : "N/A"}
+        </Text>
       ),
     },
+    
     {
       title: "Thao tác",
-      width: 170,
+      width: 150,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+        <Space size="small">
+          <Button 
+            size="small" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEdit(record)}
+            type="primary"
+          >
             Sửa
           </Button>
           <Popconfirm
@@ -252,6 +267,40 @@ function ManageModel() {
       }}
     >
       <div className="w-full px-4 md:px-6 lg:px-8 pb-6">
+        {/* Statistics Cards */}
+        <Row gutter={[16, 16]} className="mb-4">
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Tổng số Model"
+                value={models.length}
+                prefix={<CarOutlined style={{ color: "#1890ff" }} />}
+                valueStyle={{ color: "#1890ff" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Đang hiển thị"
+                value={filteredAndSortedModels.length}
+                prefix={<FileTextOutlined style={{ color: "#52c41a" }} />}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Đang hoạt động"
+                value={models.filter(m => m.isActive !== false).length}
+                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
         <Card className="shadow-sm">
           <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
             <Col span={24}>
@@ -269,14 +318,24 @@ function ManageModel() {
           {/* Search and Sort Section */}
           <Row gutter={[16, 16]} className="mb-4">
             <Col xs={24} sm={16} md={12}>
-              <Input
+              <Select
                 allowClear
-                prefix={<SearchOutlined />}
-                placeholder="Tìm theo tên/mô tả model..."
-                value={searchKeyword}
-                onChange={(e) => setSearchKeyword(e.target.value)}
+                showSearch
+                placeholder="Chọn tên model để tìm kiếm..."
+                value={searchKeyword || undefined}
+                onChange={setSearchKeyword}
                 size="large"
-              />
+                style={{ width: "100%" }}
+                filterOption={(input, option) =>
+                  (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {models.map((model) => (
+                  <Option key={model.id} value={model.modelName}>
+                    {model.modelName}
+                  </Option>
+                ))}
+              </Select>
             </Col>
             <Col xs={24} sm={8} md={6}>
               <Select
@@ -308,8 +367,8 @@ function ManageModel() {
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} model`,
+              pageSizeOptions: ['10', '20', '50', '100'],
             }}
-
             sticky
           />
         </Card>

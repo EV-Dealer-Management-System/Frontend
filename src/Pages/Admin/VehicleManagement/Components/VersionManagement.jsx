@@ -18,6 +18,8 @@ import {
   Typography,
   Divider,
   Descriptions,
+  Statistic,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -30,6 +32,7 @@ import {
   StopOutlined,
   CalendarOutlined,
   SortAscendingOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
@@ -189,30 +192,15 @@ function ManageVersion() {
     }
   };
 
-  // Filter data
-  const filteredVersions = versions.filter((version) => {
-    const model = models.find((m) => m.id === version.modelId);
-    const modelName = model?.modelName || "";
-
-    const matchModel = searchModel
-      ? modelName.toLowerCase().includes(searchModel.toLowerCase())
-      : true;
-
-    return matchModel;
-  });
-
   // Filter and sort data
   const filteredAndSortedVersions = React.useMemo(() => {
     // Filter
     let filtered = versions.filter((version) => {
+      if (!searchModel) return true;
       const model = models.find((m) => m.id === version.modelId);
       const modelName = model?.modelName || "";
-
-      const matchModel = searchModel
-        ? modelName.toLowerCase().includes(searchModel.toLowerCase())
-        : true;
-
-      return matchModel;
+      // So sánh chính xác với tên model đã chọn
+      return modelName === searchModel;
     });
 
     // Sort
@@ -247,47 +235,63 @@ function ManageVersion() {
   const columns = [
     {
       title: "STT",
-      width: 100,
+      width: 70,
       align: "center",
-      render: (_, __, i) => i + 1,
+      render: (_, __, i) => (
+        <Text strong style={{ color: "#1890ff", fontSize: 13 }}>{i + 1}</Text>
+      ),
     },
     {
       title: "Model",
       dataIndex: "modelId",
-      width: 100,
+      width: 150,
       render: (modelId) => {
         const m = models.find((x) => x.id === modelId);
-        return <Tag color="blue">{m?.modelName || (modelId ? modelId.slice(0, 8) : "N/A")}</Tag>;
+        return (
+          <Tag color="blue" style={{ fontSize: 12, padding: '4px 10px', borderRadius: '4px' }}>
+            {m?.modelName || (modelId ? modelId.slice(0, 8) : "N/A")}
+          </Tag>
+        );
       },
     },
     {
       title: "Version",
       dataIndex: "versionName",
-      width: 140,
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (t) => (
-        <Space>
-          <SettingOutlined style={{ color: "#1890ff" }} />
-          <Text strong>{t}</Text>
-        </Space>
+        <Tooltip placement="topLeft" title={t}>
+          <Space>
+            <SettingOutlined style={{ color: "#1890ff", fontSize: 14 }} />
+            <Text strong style={{ fontSize: 13 }}>{t}</Text>
+          </Space>
+        </Tooltip>
       ),
     },
     {
       title: "Thao tác",
-      width: 200,
+      width: 220,
       fixed: "right",
+      align: "center",
       render: (_, r) => (
-        <Space>
-          <Button 
-            size="small" 
-            icon={<EyeOutlined />} 
-            onClick={() => handleViewDetails(r)}
-            type="primary"
-          >
-            Xem chi tiết
-          </Button>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)}>
-            Sửa
-          </Button>
+        <Space size="small">
+          <Tooltip title="Xem chi tiết">
+            <Button 
+              size="small" 
+              icon={<EyeOutlined />} 
+              onClick={() => handleViewDetails(r)}
+              type="primary"
+            >
+              Chi tiết
+            </Button>
+          </Tooltip>
+          <Tooltip title="Sửa version">
+            <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(r)}>
+              Sửa
+            </Button>
+          </Tooltip>
           <Popconfirm
             title="Xác nhận xóa"
             description="Bạn chắc chắn muốn xóa version này?"
@@ -330,6 +334,40 @@ function ManageVersion() {
       }}
     >
       <div className="w-full px-4 md:px-6 lg:px-8 pb-6">
+        {/* Statistics Cards */}
+        <Row gutter={[16, 16]} className="mb-4">
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Tổng số Version"
+                value={versions.length}
+                prefix={<SettingOutlined style={{ color: "#1890ff" }} />}
+                valueStyle={{ color: "#1890ff" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Đang hiển thị"
+                value={filteredAndSortedVersions.length}
+                prefix={<FileTextOutlined style={{ color: "#52c41a" }} />}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card>
+              <Statistic
+                title="Đang hoạt động"
+                value={versions.filter(v => v.isActive !== false).length}
+                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
         <Card className="shadow-sm">
           <Row gutter={[16, 8]} style={{ marginBottom: 8 }}>
             <Col span={24}>
@@ -347,30 +385,27 @@ function ManageVersion() {
           {/* Filter and Sort Section */}
           <Row gutter={[16, 16]} className="mb-4">
             <Col xs={24} sm={12} md={10}>
-              <div>
-                <Text className="block mb-2 text-sm font-medium">Tìm Model:</Text>
-                <Select
-                  placeholder="Chọn hoặc nhập tên model..."
-                  value={searchModel || undefined}
-                  onChange={setSearchModel}
-                  allowClear
-                  size="large"
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.children ?? "")
-                      .toString()
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  style={{ width: "100%" }}
-                >
-                  {[...new Set(models.map(m => m.modelName))].map((modelName) => (
-                    <Option key={modelName} value={modelName}>
-                      {modelName}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
+              <Select
+                placeholder="Chọn model để lọc..."
+                value={searchModel || undefined}
+                onChange={setSearchModel}
+                allowClear
+                size="large"
+                showSearch
+                style={{ width: "100%" }}
+                filterOption={(input, option) =>
+                  (option?.children ?? "")
+                    .toString()
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {[...new Set(models.map(m => m.modelName))].map((modelName) => (
+                  <Option key={modelName} value={modelName}>
+                    {modelName}
+                  </Option>
+                ))}
+              </Select>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <div>
@@ -404,6 +439,7 @@ function ManageVersion() {
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (t, r) => `${r[0]}-${r[1]} của ${t} phiên bản`,
+              pageSizeOptions: ['10', '20', '50', '100'],
             }}
             scroll={{ x: "max-content" }}
             sticky

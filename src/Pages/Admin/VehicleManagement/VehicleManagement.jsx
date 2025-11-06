@@ -131,15 +131,22 @@ function VehicleManagement() {
       setLoading(true);
       const result = await vehicleApi.getAllTemplateVehicles();
 
-      console.log("📥 Template API Response:", result);
-
       if (result.success) {
-        const templatesData = result.data || [];
-        console.log(" Loaded templates:", templatesData);
-        setTemplates(templatesData);
+        const allTemplates = result.data || [];
+        
+        // Tự động ẩn các template không hoạt động
+        // isActive có thể là boolean (true/false) hoặc number (1/0)
+        const activeTemplates = allTemplates.filter(
+          (template) => {
+            // Check isActive: true hoặc 1 là hoạt động
+            const isActive = template.isActive === true || template.isActive === 1;
+            return isActive;
+          }
+        );
+        setTemplates(activeTemplates);
 
-        if (templatesData.length === 0) {
-          message.info("Chưa có template nào.");
+        if (activeTemplates.length === 0) {
+          message.info("Chưa có template nào đang hoạt động.");
         }
       } else {
         message.error(result.error || "Không thể tải danh sách templates!");
@@ -200,7 +207,7 @@ function VehicleManagement() {
                   <div className="w-full">
                     <PageContainer
                       title="Tổng Quan Xe Điện"
-                      subTitle={`${templates.filter(t => t.isActive !== false && t.status !== 0).length} mẫu xe điện có sẵn`}
+                      subTitle={`${templates.length} mẫu xe điện đang hoạt động`}
                       extra={[
                         <Search
                           key="search"
@@ -243,9 +250,7 @@ function VehicleManagement() {
                         <Row gutter={[16, 16]}>
                           {templates
                             .filter((template) => {
-                              // Ẩn những template có status ngừng hoạt động
-                              const isActive = template.isActive !== false && template.status !== 0;
-
+                              // Chỉ filter theo keyword vì đã filter isActive khi load
                               const keyword = searchKeyword.toLowerCase();
                               const matchKeyword = (
                                 template.version?.modelName?.toLowerCase().includes(keyword) ||
@@ -253,7 +258,7 @@ function VehicleManagement() {
                                 template.color?.colorName?.toLowerCase().includes(keyword)
                               );
 
-                              return isActive && matchKeyword;
+                              return matchKeyword;
                             })
                             .map((template) => {
                               // Chuẩn hóa data để khớp với VehicleCard
