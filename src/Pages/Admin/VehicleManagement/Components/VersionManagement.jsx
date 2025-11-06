@@ -72,7 +72,10 @@ function ManageVersion() {
     try {
       const res = await vehicleApi.getAllVersions();
       if (res.success) {
-        setVersions(res.data || []);
+        // Tự động ẩn các version không hoạt động
+        const allVersions = res.data || [];
+        const activeVersions = allVersions.filter(version => version.isActive !== false);
+        setVersions(activeVersions);
       } else {
         message.error(res.error || "Không thể tải versions");
         setVersions([]);

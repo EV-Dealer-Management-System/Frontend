@@ -69,7 +69,7 @@ const CreateFeedBack = ({ onSuccess, onCancel }) => {
       });
 
       onSuccess({ attachmentKey: objectKey }, file);
-      message.success(`${file.name} upload thành công`);
+      // Không hiển thị thông báo khi upload thành công
     } catch (e) {
       onError(e);
       message.error(`${file.name} upload thất bại!`);

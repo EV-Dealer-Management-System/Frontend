@@ -55,7 +55,10 @@ function ManageModel() {
     try {
       const result = await vehicleApi.getAllModels();
       if (result.success) {
-        setModels(result.data || []);
+        // Tự động ẩn các model không hoạt động
+        const allModels = result.data || [];
+        const activeModels = allModels.filter(model => model.isActive !== false);
+        setModels(activeModels);
       } else {
         message.error("Không thể tải danh sách model");
         setModels([]);
