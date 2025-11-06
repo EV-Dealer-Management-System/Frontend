@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { PageContainer, ProTable, StatisticCard } from '@ant-design/pro-components';
-import { Card, message, Tag, Avatar, Row, Col, Space } from 'antd';
+import { PageContainer, StatisticCard } from '@ant-design/pro-components';
+import { Card, message, Row, Col } from 'antd';
 import {
-    UserOutlined,
-    PhoneOutlined,
-    EnvironmentOutlined,
     TeamOutlined,
     UserAddOutlined,
     SmileOutlined
 } from '@ant-design/icons';
 import { getAllCustomer } from '../../../App/DealerManager/CustomerManagement/GetAllCustomer';
+import CustomerEditModal from './Components/CustomerEditModal';
+import CustomerTable from './Components/CustomerTable';
 import dayjs from 'dayjs';
 import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
 import { ConfigProvider } from 'antd';
@@ -19,6 +18,8 @@ const { Statistic } = StatisticCard;
 function GetAllCustomer() {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
 
     // Fetch customers data
     useEffect(() => {
@@ -49,6 +50,39 @@ function GetAllCustomer() {
         fetchCustomers();
     }, []);
 
+    // Handle edit customer
+    const handleEditCustomer = (customer) => {
+        setSelectedCustomer(customer);
+        setEditModalVisible(true);
+    };
+
+    // Handle modal success (refresh data)
+    const handleEditSuccess = () => {
+        // Refetch customers after successful update
+        const fetchCustomers = async () => {
+            setLoading(true);
+            try {
+                const data = await getAllCustomer();
+                if (data.isSuccess) {
+                    const customersList = Array.isArray(data.result)
+                        ? data.result
+                        : (data.result?.data || []);
+                    setCustomers(customersList);
+                } else {
+                    message.error('Không thể tải dữ liệu khách hàng');
+                    setCustomers([]);
+                }
+            } catch (err) {
+                console.error('Error fetching customers:', err);
+                message.error('Lỗi khi tải dữ liệu khách hàng');
+                setCustomers([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCustomers();
+    };
+
     // Tính toán thống kê
     const stats = {
         total: Array.isArray(customers) ? customers.length : 0,
@@ -60,83 +94,7 @@ function GetAllCustomer() {
         ).length : 0,
     };
 
-    // Define table columns
-    const columns = [
-        {
-            title: 'Khách Hàng',
-            dataIndex: 'fullName',
-            key: 'fullName',
-            render: (text) => (
-                <Space>
-                    <Avatar
-                        size="small"
-                        style={{
-                            backgroundColor: '#1890ff',
-                        }}
-                        icon={<UserOutlined />}
-                    />
-                    <span className="font-medium text-gray-800">{text}</span>
-                </Space>
-            ),
-        },
-        {
-            title: 'Số Điện Thoại',
-            dataIndex: 'phoneNumber',
-            key: 'phoneNumber',
-            render: (phone) => (
-                <Space size="small">
-                    <PhoneOutlined className="text-green-600" />
-                    <span>{phone}</span>
-                </Space>
-            ),
-        },
-        {
-            title: 'Địa Chỉ',
-            dataIndex: 'address',
-            key: 'address',
-            ellipsis: {
-                showTitle: false,
-            },
-            render: (address) => (
-                <Space size={4} style={{ width: '100%' }}>
-                    <EnvironmentOutlined className="text-red-500" />
-                    <span className="text-gray-600" title={address}>
-                        {address}
-                    </span>
-                </Space>
-            ),
-        },
-        {
-            title: 'Ngày Đăng Ký',
-            dataIndex: 'createdAt',
-            key: 'createdAt',
-            sorter: (a, b) => dayjs(a.createdAt).unix() - dayjs(b.createdAt).unix(),
-            render: (date) => {
-                const isNew = dayjs(date).isAfter(dayjs().subtract(7, 'days'));
-                return (
-                    <Space direction="vertical" size={0}>
-                        <span className="text-gray-800">
-                            {dayjs(date).format('DD/MM/YYYY HH:mm')}
-                        </span>
-                        {isNew && <Tag color="green">Mới</Tag>}
-                    </Space>
-                );
-            },
-        },
-        {
-            title: 'Ghi Chú',
-            dataIndex: 'note',
-            key: 'note',
-            ellipsis: {
-                showTitle: false,
-            },
-            render: (note) => (
-                <span className="text-gray-600 italic" title={note || 'Không có ghi chú'}>
-                    {note || '-'}
-                </span>
-            ),
-        },
-    ];
+
 
     return (
         <DealerManagerLayout>
@@ -205,41 +163,25 @@ function GetAllCustomer() {
                     <Card
                         className="shadow-md rounded-lg"
                         bordered={false}
+                        style={{ padding: '24px' }}
                     >
-
-                        <ProTable
-                            dataSource={customers}
-                            columns={columns}
-                            rowKey="id"
+                        <CustomerTable
+                            customers={customers}
                             loading={loading}
-                            pagination={{
-                                pageSize: 10,
-                                showSizeChanger: true,
-                                showQuickJumper: true,
-                                showTotal: (total) => (
-                                    <span className="text-gray-600">
-                                        <TeamOutlined /> Tổng số <strong>{total}</strong> khách hàng
-                                    </span>
-                                ),
-                            }}
-                            search={false}
-                            options={{
-                                reload: () => {
-                                    window.location.reload();
-                                },
-                                density: true,
-                                setting: true,
-                            }}
-                            cardProps={false}
-                            tableLayout="fixed"
-                            headerTitle={
-                                <Space className="text-lg font-semibold text-gray-800">
-                                    <TeamOutlined />
-                                    Danh Sách Khách Hàng Xe Máy Điện
-                                </Space>
-                            }
+                            onEditCustomer={handleEditCustomer}
                         />
                     </Card>
+
+                    {/* Edit Customer Modal */}
+                    <CustomerEditModal
+                        visible={editModalVisible}
+                        onCancel={() => {
+                            setEditModalVisible(false);
+                            setSelectedCustomer(null);
+                        }}
+                        onSuccess={handleEditSuccess}
+                        customerData={selectedCustomer}
+                    />
                 </PageContainer>
             </ConfigProvider>
         </DealerManagerLayout>

@@ -27,4 +27,16 @@ export const EVMStaffAccountService = {
             throw error;
         }
     },
+    updateEVMStaffStatus: async function (evcStaffId, isActive = true) {
+        try {
+            // PUT request with query param isActive=true/false
+            const response = await api.put(`/EVC/update-evm-staff-status/${evcStaffId}`, null, {
+                params: { isActive },
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Error updating EVM staff status for ${evcStaffId}:`, error);
+            throw error;
+        }
+    },
 };

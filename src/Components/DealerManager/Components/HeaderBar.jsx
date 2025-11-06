@@ -101,25 +101,54 @@ function HeaderBar({ collapsed, isMobile }) {
         };
 
         useEffect(() => {
+            let isMounted = true;
             fetchNotifications();
             const base = import.meta.env.VITE_API_URL || 'https://localhost:7269';
             const conn = new signalR.HubConnectionBuilder()
-                .withUrl(`${base}/api/notificationHub`, { accessTokenFactory: () => localStorage.getItem('jwt_token') || '' })
+                .withUrl(`${base}/notificationHub`, { accessTokenFactory: () => localStorage.getItem('jwt_token') || '' })
                 .withAutomaticReconnect()
                 .build();
 
             conn.start()
                 .then(() => {
-                    conn.on('NotificationChanged', () => {
-                        fetchNotifications();
-                    });
-                })
-                .catch(() => {});
+                    if (!isMounted) return;
+                        conn.on("NotificationChanged", () => {
+                            fetchNotifications();
+                        });
+                        console.log("✅ SignalR connected");
+                        })
+                        .catch(err => console.error("❌ SignalR start error:", err));
 
-            return () => conn.stop().catch(() => {});
+            return () => {
+                isMounted = false;
+                conn.stop().catch(() => {});
+            };
         }, []);
 
-        const markAll = () => setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+        // Placeholder: send read update to backend when API is available
+        const sendReadUpdate = async (notificationId) => {
+            // TODO: when the backend endpoint is available, call it here, e.g.:
+            // await api.put(`/Notification/mark-read/${notificationId}`);
+            // For now, keep this as a no-op so UI is responsive and doesn't fail.
+            try {
+                // noop / placeholder
+                return Promise.resolve();
+            } catch (err) {
+                console.error('Failed to send read update for notification', notificationId, err);
+            }
+        };
+
+        // Mark all notifications as read in UI and attempt to notify the backend
+        const markAll = () => {
+            // capture unread ids from the current items state
+            const unreadIds = items.filter(n => !n.isRead).map(n => n.id).filter(Boolean);
+            // optimistic UI update
+            setItems(prev => prev.map(n => ({ ...n, isRead: true })));
+            // Attempt to update backend for unread notifications (fire-and-forget)
+            unreadIds.forEach(id => {
+                sendReadUpdate(id).catch(() => {});
+            });
+        };
 
         return (
             <Dropdown
@@ -139,8 +168,21 @@ function HeaderBar({ collapsed, isMobile }) {
                             dataSource={items}
                             locale={{ emptyText: 'Không có thông báo' }}
                             renderItem={(item, idx) => (
-                                <List.Item key={item.createdAt || idx}
-                                           style={{ background: item.isRead ? '#fff' : '#e6f7ff', borderRadius: 10, marginBottom: 6 }}>
+                                // Clicking an item will mark it as read in the UI and attempt a backend update.
+                                <List.Item
+                                    key={item.createdAt || idx}
+                                    onClick={async () => {
+                                        // optimistic UI update: mark only the clicked item as read
+                                        setItems(prev => prev.map(p => p.id === item.id ? { ...p, isRead: true } : p));
+                                        // try to notify backend (placeholder)
+                                        try {
+                                            await sendReadUpdate(item.id);
+                                        } catch (err) {
+                                            // swallow errors for now — UI already updated
+                                            console.error('sendReadUpdate failed', err);
+                                        }
+                                    }}
+                                    style={{ cursor: 'pointer', background: item.isRead ? '#fff' : '#e6f7ff', borderRadius: 10, marginBottom: 6 }}>
                                     <List.Item.Meta
                                         avatar={item.title?.toLowerCase().includes('cảnh báo') ? (
                                             <WarningOutlined style={{ color: '#faad14' }} />

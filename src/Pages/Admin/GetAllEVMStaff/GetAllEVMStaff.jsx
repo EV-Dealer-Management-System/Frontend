@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
-import { Button, message, Space, Statistic } from 'antd';
+import { Button, message, Space, Statistic, App } from 'antd';
 import { ReloadOutlined, TeamOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import AdminLayout from '../../../Components/Admin/AdminLayout';
 import { EVMStaffAccountService } from '../../../App/EVMAdmin/EVMStaffAccount/GetAllEVMStaff';
@@ -8,6 +8,8 @@ import FilterBar from './Components/FilterBar';
 import StaffTable from './Components/StaffTable';
 import {ConfigProvider} from "antd";
 import viVN from 'antd/lib/locale/vi_VN';
+
+
 
 function GetAllEVMStaff() {
     const [staffList, setStaffList] = useState([]);
@@ -17,6 +19,7 @@ function GetAllEVMStaff() {
         pageSize: 1000,
         total: 0,
     });
+    const { modal } = App.useApp();
 
     // Search keyword state
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -59,6 +62,48 @@ function GetAllEVMStaff() {
             message.error(error.response?.data?.message || 'Không thể tải danh sách nhân viên EVM');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Toggle active status for a staff account
+    const handleToggleStatus = async (record, isActive) => {
+        if (!record || !record.id) return;
+        const evcStaffId = record.id;
+
+        const doToggle = async () => {
+            setLoading(true);
+            try {
+                // mark updating on the specific row
+                setStaffList(prev => prev.map(s => s.id === evcStaffId ? { ...s, _updating: true } : s));
+                    const res = await EVMStaffAccountService.updateEVMStaffStatus(evcStaffId, isActive);
+                if (res?.isSuccess) {
+                    // backend expects isActive=true to activate, lockoutEnabled maps inversely
+                    setStaffList(prev => prev.map(s => s.id === evcStaffId ? { ...s, lockoutEnabled: !isActive, _updating: false } : s));
+                    message.success(res.message || 'Cập nhật trạng thái thành công');
+                } else {
+                    setStaffList(prev => prev.map(s => s.id === evcStaffId ? { ...s, _updating: false } : s));
+                    message.error(res?.message || 'Không thể cập nhật trạng thái');
+                }
+            } catch (err) {
+                setStaffList(prev => prev.map(s => s.id === evcStaffId ? { ...s, _updating: false } : s));
+                console.error(err);
+                message.error('Lỗi khi cập nhật trạng thái');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        // If turning off (isActive === false) ask for confirmation
+        if (isActive === false) {
+            modal.confirm({
+                title: 'Xác nhận vô hiệu hóa',
+                content: 'Bạn có chắc muốn vô hiệu hóa tài khoản này?',
+                okText: 'Vô hiệu hóa',
+                cancelText: 'Hủy',
+                onOk: doToggle,
+            });
+        } else {
+            doToggle();
         }
     };
 
@@ -124,6 +169,7 @@ function GetAllEVMStaff() {
                     );
                 })}
                 loading={loading}
+                onToggleStatus={handleToggleStatus}
                 />
             </PageContainer>
             </ConfigProvider>
