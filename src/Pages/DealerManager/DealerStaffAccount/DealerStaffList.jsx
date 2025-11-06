@@ -215,7 +215,7 @@ const DealerStaffList = () => {
         <ProCard split="horizontal" bordered>
           <Space>
             <Input
-              placeholder="🔍 Tìm theo họ tên"
+              placeholder="Tìm theo họ tên..."
               prefix={<SearchOutlined />}
               allowClear
               value={searchText}
