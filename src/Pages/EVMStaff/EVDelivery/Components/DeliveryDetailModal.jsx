@@ -124,6 +124,11 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                                 <CheckCircleOutlined className="text-base" />
                                 Đơn giao xe đã được bên đại lý xác nhận
                             </div>
+                        ) : delivery.status === 4 ? (
+                            <div className="text-purple-600 text-sm font-medium flex items-center gap-2">
+                                <CheckCircleOutlined className="text-base" />
+                                Xe đã đến đại lý, đang chờ xác nhận
+                            </div>
                         ) : (
                             <UpdateStatusButton
                                 deliveryId={delivery.id}

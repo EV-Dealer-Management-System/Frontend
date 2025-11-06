@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table } from 'antd';
+import { Table, Button } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import DeliveryStatusTag from './DeliveryStatusTag';
 
@@ -33,7 +33,7 @@ function DeliveryTable({
             title: 'Mô tả',
             dataIndex: 'description',
             key: 'description',
-            width: '30%',
+            width: '20%',
             ellipsis: true,
             render: (text) => (
                 <span className="text-sm text-gray-600">{text}</span>
@@ -63,16 +63,20 @@ function DeliveryTable({
             ),
         },
         {
-            title: '',
+            title: 'Thao tác',
             key: 'action',
-            width: '8%',
+            width: '12%',
             align: 'center',
             render: (_, record) => (
-                <EyeOutlined
-                    className="text-blue-600 text-lg cursor-pointer hover:text-blue-800 transition-colors"
+                <Button
+                    type="primary"
+                    icon={<EyeOutlined />}
+                    size="small"
                     onClick={() => onViewDetail(record)}
-                    title="Xem chi tiết"
-                />
+                    className="bg-blue-600 hover:bg-blue-700"
+                >
+                    Xem chi tiết
+                </Button>
             ),
         },
     ];

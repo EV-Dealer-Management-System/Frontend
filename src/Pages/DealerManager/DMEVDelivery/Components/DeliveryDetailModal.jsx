@@ -240,14 +240,23 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                                     }
                                     className="mb-3 bg-gray-50 rounded-lg border border-gray-200"
                                 >
-                                    <div className="text-xs text-gray-500 mb-2">Danh sách VIN:</div>
+                                    {/* <div className="text-xs text-gray-500 mb-2">Danh sách VIN: </div> */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {summary.vinList.map((vin) => (
-                                            <div key={vin} className="font-mono bg-white px-3 py-2 border rounded text-xs">
-                                                {vin}
-                                            </div>
-                                        ))}
+                                        {summary.vinList.map((vin) => {
+                                            const vehicleDetail = delivery.vehicleDeliveryDetails.find(v => v.vin === vin);
+                                            return (
+                                                <div>
+                                                  <div key={vin} className="font-mono bg-white px-3 py-2 border rounded text-xs">
+                                                    Số VIN: {vin}
+                                                  </div>
+                                                  <div key={vin} className="font-mono bg-white px-3 py-2 border rounded text-xs">
+                                                    Ghi chú: {vehicleDetail.note }
+                                                  </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
+
                                 </Panel>
                             ))}
                         </Collapse>

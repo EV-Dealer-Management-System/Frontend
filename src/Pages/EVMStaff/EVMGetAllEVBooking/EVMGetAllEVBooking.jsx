@@ -26,6 +26,7 @@ import {
 import { getAllEVBookings } from "../../../App/DealerManager/EVBooking/GetAllEVBooking";
 import { getBookingById } from "../../../App/DealerManager/EVBooking/GetBookingByID";
 import NavigationBar from "../../../Components/EVMStaff/Components/NavigationBar";
+import HeaderBar from "../../../Components/EVMStaff/Components/HeaderBar";
 import BookingFilters from "./Components/BookingFilters";
 import BookingTable from "./Components/BookingTable";
 import BookingDetailDrawer from "./Components/BookingDetailDrawer";
@@ -340,7 +341,8 @@ function EVMGetAllEVBooking() {
                     marginLeft: isMobile ? 0 : collapsed ? 64 : 280,
                 }}
             >
-                <Content style={{ margin: "24px 16px" }}>
+                <HeaderBar collapsed={collapsed} isMobile={isMobile} />
+                <Content style={{ margin: "80px 16px 24px" }}>
                     <PageContainer
                         header={{
                             title: (
