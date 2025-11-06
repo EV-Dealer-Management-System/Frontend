@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ProTable } from "@ant-design/pro-components";
-import { Tag, Badge, message, Input, Switch, Modal, App } from "antd";
+import { Tag, Badge, message, Input, Switch, Modal, App, Select } from "antd";
 import AdminLayout from "../../../Components/Admin/AdminLayout";
 import { GetAllEVDealer, updateDealerStatus } from "../../../App/EVMAdmin/GetAllEVDealer/GetAllEVDealer";
 import { ConfigProvider } from "antd";
@@ -22,6 +22,7 @@ function GetAllEVDealerPage() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [originalDealerData, setOriginalDealerData] = useState([]);
   const [updatingStatus, setUpdatingStatus] = useState({});
+  const [filterStatus, setFilterStatus] = useState(null);
 
   const { modal } = App.useApp();
   const { Search } = Input;
@@ -227,14 +228,15 @@ function GetAllEVDealerPage() {
               }
             })();
           }
+          
         };
 
         return (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
             <Switch
               checked={isActive}
-              checkedChildren="Hoạt"
-              unCheckedChildren="Tạm"
+              checkedChildren="Hoạt Động"
+              unCheckedChildren="Tạm Ngừng"
               onChange={handleToggle}
               loading={!!updatingStatus[record.id]}
             />
@@ -315,6 +317,39 @@ function GetAllEVDealerPage() {
                   );
                   setDealerData(filtered);
                 }}
+                
+              />,
+               <Select
+                key="statusFilter"
+                placeholder="Lọc trạng thái"
+                allowClear
+                style={{ width: 160 }}
+                value={filterStatus}
+                onChange={(value) => {
+                  setFilterStatus(value);
+
+                  const filterVal = value !== null ? Number(value) : null;
+
+                  setSearchParams((prev) => ({
+                    ...prev,
+                    filterOn: filterVal !== null ? "dealerStatus" : "",
+                    filterQuery: filterVal !== null ? filterVal : "",
+                  }));
+
+                  // reset về trang đầu khi filter
+                  setPagination((prev) => ({ ...prev, current: 1 }));
+
+                  loadDealerData({
+                    pageNumber: 1,
+                    pageSize: pagination.pageSize,
+                    filterOn: filterVal !== null ? "dealerStatus" : "",
+                    filterQuery: filterVal !== null ? filterVal : "",
+                  });
+                }}
+                options={[
+                  { label: "Hoạt động", value: 0 },
+                  { label: "Tạm ngừng", value: 1 },
+                ]}
               />,
             ]}
             
