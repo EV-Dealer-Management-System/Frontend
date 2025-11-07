@@ -174,6 +174,8 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                                 </Button>
                             </Popconfirm>
                         )}
+
+
                     </div>
                 </Card>
 
@@ -307,6 +309,8 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                     }
                 }}
             />
+
+
         </Modal>
     );
 }
