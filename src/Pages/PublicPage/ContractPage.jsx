@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, use } from 'react';
-import { Card, Form, Input, Button, Row, Col, Typography, Steps, Space, Tag, Divider, Modal, message } from 'antd';
+import { Card, Form, Input, Button, Row, Col, Typography, Steps, Space, Tag, Divider, Modal, message, Alert } from 'antd';
 import { FileTextOutlined, SafetyOutlined, EditOutlined, CheckCircleOutlined, FilePdfOutlined, ReloadOutlined, DownloadOutlined, ClockCircleOutlined, InfoCircleOutlined, CrownOutlined } from '@ant-design/icons';
 import { useLocation } from "react-router-dom";
 // Reuse service
@@ -51,7 +51,33 @@ function ContractPage() {
   const [showExistingSmartCASelector, setShowExistingSmartCASelector] = useState(false);
   const [selectedSmartCA, setSelectedSmartCA] = useState(null);
 
+  // ✅ OTP Flow States
+  const [isOTPFlow, setIsOTPFlow] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [showOTPModal, setShowOTPModal] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  
+  // ✅ Send OTP States
+  const [otpSent, setOtpSent] = useState(false);
+  const [sendingOTP, setSendingOTP] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+
   const location = useLocation();
+
+  // ✅ OTP Countdown Timer
+  useEffect(() => {
+    let timer;
+    if (otpCountdown > 0) {
+      timer = setTimeout(() => {
+        setOtpCountdown(otpCountdown - 1);
+      }, 1000);
+    }
+    return () => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    };
+  }, [otpCountdown]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -170,8 +196,18 @@ function ContractPage() {
       const result = await contractService.handleGetContractInfo(processCode);
       if (result.success) {
         setContractInfo(result.data);
-        setCurrentStep(1);
-        await checkSmartCA(result.data.processedByUserId);
+        
+        // ✅ Check OTP flow
+        if (result.data.isOTP) {
+          setIsOTPFlow(true);
+          setCurrentStep(3); // Skip SmartCA step, go directly to ready to sign
+          console.log('OTP Flow detected - skipping SmartCA step');
+        } else {
+          setIsOTPFlow(false);
+          setCurrentStep(1);
+          await checkSmartCA(result.data.processedByUserId);
+        }
+        
         await loadPdfPreview(result.data.downloadUrl, { silent: true });
         if (!options.silent) {
           message.success('Lấy thông tin hợp đồng thành công!');
@@ -285,14 +321,26 @@ function ContractPage() {
       return;
     }
 
-    if (!selectedSmartCA) {
-      message.error('Vui lòng chọn chứng thư số để ký.');
+    // ✅ Check flow type
+    if (isOTPFlow) {
+      // OTP Flow - không cần SmartCA
+      setShowSignatureModal(false);
+      setShowOTPModal(true);
+      // Store signature for later use
+      window.__TEMP_SIGNATURE__ = signatureDataURL;
+      window.__TEMP_DISPLAY_MODE__ = displayMode;
       return;
+    } else {
+      // SmartCA Flow - cần chọn certificate
+      if (!selectedSmartCA) {
+        message.error('Vui lòng chọn chứng thư số để ký.');
+        return;
+      }
+      setShowSignatureModal(false);
+      setShowSmartCAModal(true);
     }
     
     setSigningLoading(true);
-    setShowSignatureModal(false);
-    setShowSmartCAModal(true);
     
     try {
       const result = await contractService.handleDigitalSignature({
@@ -346,7 +394,109 @@ function ContractPage() {
     }
   }
 
+  // ✅ Send OTP to user's email
+  async function handleSendOTP() {
+    if (!contractInfo?.processId || !contractInfo?.accessToken) {
+      message.error('Thiếu thông tin process hoặc token để gửi OTP');
+      return;
+    }
 
+    setSendingOTP(true);
+    
+    try {
+      // ✅ Sử dụng function riêng để gửi OTP
+      const result = await contractService.handleSendOTP({
+        processId: contractInfo.processId,
+        accessToken: contractInfo.accessToken,
+        contractInfo: contractInfo
+      });
+      
+      if (result.success) {
+        setOtpSent(true);
+        setOtpCountdown(60); // Start 60s countdown
+        message.success(result.message || 'Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư!');
+      } else {
+        message.error(result.error || 'Không thể gửi mã OTP');
+      }
+      
+    } catch (e) {
+      console.error('Send OTP error:', e.message);
+      message.error('Có lỗi khi gửi mã OTP. Vui lòng thử lại.');
+    } finally {
+      setSendingOTP(false);
+    }
+  }
+
+  // ✅ Handle OTP submission
+  async function handleOTPSubmit() {
+    if (!otpCode || otpCode.length !== 6) {
+      setOtpError('Vui lòng nhập đầy đủ 6 số OTP');
+      return;
+    }
+
+    setSigningLoading(true);
+    setOtpError('');
+    
+    try {
+      const signatureDataURL = window.__TEMP_SIGNATURE__;
+      const displayMode = window.__TEMP_DISPLAY_MODE__ || 2;
+      
+      const result = await contractService.handleDigitalSignature({
+        processId: contractInfo.processId,
+        reason: 'Ký hợp đồng điện tử',
+        signatureImage: signatureDataURL,
+        signatureDisplayMode: displayMode,
+        accessToken: contractInfo.accessToken,
+        contractInfo: contractInfo,
+        otp: otpCode // ✅ Gửi OTP
+      });
+      
+      setShowOTPModal(false);
+      
+      if (result.success) {
+        setCurrentStep(4);
+        setContractSigned(true);
+        await refreshPdfCache('afterSign');
+        
+        Modal.success({
+          title: (
+            <span className="text-green-600 font-semibold flex items-center">
+              <CheckCircleOutlined className="mr-2" />
+              Ký Hợp Đồng Thành Công!
+            </span>
+          ),
+          content: (
+            <div className="py-4">
+              <div className="text-base mb-3">🎉 Hợp đồng đã được ký thành công!</div>
+              <div className="text-sm text-gray-600">
+                Process ID: <strong>{contractInfo.processId?.substring(0, 8)}...</strong>
+              </div>
+              <div className="text-sm text-gray-600">
+                Trạng thái: <strong className="text-green-600">Đã ký thành công ✅</strong>
+              </div>
+            </div>
+          ),
+          okText: 'Đóng',
+          centered: true,
+          width: 450,
+          okButtonProps: { className: 'bg-green-500 border-green-500 hover:bg-green-600' }
+        });
+        message.success('Ký hợp đồng thành công!');
+        
+        // Cleanup
+        delete window.__TEMP_SIGNATURE__;
+        delete window.__TEMP_DISPLAY_MODE__;
+        setOtpCode('');
+      } else {
+        setOtpError(result.error || 'Ký thất bại.');
+      }
+    } catch (e) {
+      console.error('OTP signing error:', e);
+      setOtpError(e.message || 'Có lỗi khi ký với OTP');
+    } finally {
+      setSigningLoading(false);
+    }
+  }
 
   // Submit form
   async function onFinish(values) {
@@ -368,6 +518,14 @@ function ContractPage() {
     setSigningLoading(false);
     setShowSmartCASelector(false);
     setSelectedSmartCA(null);
+    // ✅ Reset OTP states
+    setIsOTPFlow(false);
+    setOtpCode('');
+    setShowOTPModal(false);
+    setOtpError('');
+    setOtpSent(false);
+    setSendingOTP(false);
+    setOtpCountdown(0);
   }
 
   // Mở modal nhập thông tin SmartCA
@@ -593,6 +751,13 @@ function ContractPage() {
                 contractSigned={contractSigned}
                 selectedSmartCA={selectedSmartCA}
                 onSelectCertificate={showCertificateSelector}
+                isOTPFlow={isOTPFlow}
+                contractInfo={contractInfo}
+                // ✅ OTP props
+                otpSent={otpSent}
+                sendingOTP={sendingOTP}
+                otpCountdown={otpCountdown}
+                onSendOTP={handleSendOTP}
               />
             </Col>
           </Row>
@@ -688,24 +853,106 @@ function ContractPage() {
           userId={contractInfo?.processedByUserId}
           onReloadSmartCA={handleReloadSmartCA}
         />
+
+        {/* ✅ OTP Modal */}
+        <Modal
+          title={
+            <span className="flex items-center">
+              <SafetyOutlined className="text-blue-500 mr-2" />
+              Nhập Mã OTP
+            </span>
+          }
+          open={showOTPModal}
+          onCancel={() => {
+            setShowOTPModal(false);
+            setOtpCode('');
+            setOtpError('');
+          }}
+          footer={[
+            <Button 
+              key="cancel" 
+              onClick={() => {
+                setShowOTPModal(false);
+                setOtpCode('');
+                setOtpError('');
+              }}
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="submit"
+              type="primary"
+              loading={signingLoading}
+              onClick={handleOTPSubmit}
+              disabled={!otpCode || otpCode.length !== 6}
+            >
+              Xác Nhận & Ký
+            </Button>
+          ]}
+          centered
+          maskClosable={false}
+        >
+          <div className="py-4">
+            <div className="mb-4">
+              <Alert
+                message="Mã OTP đã được gửi"
+                description="Vui lòng kiểm tra email để lấy mã OTP 6 số, sau đó nhập vào ô bên dưới để hoàn tất việc ký hợp đồng."
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+              <Text className="text-gray-600">
+                Nhập mã OTP từ email:
+              </Text>
+            </div>
+            
+            <div className="mb-4">
+              <Input.OTP
+                length={6}
+                value={otpCode}
+                onChange={setOtpCode}
+                size="large"
+                className="justify-center"
+              />
+            </div>
+            
+            {otpError && (
+              <Alert
+                message={otpError}
+                type="error"
+                showIcon
+                className="mb-2"
+              />
+            )}
+            
+            <div className="text-sm text-gray-500">
+              <div className="mb-1">
+                Process ID: <strong>{contractInfo?.processId?.substring(0, 8)}...</strong>
+              </div>
+              <div>
+                User ID: <strong>{contractInfo?.processedByUserId}</strong>
+              </div>
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
 
   }
 // Component hiển thị thông tin SmartCA với giao diện cải tiến
-const SmartCACard = ({ smartCAInfo, onAddSmartCA, onSign, signingLoading, contractSigned, selectedSmartCA, onSelectCertificate }) => {
+const SmartCACard = ({ smartCAInfo, onAddSmartCA, onSign, signingLoading, contractSigned, selectedSmartCA, onSelectCertificate, isOTPFlow, contractInfo, otpSent, sendingOTP, otpCountdown, onSendOTP }) => {
   const hasSmartCA = !!smartCAInfo?.defaultSmartCa || 
     (smartCAInfo?.userCertificates && smartCAInfo.userCertificates.length > 0);
   
-  const ready = !!selectedSmartCA;
+  const ready = isOTPFlow ? true : !!selectedSmartCA; // ✅ OTP flow always ready
 
   return (
     <Card
       title={
         <span className="flex items-center">
           <SafetyOutlined className="text-blue-500 mr-2" />
-          SmartCA
+          {isOTPFlow ? 'Xác Thực OTP' : 'SmartCA'}
         </span>
       }
       extra={
@@ -721,58 +968,8 @@ const SmartCACard = ({ smartCAInfo, onAddSmartCA, onSign, signingLoading, contra
       }
       className="shadow-md"
     >
-      {!hasSmartCA ? (
-        <div className="text-center p-4">
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 text-yellow-700 rounded-lg p-4 mb-4 shadow-sm">
-            <div className="font-semibold text-base flex items-center justify-center mb-2">
-              <InfoCircleOutlined className="mr-2" />
-              SmartCA chưa sẵn sàng
-            </div>
-            <div className="text-sm">Bạn cần thêm SmartCA để có thể ký hợp đồng điện tử</div>
-          </div>
-          <Button 
-            type="primary" 
-            danger 
-            onClick={onAddSmartCA} 
-            disabled={contractSigned}
-            size="large"
-            className="bg-red-500 hover:bg-red-600 border-red-500 shadow-md"
-          >
-            <SafetyOutlined className="mr-2" />
-            Thêm SmartCA
-          </Button>
-        </div>
-      ) : !ready ? (
-        <div className="text-center p-4">
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-blue-700 rounded-lg p-4 mb-4 shadow-sm">
-            <div className="font-semibold text-base flex items-center justify-center mb-2">
-              <CheckCircleOutlined className="mr-2" />
-              Đã có SmartCA trong hệ thống
-            </div>
-            <div className="text-sm">Vui lòng chọn chứng thư số để tiếp tục ký hợp đồng</div>
-          </div>
-          <Space size="middle">
-            <Button 
-              type="primary" 
-              onClick={onSelectCertificate} 
-              disabled={contractSigned}
-              size="large"
-              className="bg-blue-500 hover:bg-blue-600 border-blue-500 shadow-md"
-            >
-              <SafetyOutlined className="mr-2" />
-              Chọn Chứng Thư
-            </Button>
-            <Button 
-              onClick={onAddSmartCA} 
-              disabled={contractSigned}
-              size="large"
-              className="shadow-md"
-            >
-              Thêm SmartCA Khác
-            </Button>
-          </Space>
-        </div>
-      ) : (
+      {/* ✅ OTP Flow */}
+      {isOTPFlow ? (
         <div className="text-center p-4">
           <div className={`
             ${contractSigned 
@@ -782,28 +979,72 @@ const SmartCACard = ({ smartCAInfo, onAddSmartCA, onSign, signingLoading, contra
             border rounded-lg p-4 mb-4 shadow-sm
           `}>
             <div className="font-semibold text-base flex items-center justify-center mb-2">
-              <CheckCircleOutlined className="mr-2" />
-              {contractSigned ? "Đã ký thành công" : "SmartCA sẵn sàng"}
+              <SafetyOutlined className="mr-2" />
+              {contractSigned ? "Đã ký thành công với OTP" : "Sẵn sàng ký với OTP"}
             </div>
-            <div className="text-sm space-y-1">
-              <div><strong>Chứng thư:</strong> {selectedSmartCA.commonName}</div>
-              <div><strong>UID:</strong> {selectedSmartCA.uid}</div>
-              {selectedSmartCA.isDefault && (
-                <Tag color="gold" size="small" className="mt-1">
-                  <CrownOutlined className="mr-1" />
-                  Chứng thư mặc định
-                </Tag>
-              )}
+            <div className="text-sm">
+              {contractSigned 
+                ? "Hợp đồng đã được ký thành công bằng mã OTP" 
+                : otpSent
+                  ? "Mã OTP đã được gửi đến email. Vui lòng kiểm tra hộp thư và tạo chữ ký để ký hợp đồng."
+                  : "Nhấn 'Gửi OTP' để nhận mã xác thực qua email"
+              }
             </div>
+            {contractInfo?.processedByUserId && (
+              <div className="text-xs text-gray-500 mt-1">
+                User ID: {contractInfo.processedByUserId}
+              </div>
+            )}
           </div>
-          <Space size="middle">
+          
+          {/* ✅ OTP Flow Buttons */}
+          <Space direction="vertical" size="middle" className="w-full">
+            {!contractSigned && !otpSent && (
+              <Button 
+                type="default"
+                onClick={onSendOTP} 
+                loading={sendingOTP} 
+                disabled={contractSigned}
+                size="large"
+                className="w-full shadow-md border-blue-500 text-blue-500 hover:bg-blue-50"
+              >
+                <SafetyOutlined className="mr-2" />
+                Gửi Mã OTP
+              </Button>
+            )}
+            
+            {!contractSigned && otpSent && otpCountdown > 0 && (
+              <Button 
+                type="default"
+                disabled
+                size="large"
+                className="w-full shadow-md"
+              >
+                Gửi lại sau {otpCountdown}s
+              </Button>
+            )}
+            
+            {!contractSigned && otpSent && otpCountdown === 0 && (
+              <Button 
+                type="default"
+                onClick={onSendOTP} 
+                loading={sendingOTP} 
+                size="large"
+                className="w-full shadow-md border-blue-500 text-blue-500 hover:bg-blue-50"
+              >
+                <ReloadOutlined className="mr-2" />
+                Gửi Lại Mã OTP
+              </Button>
+            )}
+            
             <Button 
               type="primary" 
               onClick={onSign} 
               loading={signingLoading} 
-              disabled={contractSigned}
+              disabled={contractSigned || (!otpSent && !contractSigned)}
               size="large"
               className={`
+                w-full
                 ${contractSigned 
                   ? 'bg-green-500 hover:bg-green-600 border-green-500' 
                   : 'bg-blue-500 hover:bg-blue-600 border-blue-500'
@@ -819,21 +1060,128 @@ const SmartCACard = ({ smartCAInfo, onAddSmartCA, onSign, signingLoading, contra
               ) : (
                 <>
                   <EditOutlined className="mr-2" />
-                  Ký Hợp Đồng
+                  Ký Hợp Đồng với OTP
                 </>
               )}
             </Button>
-            {!contractSigned && (
+          </Space>
+        </div>
+      ) : (
+        /* ✅ SmartCA Flow - keep existing logic */
+        !hasSmartCA ? (
+          <div className="text-center p-4">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 text-yellow-700 rounded-lg p-4 mb-4 shadow-sm">
+              <div className="font-semibold text-base flex items-center justify-center mb-2">
+                <InfoCircleOutlined className="mr-2" />
+                SmartCA chưa sẵn sàng
+              </div>
+              <div className="text-sm">Bạn cần thêm SmartCA để có thể ký hợp đồng điện tử</div>
+            </div>
+            <Button 
+              type="primary" 
+              danger 
+              onClick={onAddSmartCA} 
+              disabled={contractSigned}
+              size="large"
+              className="bg-red-500 hover:bg-red-600 border-red-500 shadow-md"
+            >
+              <SafetyOutlined className="mr-2" />
+              Thêm SmartCA
+            </Button>
+          </div>
+        ) : !ready ? (
+          <div className="text-center p-4">
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 text-blue-700 rounded-lg p-4 mb-4 shadow-sm">
+              <div className="font-semibold text-base flex items-center justify-center mb-2">
+                <CheckCircleOutlined className="mr-2" />
+                Đã có SmartCA trong hệ thống
+              </div>
+              <div className="text-sm">Vui lòng chọn chứng thư số để tiếp tục ký hợp đồng</div>
+            </div>
+            <Space size="middle">
               <Button 
-                onClick={onSelectCertificate}
+                type="primary" 
+                onClick={onSelectCertificate} 
+                disabled={contractSigned}
+                size="large"
+                className="bg-blue-500 hover:bg-blue-600 border-blue-500 shadow-md"
+              >
+                <SafetyOutlined className="mr-2" />
+                Chọn Chứng Thư
+              </Button>
+              <Button 
+                onClick={onAddSmartCA} 
+                disabled={contractSigned}
                 size="large"
                 className="shadow-md"
               >
-                Đổi Chứng Thư
+                Thêm SmartCA Khác
               </Button>
-            )}
-          </Space>
-        </div>
+            </Space>
+          </div>
+        ) : (
+          <div className="text-center p-4">
+            <div className={`
+              ${contractSigned 
+                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-700' 
+                : 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 text-blue-700'
+              } 
+              border rounded-lg p-4 mb-4 shadow-sm
+            `}>
+              <div className="font-semibold text-base flex items-center justify-center mb-2">
+                <CheckCircleOutlined className="mr-2" />
+                {contractSigned ? "Đã ký thành công" : "SmartCA sẵn sàng"}
+              </div>
+              <div className="text-sm space-y-1">
+                <div><strong>Chứng thư:</strong> {selectedSmartCA.commonName}</div>
+                <div><strong>UID:</strong> {selectedSmartCA.uid}</div>
+                {selectedSmartCA.isDefault && (
+                  <Tag color="gold" size="small" className="mt-1">
+                    <CrownOutlined className="mr-1" />
+                    Chứng thư mặc định
+                  </Tag>
+                )}
+              </div>
+            </div>
+            <Space size="middle">
+              <Button 
+                type="primary" 
+                onClick={onSign} 
+                loading={signingLoading} 
+                disabled={contractSigned}
+                size="large"
+                className={`
+                  ${contractSigned 
+                    ? 'bg-green-500 hover:bg-green-600 border-green-500' 
+                    : 'bg-blue-500 hover:bg-blue-600 border-blue-500'
+                  } 
+                  shadow-md
+                `}
+              >
+                {contractSigned ? (
+                  <>
+                    <CheckCircleOutlined className="mr-2" />
+                    Đã Ký Thành Công
+                  </>
+                ) : (
+                  <>
+                    <EditOutlined className="mr-2" />
+                    Ký Hợp Đồng
+                  </>
+                )}
+              </Button>
+              {!contractSigned && (
+                <Button 
+                  onClick={onSelectCertificate}
+                  size="large"
+                  className="shadow-md"
+                >
+                  Đổi Chứng Thư
+                </Button>
+              )}
+            </Space>
+          </div>
+        )
       )}
     </Card>
   );

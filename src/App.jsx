@@ -69,6 +69,7 @@ import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
 import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
 import DepositSettings from "./Pages/DealerManager/DepositSettings/DepositSettings";
 import UpdateAllEVDepositSettings from "./Pages/Admin/DepositSettings/UpdatAllEVDepositSettings";
+import GetAllContract from "./Pages/DealerManager/ViewAllOrderContract/GetAllContract";
 function App() {
   return (
     <BrowserRouter>
@@ -210,6 +211,11 @@ function App() {
                   path="appointment"
                   element={<Appointment />}
                 />
+                <Route
+                  path="/orders-and-contracts/get-all-contracts"
+                  element={<GetAllContract />}
+                />
+                <Route path="orders-and-contracts/view-all-contracts" element={<GetAllContract />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ dealer manager */}
                 <Route
                   path="*"

@@ -24,11 +24,16 @@ export const ContractService = () => {
         console.warn('Response thiếu position hoặc pageSign, sử dụng giá trị mặc định');
       }
       
-      // Ensure position and pageSign are included in the returned data
+      // ✅ Parse isOTP field cho flow mới
+      const isOTPFlow = contractData.isOTP || false;
+      console.log('Contract flow type:', isOTPFlow ? 'OTP' : 'SmartCA');
+      
+      // Ensure position, pageSign và isOTP are included in the returned data
       const enhancedData = {
         ...contractData,
         position: contractData.position, 
-        pageSign: contractData.pageSign 
+        pageSign: contractData.pageSign,
+        isOTP: isOTPFlow // ✅ Thêm isOTP field
       };
       
       return {
@@ -120,11 +125,99 @@ export const ContractService = () => {
     }
   };
 
-  // Ký hợp đồng điện tử - sử dụng position và pageSign từ contract info
-  const handleDigitalSignature = async ({ processId, reason, signatureImage, signatureDisplayMode, accessToken, contractInfo }) => {
+  // ✅ Gửi OTP - không cần chữ ký, chỉ cần processId và accessToken
+  const handleSendOTP = async ({ processId, accessToken, contractInfo }) => {
     try {
+      if (!processId || !accessToken) {
+        throw new Error("Thiếu thông tin processId hoặc accessToken để gửi OTP");
+      }
+
+      // Lấy position và pageSign từ contractInfo
+      const signingPosition = contractInfo?.position || "406,396,576,486";
+      const signingPage = contractInfo?.pageSign || 3;
+
+      // Request body để trigger gửi OTP - hầu hết field null/default
+      const requestBody = {
+        processId: processId,
+        reason: "Gửi mã OTP xác thực",
+        reject: false,
+        otp: "", // Empty để trigger gửi OTP
+        signatureDisplayMode: 1,
+        signatureImage: null, // ✅ Không cần chữ ký để gửi OTP
+        signingPage: signingPage,
+        signingPosition: signingPosition,
+        signatureText: "{{Name}}\n{{SubjectDN}}\n{{Reason}}\n{{SignTime}}",
+        fontSize: 14,
+        showReason: true,
+        confirmTermsConditions: true
+      };
+
+      console.log("=== SENDING OTP REQUEST ===");
+      console.log("Full request body:", JSON.stringify(requestBody, null, 2));
+      console.log("Request summary:", {
+        processId: requestBody.processId,
+        reason: requestBody.reason,
+        signatureImage: requestBody.signatureImage,
+        signatureText: requestBody.signatureText,
+        otp: requestBody.otp,
+        signingPosition: requestBody.signingPosition,
+        signingPage: requestBody.signingPage
+      });
+
+      // Gọi API - không quan tâm success/fail vì mục đích chỉ để trigger gửi OTP
+      const response = await api.post('/EContract/sign-process', requestBody, {
+        params: {
+          token: accessToken
+        }
+      });
+
+      console.log("=== SEND OTP API RESPONSE ===");
+      console.log("Response status:", response.status);
+      console.log("Full response data:", JSON.stringify(response.data, null, 2));
+      console.log("Response summary:", {
+        statusCode: response.data?.statusCode,
+        isSuccess: response.data?.isSuccess,
+        message: response.data?.message,
+        result: response.data?.result
+      });
+      
+      // Luôn return success vì mục đích chỉ để trigger gửi OTP
+      return {
+        success: true,
+        message: 'Đã gửi mã OTP đến email của bạn'
+      };
+    } catch (error) {
+      console.log("=== SEND OTP ERROR RESPONSE ===");
+      console.log("Error object:", error);
+      console.log("Error response status:", error.response?.status);
+      console.log("Error response data:", JSON.stringify(error.response?.data, null, 2));
+      console.log("Error message:", error.message);
+      console.log('Send OTP API called (expected):', error.message);
+      
+      // Vẫn return success vì chỉ cần trigger gửi OTP
+      return {
+        success: true,
+        message: 'Đã gửi mã OTP đến email của bạn'
+      };
+    }
+  };
+
+  // Ký hợp đồng điện tử - sử dụng position và pageSign từ contract info
+  const handleDigitalSignature = async ({ processId, reason, signatureImage, signatureDisplayMode, accessToken, contractInfo, otp = "" }) => {
+    try {
+      // ✅ Logic validation mới cho OTP và SmartCA flow
+      const hasOTP = otp && otp.trim() !== "";
+      const isSmartCAFlow = !hasOTP;
+      
+      // SmartCA flow: luôn cần chữ ký
+      // OTP flow với OTP có giá trị: cần chữ ký  
       if (!signatureImage) {
-        throw new Error("Vui lòng tạo chữ ký trước khi ký hợp đồng");
+        if (isSmartCAFlow) {
+          throw new Error("Vui lòng tạo chữ ký trước khi ký hợp đồng với SmartCA");
+        } else if (hasOTP) {
+          throw new Error("Vui lòng tạo chữ ký trước khi ký hợp đồng với OTP");
+        }
+        // Nếu không có OTP và không có chữ ký = đang gửi OTP (được phép)
       }
 
       // Lấy pageSign và position từ contract info (response mới)
@@ -144,26 +237,29 @@ export const ContractService = () => {
         processId: processId,
         reason: reason || "Ký hợp đồng điện tử - Khách hàng",
         reject: false,
-        otp: "",
+        otp: otp, // ✅ Sử dụng OTP từ parameter
         signatureDisplayMode: signatureDisplayMode || 2,
         signatureImage: signatureImage,
         signingPage: signingPage,
         signingPosition: signingPosition,
-        signatureText: "Đại Diện Đại Lý",
+        signatureText: "{{Name}}\n{{SubjectDN}}\n{{Reason}}\n{{SignTime}}", // ✅ Thay đổi signatureText mặc định
         fontSize: 14,
         showReason: true,
         confirmTermsConditions: true
       };
 
-      console.log("Customer signing contract with updated data:", {
-        pageSign: signingPage,
-        signingPosition: signingPosition,
+      console.log("=== DIGITAL SIGNATURE REQUEST ===");
+      console.log("Flow type:", { hasOTP, isSmartCAFlow });
+      console.log("Full request body:", JSON.stringify(requestBody, null, 2));
+      console.log("Request summary:", {
         processId: requestBody.processId,
-        fromContractInfo: {
-          position: contractInfo?.position,
-          pageSign: contractInfo?.pageSign
-        },
-        requestBody: requestBody
+        reason: requestBody.reason,
+        signatureImage: requestBody.signatureImage ? 'HAS_SIGNATURE' : 'NULL',
+        signatureText: requestBody.signatureText,
+        otp: requestBody.otp,
+        signingPosition: requestBody.signingPosition,
+        signingPage: requestBody.signingPage,
+        signatureDisplayMode: requestBody.signatureDisplayMode
       });
 
       // Gọi API với access token
@@ -173,7 +269,16 @@ export const ContractService = () => {
         }
       });
 
-      console.log('Customer signature result:', response.data);
+      console.log("=== DIGITAL SIGNATURE API RESPONSE ===");
+      console.log("Response status:", response.status);
+      console.log("Full response data:", JSON.stringify(response.data, null, 2));
+      console.log("Response summary:", {
+        statusCode: response.data?.statusCode,
+        isSuccess: response.data?.isSuccess,
+        message: response.data?.message,
+        result: response.data?.result,
+        errorMessages: response.data?.result?.messages
+      });
       
       if (response.data && response.data.statusCode === 200 && response.data.isSuccess) {
         return {
@@ -188,7 +293,18 @@ export const ContractService = () => {
         throw new Error(errorMessage);
       }
     } catch (error) {
+      console.log("=== DIGITAL SIGNATURE ERROR RESPONSE ===");
+      console.log("Error object:", error);
+      console.log("Error response status:", error.response?.status);
+      console.log("Error response data:", JSON.stringify(error.response?.data, null, 2));
+      console.log("Error message:", error.message);
       console.error('Error in customer digital signature:', error);
+      
+      // ✅ Xử lý các loại error cụ thể
+      if (error.response?.status === 500) {
+        // Lỗi 500 thường là sai OTP hoặc lỗi server
+        throw new Error("Mã OTP không chính xác hoặc đã hết hạn. Vui lòng kiểm tra lại mã OTP.");
+      }
       
       if (error.response?.data?.message) {
         const errorMessage = error.response.data.message;
@@ -198,6 +314,8 @@ export const ContractService = () => {
           throw new Error("Người dùng chưa xác nhận. Vui lòng kiểm tra OTP hoặc xác nhận điều khoản trước khi ký.");
         } else if (errorMessage.includes("Lỗi ký số")) {
           throw new Error(`Lỗi ký số: ${errorMessage}`);
+        } else if (errorMessage.includes("OTP") || errorMessage.includes("otp")) {
+          throw new Error("Mã OTP không chính xác. Vui lòng kiểm tra lại mã OTP từ SMS hoặc email.");
         } else {
           throw new Error(errorMessage);
         }
@@ -413,6 +531,7 @@ export const ContractService = () => {
     handleGetContractInfo,
     handleCheckSmartCA,
     handleAddSmartCA,
+    handleSendOTP, // ✅ Export function mới
     handleUpdateSmartCA,
     handleDigitalSignature,
     handleGetPreviewPDF,
