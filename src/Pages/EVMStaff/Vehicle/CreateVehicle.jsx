@@ -360,6 +360,9 @@ function CreateElectricVehicle() {
   // ✅ Columns cho bảng VEHICLES 
 
   const handleCreateModal = () => {
+    // ✅ Destroy tất cả loading messages khi mở modal
+    message.destroy();
+    
     form.resetFields();
     setSelectedTemplate(null);
     setSelectedModelId(null); // ✅ Reset model selection
@@ -395,8 +398,9 @@ function CreateElectricVehicle() {
     }
 
     // ✅ Kiểm tra VIN đã tồn tại trong database bằng cách gọi API
+    let loadingMsg = null;
     try {
-      const loadingMsg = message.loading('Đang kiểm tra VIN...', 0);
+      loadingMsg = message.loading('Đang kiểm tra VIN...', 0);
       
       // Gọi API để lấy danh sách vehicles mới nhất
       const latestVehiclesResult = await vehicleApi.getAllVehicles();
@@ -404,7 +408,11 @@ function CreateElectricVehicle() {
         ? (latestVehiclesResult.result || latestVehiclesResult.data || [])
         : [];
 
-      message.destroy(loadingMsg);
+      // ✅ Destroy loading message TRƯỚC KHI kiểm tra
+      if (loadingMsg) {
+        message.destroy(loadingMsg);
+        loadingMsg = null;
+      }
 
       // Kiểm tra VIN có tồn tại trong database không
       const vinExists = latestVehiclesList.some(v => v.vin === vinValue);
@@ -420,6 +428,13 @@ function CreateElectricVehicle() {
       message.success(`✅ Đã thêm VIN: ${vinValue}`);
     } catch (error) {
       console.error('❌ Error checking VIN:', error);
+      // ✅ Đảm bảo destroy loading message trong catch
+      if (loadingMsg) {
+        message.destroy(loadingMsg);
+        loadingMsg = null;
+      }
+      // ✅ Destroy tất cả loading messages để đảm bảo
+      message.destroy();
       message.error('Lỗi khi kiểm tra VIN. Vui lòng thử lại!');
     }
   };
@@ -539,35 +554,11 @@ function CreateElectricVehicle() {
       setVinList([...vinList, ...validVins]);
       setBulkVinInput('');
 
-      let successMsg = `✅ Đã thêm ${validVins.length} VIN`;
-
-      // Show warnings for invalid/duplicate VINs
-      if (invalidVins.length > 0) {
-        successMsg += `\n⚠️ ${invalidVins.length} VIN không đúng format`;
-      }
-      if (duplicateVins.length > 0) {
-        successMsg += `\n⚠️ ${duplicateVins.length} VIN trùng lặp`;
-      }
-      if (existingVins.length > 0) {
-        successMsg += `\n❌ ${existingVins.length} VIN đã tồn tại trong hệ thống`;
-      }
-
-      message.success(successMsg, 5);
+      // ✅ Chỉ hiển thị thông báo số VIN đã thêm thành công (tiếng Việt)
+      message.success(`Đã thêm ${validVins.length} VIN vào danh sách`, 3);
     } else {
-      // No valid VINs
-      let errorMsg = '❌ Không có VIN hợp lệ nào được thêm!\n';
-
-      if (invalidVins.length > 0) {
-        errorMsg += `\n⚠️ ${invalidVins.length} VIN không đúng format (phải là VIN + 10 số)`;
-      }
-      if (duplicateVins.length > 0) {
-        errorMsg += `\n⚠️ ${duplicateVins.length} VIN bị trùng lặp`;
-      }
-      if (existingVins.length > 0) {
-        errorMsg += `\n❌ ${existingVins.length} VIN đã tồn tại trong hệ thống`;
-      }
-
-      message.error(errorMsg, 6);
+      // No valid VINs - chỉ hiển thị lỗi nếu không có VIN hợp lệ nào
+      message.error('Không có VIN hợp lệ nào được thêm. Vui lòng kiểm tra lại format VIN (VIN + 10 số)', 4);
     }
   };
 
@@ -599,9 +590,10 @@ function CreateElectricVehicle() {
     }
 
     // ✅ Validation: Kiểm tra VIN trùng lặp với database TRƯỚC KHI submit
+    let loadingMessage = null;
     try {
       setLoading(true);
-      const loadingMessage = message.loading('Đang kiểm tra VIN...', 0);
+      loadingMessage = message.loading('Đang kiểm tra VIN...', 0);
 
       // Reload lại danh sách vehicles để có dữ liệu mới nhất
       const latestVehiclesResult = await vehicleApi.getAllVehicles();
@@ -609,7 +601,11 @@ function CreateElectricVehicle() {
         ? (latestVehiclesResult.result || latestVehiclesResult.data || [])
         : [];
 
-      message.destroy(loadingMessage);
+      // ✅ Destroy loading message TRƯỚC KHI kiểm tra
+      if (loadingMessage) {
+        message.destroy(loadingMessage);
+        loadingMessage = null;
+      }
 
       // Kiểm tra từng VIN trong vinList có trùng với database không
       const duplicateVins = [];
@@ -621,6 +617,8 @@ function CreateElectricVehicle() {
 
       if (duplicateVins.length > 0) {
         console.error("❌ Found duplicate VINs:", duplicateVins);
+        // ✅ Đảm bảo destroy loading message trước khi hiển thị lỗi
+        message.destroy();
         message.error(
           `❌ Có ${duplicateVins.length} VIN đã tồn tại trong hệ thống:\n${duplicateVins.slice(0, 5).join(', ')}${duplicateVins.length > 5 ? '...' : ''}\nVui lòng xóa các VIN trùng lặp và thử lại!`,
           8
@@ -632,6 +630,12 @@ function CreateElectricVehicle() {
       console.log("✅ VIN validation passed - no duplicates found!");
     } catch (validationError) {
       console.error("❌ Error validating VINs:", validationError);
+      // ✅ Đảm bảo destroy loading message trong catch
+      if (loadingMessage) {
+        message.destroy(loadingMessage);
+        loadingMessage = null;
+      }
+      // ✅ Destroy tất cả loading messages để đảm bảo
       message.destroy();
       message.error('Lỗi khi kiểm tra VIN. Vui lòng thử lại!');
       setLoading(false);
@@ -683,7 +687,15 @@ function CreateElectricVehicle() {
       console.log("📊 Normalized response:", normalized);
 
       if (normalized.success) {
-        message.success(normalized.message || `🎉 Tạo thành công ${vinList.length} xe!`);
+        // ✅ Destroy tất cả loading messages trước khi hiển thị success
+        message.destroy();
+        
+        // ✅ Hiển thị success message với duration dài hơn để người dùng thấy
+        message.success({
+          content: `Đã tạo thành công ${vinList.length} xe`,
+          duration: 5, // Hiển thị 5 giây
+        });
+        
         setIsCreateModalVisible(false); // ✅ Đóng create modal
         form.resetFields();
         setSelectedTemplate(null);
@@ -715,14 +727,20 @@ function CreateElectricVehicle() {
         console.log("✅ Vehicle created successfully, scrolled to top");
       } else {
         console.error("❌ Create failed:", normalized.message);
+        // ✅ Destroy tất cả loading messages trước khi hiển thị lỗi
+        message.destroy();
         message.error(normalized.message || "Không thể tạo xe");
       }
     } catch (error) {
       console.error("❌ Error creating vehicle:", error);
       console.error("❌ Error response:", error.response?.data);
+      // ✅ Destroy tất cả loading messages trong catch
+      message.destroy();
       message.error(extractErrorMessage(error));
     } finally {
       setLoading(false);
+      // ✅ KHÔNG destroy trong finally vì sẽ xóa luôn success message
+      // Chỉ destroy loading messages đã được destroy ở trên
     }
   };
 
@@ -909,7 +927,11 @@ function CreateElectricVehicle() {
               </div>
             </div>
           }
-          onCancel={() => setIsCreateModalVisible(false)}
+          onCancel={() => {
+            // ✅ Destroy tất cả loading messages khi đóng modal
+            message.destroy();
+            setIsCreateModalVisible(false);
+          }}
           footer={null}
           width={1000}
           destroyOnClose
@@ -1508,6 +1530,8 @@ function CreateElectricVehicle() {
               <Col>
                 <Button 
                   onClick={() => {
+                    // ✅ Destroy tất cả loading messages khi hủy
+                    message.destroy();
                     setIsCreateModalVisible(false);
                     form.resetFields();
                     setSelectedTemplate(null);
