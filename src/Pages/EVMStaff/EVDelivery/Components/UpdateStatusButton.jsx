@@ -140,8 +140,8 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
                     onConfirm={handleUpdateStatus}
                     okText="Xác nhận"
                     cancelText="Hủy"
-                    disabled={(selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) || 
-                              (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim())}
+                    disabled={(selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) ||
+                        (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim())}
                 >
                     <Button
                         type="primary"

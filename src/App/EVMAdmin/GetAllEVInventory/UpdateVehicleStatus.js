@@ -1,9 +1,7 @@
 import api from "../../../api/api";
 export const updateVehicleStatus = async (vehicleId, status) => {
     try {
-        const response = await api.put(`/ElectricVehicle/update-vehicle-status/${vehicleId}`, {
-            status
-        });
+        const response = await api.put(`/ElectricVehicle/update-vehicle-status/${vehicleId}?status=${status}`);
         console.log("Response from updateVehicleStatus:", response.data);
         return response.data;
     } catch (error) {
