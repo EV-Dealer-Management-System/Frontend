@@ -9,7 +9,7 @@ import {
   InputNumber,
   Select,
   Radio,
-  message,
+  App,
   Badge,
   Row,
   Col,
@@ -21,6 +21,8 @@ import {
   Empty,
   Image,
   Tag,
+  Steps,
+  Statistic,
 } from "antd";
 import {
   PlusOutlined,
@@ -31,6 +33,10 @@ import {
   EditOutlined,
   DeleteOutlined,
   InfoCircleOutlined,
+  FileTextOutlined,
+  ShoppingCartOutlined,
+  CalendarOutlined,
+  SafetyOutlined,
 } from "@ant-design/icons";
 import { vehicleApi } from "../../../App/EVMAdmin/VehiclesManagement/Vehicles";
 import EVMStaffLayout from "../../../Components/EVMStaff/EVMStaffLayout";
@@ -76,6 +82,7 @@ const extractErrorMessage = (err) => {
 
 // ✅ Component TẠO XE ĐIỆN (có VIN)
 function CreateElectricVehicle() {
+  const { message } = App.useApp(); // ✅ Sử dụng message từ App.useApp()
   const [loading, setLoading] = useState(false);
   const [vehiclesList, setVehiclesList] = useState([]);
   const [models, setModels] = useState([]); // ✅ Thêm state cho models
@@ -128,9 +135,21 @@ function CreateElectricVehicle() {
 
       if (result.isSuccess || result.success) {
         const vehiclesData = result.result || result.data || [];
-        setVehiclesList(vehiclesData);
+        
+        // ✅ Sắp xếp theo id giảm dần (mới nhất trước) để xe mới tạo hiển thị ở đầu
+        const sortedVehicles = [...vehiclesData].sort((a, b) => {
+          // Sắp xếp theo id giảm dần (id lớn hơn = mới hơn)
+          // Hoặc theo createdAt nếu có
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          }
+          // Fallback: sắp xếp theo id giảm dần
+          return (b.id || 0) - (a.id || 0);
+        });
+        
+        setVehiclesList(sortedVehicles);
 
-        if (vehiclesData.length === 0) {
+        if (sortedVehicles.length === 0) {
           message.info("Chưa có xe nào.");
         }
       } else {
@@ -355,7 +374,7 @@ function CreateElectricVehicle() {
   };
 
   // ✅ Thêm VIN vào danh sách
-  const handleAddVin = () => {
+  const handleAddVin = async () => {
     const vinValue = currentVinInput.trim().toUpperCase();
 
     // Validate format VIN
@@ -375,16 +394,34 @@ function CreateElectricVehicle() {
       return;
     }
 
-    // Check duplicate với xe đã có trong database
-    if (vehiclesList.some(v => v.vin === vinValue)) {
-      message.error('VIN này đã tồn tại trong hệ thống!');
-      return;
-    }
+    // ✅ Kiểm tra VIN đã tồn tại trong database bằng cách gọi API
+    try {
+      const loadingMsg = message.loading('Đang kiểm tra VIN...', 0);
+      
+      // Gọi API để lấy danh sách vehicles mới nhất
+      const latestVehiclesResult = await vehicleApi.getAllVehicles();
+      const latestVehiclesList = latestVehiclesResult.isSuccess || latestVehiclesResult.success
+        ? (latestVehiclesResult.result || latestVehiclesResult.data || [])
+        : [];
 
-    // Thêm VIN vào list
-    setVinList([...vinList, vinValue]);
-    setCurrentVinInput('');
-    message.success(`✅ Đã thêm VIN: ${vinValue}`);
+      message.destroy(loadingMsg);
+
+      // Kiểm tra VIN có tồn tại trong database không
+      const vinExists = latestVehiclesList.some(v => v.vin === vinValue);
+      
+      if (vinExists) {
+        message.error(`VIN ${vinValue} đã tồn tại trong hệ thống! Vui lòng nhập VIN khác.`);
+        return;
+      }
+
+      // Thêm VIN vào list
+      setVinList([...vinList, vinValue]);
+      setCurrentVinInput('');
+      message.success(`✅ Đã thêm VIN: ${vinValue}`);
+    } catch (error) {
+      console.error('❌ Error checking VIN:', error);
+      message.error('Lỗi khi kiểm tra VIN. Vui lòng thử lại!');
+    }
   };
 
   // ✅ Xóa VIN khỏi danh sách
@@ -399,6 +436,48 @@ function CreateElectricVehicle() {
     setCurrentVinInput('');
     setBulkVinInput('');
     message.info('Đã xóa tất cả VIN');
+  };
+
+  // ✅ Xử lý onChange cho bulk VIN input - Format và validate từng dòng
+  const handleBulkVinInputChange = (e) => {
+    const inputValue = e.target.value.toUpperCase();
+    
+    // Tách thành các dòng
+    const lines = inputValue.split('\n');
+    
+    // Format từng dòng: chỉ cho phép VIN + tối đa 10 số
+    const formattedLines = lines.map(line => {
+      // Loại bỏ khoảng trắng và ký tự đặc biệt (giữ lại VIN và số)
+      let cleaned = line.replace(/[^VIN\d]/g, '');
+      
+      // Nếu bắt đầu bằng VIN
+      if (cleaned.startsWith('VIN')) {
+        // Lấy phần sau VIN (chỉ số)
+        const numbers = cleaned.substring(3).replace(/\D/g, '');
+        // Giới hạn tối đa 10 số
+        const limitedNumbers = numbers.substring(0, 10);
+        return 'VIN' + limitedNumbers;
+      } else if (cleaned.startsWith('V')) {
+        // Nếu chỉ có V, thêm IN
+        const numbers = cleaned.substring(1).replace(/\D/g, '');
+        const limitedNumbers = numbers.substring(0, 10);
+        return 'VIN' + limitedNumbers;
+      } else if (cleaned.startsWith('VI')) {
+        // Nếu có VI, thêm N
+        const numbers = cleaned.substring(2).replace(/\D/g, '');
+        const limitedNumbers = numbers.substring(0, 10);
+        return 'VIN' + limitedNumbers;
+      } else {
+        // Nếu không có VIN ở đầu, chỉ lấy số và giới hạn 10 số
+        const numbers = cleaned.replace(/\D/g, '');
+        const limitedNumbers = numbers.substring(0, 10);
+        return limitedNumbers.length > 0 ? 'VIN' + limitedNumbers : '';
+      }
+    });
+    
+    // Ghép lại thành chuỗi với xuống dòng
+    const formattedValue = formattedLines.join('\n');
+    setBulkVinInput(formattedValue);
   };
 
   // ✅ Thêm nhiều VIN cùng lúc (bulk add)
@@ -519,15 +598,54 @@ function CreateElectricVehicle() {
       return;
     }
 
+    // ✅ Validation: Kiểm tra VIN trùng lặp với database TRƯỚC KHI submit
+    try {
+      setLoading(true);
+      const loadingMessage = message.loading('Đang kiểm tra VIN...', 0);
+
+      // Reload lại danh sách vehicles để có dữ liệu mới nhất
+      const latestVehiclesResult = await vehicleApi.getAllVehicles();
+      const latestVehiclesList = latestVehiclesResult.isSuccess || latestVehiclesResult.success
+        ? (latestVehiclesResult.result || latestVehiclesResult.data || [])
+        : [];
+
+      message.destroy(loadingMessage);
+
+      // Kiểm tra từng VIN trong vinList có trùng với database không
+      const duplicateVins = [];
+      vinList.forEach(vin => {
+        if (latestVehiclesList.some(v => v.vin === vin)) {
+          duplicateVins.push(vin);
+        }
+      });
+
+      if (duplicateVins.length > 0) {
+        console.error("❌ Found duplicate VINs:", duplicateVins);
+        message.error(
+          `❌ Có ${duplicateVins.length} VIN đã tồn tại trong hệ thống:\n${duplicateVins.slice(0, 5).join(', ')}${duplicateVins.length > 5 ? '...' : ''}\nVui lòng xóa các VIN trùng lặp và thử lại!`,
+          8
+        );
+        setLoading(false);
+        return;
+      }
+
+      console.log("✅ VIN validation passed - no duplicates found!");
+    } catch (validationError) {
+      console.error("❌ Error validating VINs:", validationError);
+      message.destroy();
+      message.error('Lỗi khi kiểm tra VIN. Vui lòng thử lại!');
+      setLoading(false);
+      return;
+    }
+
     console.log("✅ All validations passed!");
     console.log("✅ Template ID:", selectedTemplate.id);
     console.log("✅ VIN List:", vinList);
     console.log("✅ Number of vehicles to create:", vinList.length);
     console.log("✅ Warehouse ID:", values.warehouseId);
 
+    // Tiếp tục với việc tạo vehicle
     try {
-      setLoading(true);
-
       // ✅ Format dates to ISO 8601 with timezone
       const formatDateToISO = (dateString) => {
         if (!dateString) return null;
@@ -575,11 +693,24 @@ function CreateElectricVehicle() {
         setVersions([]); // ✅ Reset versions list
         setVinList([]); // ✅ Reset VIN list
         setCurrentVinInput(''); // ✅ Reset current VIN input
+        
+        // ✅ Reset về trang đầu tiên TRƯỚC KHI load lại danh sách
+        setCurrentPage(1);
+        
+        // ✅ Load lại danh sách (đã được sắp xếp theo mới nhất)
         await loadAllVehicles();
 
-        // ✅ Scroll to top và reset về trang đầu tiên
-        setCurrentPage(1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // ✅ Scroll to top sau khi danh sách đã được load và render
+        // Sử dụng setTimeout để đảm bảo DOM đã render xong
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          
+          // ✅ Scroll đến phần danh sách xe nếu có
+          const vehicleListElement = document.querySelector('.ant-table-wrapper');
+          if (vehicleListElement) {
+            vehicleListElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
 
         console.log("✅ Vehicle created successfully, scrolled to top");
       } else {
@@ -767,11 +898,29 @@ function CreateElectricVehicle() {
         {/* Modal tạo xe */}
         <Modal
           open={isCreateModalVisible}
-          title="Tạo xe điện mới"
+          title={
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <CarOutlined className="text-white text-lg" />
+              </div>
+              <div>
+                <Typography.Title level={4} className="m-0">Tạo xe điện mới</Typography.Title>
+                <Typography.Text type="secondary" className="text-xs">Nhập thông tin để tạo xe điện với VIN</Typography.Text>
+              </div>
+            </div>
+          }
           onCancel={() => setIsCreateModalVisible(false)}
           footer={null}
-          width={900}
+          width={1000}
           destroyOnClose
+          className="create-vehicle-modal"
+          styles={{
+            body: {
+              padding: '24px',
+              maxHeight: '80vh',
+              overflowY: 'auto'
+            }
+          }}
         >
           <Form
             form={form}
@@ -783,12 +932,37 @@ function CreateElectricVehicle() {
             }}
             preserve
           >
-            <Alert
-              message="Bước 1: Chọn Model → Version → Color để tìm Template"
-              type="warning"
-              showIcon
-              className="mb-4"
+            {/* Steps Indicator */}
+            <Steps
+              current={selectedTemplate ? 1 : 0}
+              items={[
+                {
+                  title: 'Chọn Template',
+                  description: 'Model → Version → Color',
+                  icon: <FileTextOutlined />,
+                },
+                {
+                  title: 'Nhập thông tin',
+                  description: 'VIN và thông tin xe',
+                  icon: <ShoppingCartOutlined />,
+                },
+              ]}
+              className="mb-6"
             />
+
+            {/* Step 1: Template Selection */}
+            <Card
+              title={
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <FileTextOutlined className="text-blue-600" />
+                  </div>
+                  <span className="text-base font-semibold">Bước 1: Chọn Template</span>
+                </div>
+              }
+              className="mb-4 shadow-sm"
+              headStyle={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderBottom: '2px solid #0ea5e9' }}
+            >
 
             <Row gutter={16}>
               <Col span={24}>
@@ -922,88 +1096,117 @@ function CreateElectricVehicle() {
             )}
 
             {selectedTemplate && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-                {/* Header - Template ID */}
-                <div className="flex items-center gap-2 mb-3 pb-2 border-b border-green-200">
-                  <CheckCircleOutlined className="text-green-600" />
-                  <Text strong className="text-sm">Template ID:</Text>
-                  <Text code copyable className="bg-blue-50 px-2 py-1 rounded text-xs font-mono">
-                    {selectedTemplate.id}
-                  </Text>
+              <Card
+                className="mb-4 border-2 border-green-300 shadow-md"
+                style={{
+                  background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                }}
+              >
+                <div className="flex items-start gap-4">
+                  {/* Image Preview */}
+                  {selectedTemplate.imgUrl && Array.isArray(selectedTemplate.imgUrl) && selectedTemplate.imgUrl.length > 0 && (
+                    <div className="flex-shrink-0">
+                      <Image
+                        src={selectedTemplate.imgUrl[0]}
+                        alt="Template"
+                        width={120}
+                        height={120}
+                        className="rounded-lg object-cover border-2 border-white shadow-md"
+                        preview={{
+                          mask: 'Xem ảnh',
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-green-300">
+                      <CheckCircleOutlined className="text-green-600 text-lg" />
+                      <Text strong className="text-base">Template đã chọn</Text>
+                      <Tag color="success" className="ml-auto">
+                        <Text code copyable className="text-xs font-mono bg-white px-2 py-1 rounded">
+                          {selectedTemplate.id}
+                        </Text>
+                      </Tag>
+                    </div>
+
+                    {/* Info Grid */}
+                    <Row gutter={[16, 12]}>
+                      <Col span={12}>
+                        <div className="bg-white/60 p-3 rounded-lg">
+                          <Text type="secondary" className="text-xs block mb-1">Version</Text>
+                          <Text strong className="text-base text-blue-600">
+                            {selectedTemplate.version?.versionName || 'N/A'}
+                          </Text>
+                        </div>
+                      </Col>
+                      <Col span={12}>
+                        <div className="bg-white/60 p-3 rounded-lg">
+                          <Text type="secondary" className="text-xs block mb-1">Model</Text>
+                          <Text strong className="text-base">
+                            {selectedTemplate.version?.modelName || 'N/A'}
+                          </Text>
+                        </div>
+                      </Col>
+                      {selectedTemplate.description && (
+                        <Col span={24}>
+                          <div className="bg-white/60 p-3 rounded-lg">
+                            <Text type="secondary" className="text-xs block mb-1">Mô tả</Text>
+                            <Text className="text-sm">{selectedTemplate.description}</Text>
+                          </div>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
                 </div>
-
-                {/* Images preview - Thumbnail nhỏ */}
-                {selectedTemplate.imgUrl && Array.isArray(selectedTemplate.imgUrl) && selectedTemplate.imgUrl.length > 0 && (
-                  <div className="mb-2 pb-2 border-b border-gray-200">
-                    <Text type="secondary" className="text-xs block mb-1">
-                      Hình ảnh ({selectedTemplate.imgUrl.length}):
-                    </Text>
-
-                    <Button
-                      type="primary"
-                      size="small"
-                      className="bg-blue-500 hover:bg-blue-600 text-white mt-1"
-                      onClick={() => window.open(selectedTemplate.imgUrl[0], "_blank")}
-                    >
-                      Xem ảnh full
-                    </Button>
-                  </div>
-                )}
-
-                {/* Thông tin chi tiết - 4 cột */}
-                <Row gutter={[8, 8]}>
-                  <Col span={6}>
-                    <Text type="secondary" className="text-xs block">Version:</Text>
-                    <Text strong className="text-sm text-blue-600">
-                      {selectedTemplate.version?.versionName || 'N/A'}
-                    </Text>
-                  </Col>
-
-                  <Col span={6}>
-                    <Text type="secondary" className="text-xs block">Model:</Text>
-                    <Text strong className="text-sm">
-                      {selectedTemplate.version?.modelName || 'N/A'}
-                    </Text>
-                  </Col>
-                </Row>
-
-                {/* Description - Nếu có */}
-                {selectedTemplate.description && (
-                  <div className="mt-3 pt-2 border-t border-gray-200">
-                    <Text type="secondary" className="text-xs">Mô tả: </Text>
-                    <Text className="text-xs">{selectedTemplate.description}</Text>
-                  </div>
-                )}
-              </div>
+              </Card>
             )}
+            </Card>
 
-            <Divider />
-
-            <Alert
-              message="Bước 2: Nhập thông tin xe"
-              type="info"
-              showIcon
-              className="mb-4"
-            />
-
+            {/* Step 2: Vehicle Information */}
+            <Card
+              title={
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ShoppingCartOutlined className="text-green-600" />
+                  </div>
+                  <span className="text-base font-semibold">Bước 2: Nhập thông tin xe</span>
+                </div>
+              }
+              className="mb-4 shadow-sm"
+              headStyle={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderBottom: '2px solid #22c55e' }}
+            >
             {/* VIN List Input Section */}
             <Row gutter={16}>
               <Col span={24}>
-                <div className="mb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <Text strong>
-                      <CarOutlined className="mr-2" />
-                      Danh sách VIN
-                    </Text>
+                <Card
+                  size="small"
+                  className="mb-4"
+                  title={
+                    <div className="flex items-center gap-2">
+                      <CarOutlined className="text-blue-600" />
+                      <Text strong className="text-base">Danh sách VIN</Text>
+                    </div>
+                  }
+                  extra={
                     <Radio.Group
                       value={isBulkInputMode}
                       onChange={(e) => setIsBulkInputMode(e.target.value)}
                       size="small"
+                      buttonStyle="solid"
                     >
-                      <Radio.Button value={false}>Nhập từng VIN</Radio.Button>
-                      <Radio.Button value={true}>Nhập hàng loạt</Radio.Button>
+                      <Radio.Button value={false}>
+                        <PlusOutlined className="mr-1" />
+                        Nhập từng VIN
+                      </Radio.Button>
+                      <Radio.Button value={true}>
+                        <FileTextOutlined className="mr-1" />
+                        Nhập hàng loạt
+                      </Radio.Button>
                     </Radio.Group>
-                  </div>
+                  }
+                >
 
                   {/* Single VIN Input Mode */}
                   {!isBulkInputMode && (
@@ -1029,10 +1232,44 @@ function CreateElectricVehicle() {
                       <Input.TextArea
                         placeholder="Nhập nhiều VIN, mỗi VIN một dòng hoặc cách nhau bởi dấu phẩy&#10;VD:&#10;VIN1234567890&#10;VIN0987654321&#10;VIN1111111111"
                         value={bulkVinInput}
-                        onChange={(e) => setBulkVinInput(e.target.value.toUpperCase())}
-                        rows={6}
-                        style={{ textTransform: 'uppercase', fontFamily: 'monospace' }}
+                        onChange={handleBulkVinInputChange}
+                        rows={8}
+                        style={{ 
+                          textTransform: 'uppercase', 
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          lineHeight: '1.8'
+                        }}
+                        showCount
+                        maxLength={10000}
                       />
+                      
+                      {/* Real-time validation info */}
+                      {bulkVinInput && (
+                        <div className="mt-2 mb-2">
+                          {(() => {
+                            const lines = bulkVinInput.split('\n').filter(line => line.trim().length > 0);
+                            const validLines = lines.filter(line => /^VIN\d{10}$/.test(line.trim()));
+                            const invalidLines = lines.filter(line => !/^VIN\d{10}$/.test(line.trim()));
+                            
+                            return (
+                              <div className="text-xs space-y-1">
+                                {validLines.length > 0 && (
+                                  <div className="text-green-600">
+                                    ✅ {validLines.length} VIN hợp lệ: {validLines.slice(0, 3).join(', ')}{validLines.length > 3 ? '...' : ''}
+                                  </div>
+                                )}
+                                {invalidLines.length > 0 && (
+                                  <div className="text-red-600">
+                                    ⚠️ {invalidLines.length} VIN không hợp lệ (phải là VIN + đúng 10 số): {invalidLines.slice(0, 3).join(', ')}{invalidLines.length > 3 ? '...' : ''}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      
                       <Button
                         type="primary"
                         onClick={handleBulkAddVins}
@@ -1044,7 +1281,13 @@ function CreateElectricVehicle() {
                       </Button>
                       <Alert
                         message="Hướng dẫn"
-                        description="Nhập mỗi VIN trên một dòng, hoặc cách nhau bằng dấu phẩy. Format: VIN + 10 chữ số (VD: VIN1234567890)"
+                        description={
+                          <div>
+                            <div className="mb-1">• Nhập mỗi VIN trên một dòng, hoặc cách nhau bằng dấu phẩy</div>
+                            <div className="mb-1">• Format: <strong>VIN + đúng 10 chữ số</strong> (VD: VIN1234567890)</div>
+                            <div className="text-red-600">• Hệ thống sẽ tự động giới hạn mỗi VIN chỉ có 10 số sau "VIN"</div>
+                          </div>
+                        }
                         type="info"
                         showIcon
                         className="mt-2"
@@ -1054,40 +1297,51 @@ function CreateElectricVehicle() {
 
                   {/* VIN List Display */}
                   {vinList.length > 0 && (
-                    <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                      <div className="flex justify-between items-center mb-2">
-                        <Text strong className="text-sm">
-                          Đã thêm {vinList.length} VIN
-                        </Text>
-                        <Button
-                          size="small"
-                          danger
-                          onClick={handleClearAllVins}
-                          icon={<DeleteOutlined />}
-                        >
-                          Xóa tất cả
-                        </Button>
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
+                    <Card
+                      className="mt-3"
+                      size="small"
+                      title={
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge count={vinList.length} showZero color="#1890ff">
+                              <Text strong className="text-base">Danh sách VIN đã thêm</Text>
+                            </Badge>
+                          </div>
+                          <Button
+                            size="small"
+                            danger
+                            onClick={handleClearAllVins}
+                            icon={<DeleteOutlined />}
+                          >
+                            Xóa tất cả
+                          </Button>
+                        </div>
+                      }
+                    >
+                      <div className="max-h-48 overflow-y-auto space-y-2">
                         {vinList.map((vin, idx) => (
                           <div
                             key={idx}
-                            className="flex justify-between items-center bg-white px-3 py-2 rounded border"
+                            className="flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 rounded-lg border border-blue-200 hover:shadow-md transition-all"
                           >
-                            <Text code className="font-mono text-xs">
-                              {idx + 1}. {vin}
-                            </Text>
+                            <div className="flex items-center gap-3">
+                              <Badge count={idx + 1} style={{ backgroundColor: '#1890ff' }} />
+                              <Text code className="font-mono text-sm font-semibold text-blue-700">
+                                {vin}
+                              </Text>
+                            </div>
                             <Button
                               size="small"
                               danger
                               type="text"
                               icon={<DeleteOutlined />}
                               onClick={() => handleRemoveVin(vin)}
+                              className="hover:bg-red-100"
                             />
                           </div>
                         ))}
                       </div>
-                    </div>
+                    </Card>
                   )}
 
                   {vinList.length === 0 && (
@@ -1097,20 +1351,31 @@ function CreateElectricVehicle() {
                       type="warning"
                       showIcon
                       className="mt-2"
+                      icon={<InfoCircleOutlined />}
                     />
                   )}
-                </div>
+                </Card>
               </Col>
             </Row>
 
-            <Row gutter={16}>
+            <Row gutter={16} className="mb-4">
               <Col span={12}>
                 <Form.Item
-                  label="Chọn Kho"
+                  label={
+                    <span className="flex items-center gap-2">
+                      <SafetyOutlined className="text-blue-600" />
+                      Chọn Kho
+                    </span>
+                  }
                   name="warehouseId"
                   rules={[{ required: true, message: "Vui lòng chọn kho!" }]}
                 >
-                  <Select placeholder="Chọn kho..." showSearch>
+                  <Select 
+                    placeholder="Chọn kho..." 
+                    showSearch
+                    size="large"
+                    optionFilterProp="children"
+                  >
                     {warehouses.map((warehouse) => (
                       <Option key={warehouse.id} value={warehouse.id}>
                         {warehouse.name || warehouse.warehouseName}
@@ -1121,25 +1386,47 @@ function CreateElectricVehicle() {
               </Col>
 
               <Col span={12}>
-                <div className="p-3 bg-green-50 rounded border border-green-200">
-                  <Text strong className="block text-sm mb-1">Số xe sẽ được tạo:</Text>
-                  <Text className="text-2xl font-bold text-green-600">
-                    {vinList.length} xe
-                  </Text>
-                </div>
+                <Card
+                  className="h-full"
+                  style={{
+                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                    border: '2px solid #f59e0b'
+                  }}
+                >
+                  <Statistic
+                    title={
+                      <span className="text-sm font-medium text-gray-700">
+                        Số xe sẽ được tạo
+                      </span>
+                    }
+                    value={vinList.length}
+                    suffix="xe"
+                    valueStyle={{ 
+                      color: '#d97706',
+                      fontSize: '32px',
+                      fontWeight: 'bold'
+                    }}
+                    prefix={<CarOutlined />}
+                  />
+                </Card>
               </Col>
             </Row>
 
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="Trạng thái"
+                  label={
+                    <span className="flex items-center gap-2">
+                      <CheckCircleOutlined className="text-green-600" />
+                      Trạng thái
+                    </span>
+                  }
                   name="status"
                   initialValue={1}
                   rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
                   tooltip="Trạng thái ban đầu của xe khi tạo mới"
                 >
-                  <Select placeholder="Chọn trạng thái...">
+                  <Select placeholder="Chọn trạng thái..." size="large">
                     <Option value={1}><span className="mr-2">✅</span>Khả dụng</Option>
                     <Option value={2}><span className="mr-2">⏳</span>Đang chờ</Option>
                     <Option value={3}><span className="mr-2">📦</span>Đã đặt</Option>
@@ -1153,11 +1440,21 @@ function CreateElectricVehicle() {
 
               <Col span={12}>
                 <Form.Item
-                  label="Ngày sản xuất"
+                  label={
+                    <span className="flex items-center gap-2">
+                      <CalendarOutlined className="text-blue-600" />
+                      Ngày sản xuất
+                    </span>
+                  }
                   name="manufactureDate"
                   rules={[{ required: true, message: "Vui lòng chọn ngày sản xuất!" }]}
                 >
-                  <Input type="date" placeholder="Chọn ngày sản xuất" />
+                  <Input 
+                    type="date" 
+                    placeholder="Chọn ngày sản xuất" 
+                    size="large"
+                    className="w-full"
+                  />
                 </Form.Item>
               </Col>
             </Row>
@@ -1165,38 +1462,62 @@ function CreateElectricVehicle() {
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
-                  label="Ngày nhập kho"
+                  label={
+                    <span className="flex items-center gap-2">
+                      <CalendarOutlined className="text-green-600" />
+                      Ngày nhập kho
+                    </span>
+                  }
                   name="importDate"
                   rules={[{ required: true, message: "Vui lòng chọn ngày nhập kho!" }]}
                 >
-                  <Input type="date" placeholder="Chọn ngày nhập kho" />
+                  <Input 
+                    type="date" 
+                    placeholder="Chọn ngày nhập kho" 
+                    size="large"
+                    className="w-full"
+                  />
                 </Form.Item>
               </Col>
 
               <Col span={12}>
                 <Form.Item
-                  label="Hạn bảo hành"
+                  label={
+                    <span className="flex items-center gap-2">
+                      <SafetyOutlined className="text-orange-600" />
+                      Hạn bảo hành
+                    </span>
+                  }
                   name="warrantyExpiryDate"
                   rules={[{ required: true, message: "Vui lòng chọn hạn bảo hành!" }]}
                 >
-                  <Input type="date" placeholder="Chọn hạn bảo hành" />
+                  <Input 
+                    type="date" 
+                    placeholder="Chọn hạn bảo hành" 
+                    size="large"
+                    className="w-full"
+                  />
                 </Form.Item>
               </Col>
             </Row>
+            </Card>
 
             <Divider />
 
-            <Row justify="end" gutter={16}>
+            <Row justify="end" gutter={16} className="mt-6">
               <Col>
-                <Button onClick={() => {
-                  setIsCreateModalVisible(false);
-                  form.resetFields();
-                  setSelectedTemplate(null);
-                  setVinList([]);
-                  setCurrentVinInput('');
-                  setBulkVinInput('');
-                  setIsBulkInputMode(false);
-                }}>
+                <Button 
+                  onClick={() => {
+                    setIsCreateModalVisible(false);
+                    form.resetFields();
+                    setSelectedTemplate(null);
+                    setVinList([]);
+                    setCurrentVinInput('');
+                    setBulkVinInput('');
+                    setIsBulkInputMode(false);
+                  }}
+                  size="large"
+                >
                   Hủy
                 </Button>
               </Col>
@@ -1216,6 +1537,12 @@ function CreateElectricVehicle() {
                     loading={loading}
                     disabled={!selectedTemplate || vinList.length === 0}
                     icon={<CarOutlined />}
+                    size="large"
+                    style={{
+                      background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                      border: 'none',
+                      boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)'
+                    }}
                   >
                     Tạo {vinList.length > 0 ? `${vinList.length} ` : ''}Xe
                   </Button>

@@ -41,8 +41,29 @@ function TemplateOverview() {
       console.log("📥 Template API Response:", result);
 
       if (result.success) {
-        const templatesData = result.data || [];
+        // ✅ Xử lý nhiều trường hợp: result.data có thể là array hoặc object có data property
+        let templatesData = [];
+        
+        if (Array.isArray(result.data)) {
+          // Nếu result.data là array trực tiếp
+          templatesData = result.data;
+        } else if (result.data && Array.isArray(result.data.data)) {
+          // Nếu result.data là object có property data là array
+          templatesData = result.data.data;
+        } else if (result.data && result.data.result && Array.isArray(result.data.result)) {
+          // Nếu result.data có property result là array
+          templatesData = result.data.result;
+        } else {
+          // Fallback: thử lấy từ result.result hoặc result.data
+          templatesData = result.result || result.data || [];
+          // Đảm bảo là array
+          if (!Array.isArray(templatesData)) {
+            templatesData = [];
+          }
+        }
+        
         console.log("✅ Loaded templates:", templatesData);
+        console.log("✅ Templates is array:", Array.isArray(templatesData));
         setTemplates(templatesData);
 
         if (templatesData.length === 0) {
@@ -80,7 +101,7 @@ function TemplateOverview() {
     <EVMStaffLayout>
       <PageContainer
         title="Tổng Quan Xe Điện"
-        subTitle={`${templates.filter(t => t.isActive).length} mẫu xe điện có sẵn`}
+        subTitle={`${Array.isArray(templates) ? templates.filter(t => t.isActive !== false && t.status !== 0).length : 0} mẫu xe điện có sẵn`}
         extra={[
           <Search
             key="search"
@@ -109,7 +130,7 @@ function TemplateOverview() {
         )}
 
         {/* Empty State */}
-        {!loading && templates.length === 0 && (
+        {!loading && (!Array.isArray(templates) || templates.length === 0) && (
           <Card className="text-center py-20">
             <CarOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />
             <Text type="secondary" className="block mt-4">
@@ -119,7 +140,7 @@ function TemplateOverview() {
         )}
 
         {/* Template Grid */}
-        {!loading && templates.length > 0 && (
+        {!loading && Array.isArray(templates) && templates.length > 0 && (
           <Row gutter={[16, 16]}>
             {templates
               .filter((template) => {
