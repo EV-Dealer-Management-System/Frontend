@@ -37,11 +37,7 @@ const CreateStaffFeedback = ({ onSuccess, onCancel }) => {
 
       // Gán key vào response để Antd quản lý đúng
       onSuccess({ attachmentKey: objectKey }, file);
-      message.success({
-        content: `${file.name} upload thành công`,
-        duration: 2,
-        style: { zIndex: 9999 },
-      });
+      // Không hiển thị thông báo khi upload thành công
     } catch (e) {
       onError(e);
       message.error({
@@ -80,13 +76,14 @@ const CreateStaffFeedback = ({ onSuccess, onCancel }) => {
         form.resetFields();
         setFileList([]);
         
-        // Gọi callback onSuccess với message từ API
-        const successMessage = res?.message || 'Tạo feedback thành công! Feedback của bạn đã được gửi.';
+        // Luôn hiển thị thông báo tiếng Việt
+        const successMessage = 'Tạo feedback thành công! Feedback của bạn đã được gửi.';
         onSuccess && onSuccess(successMessage);
         onCancel && onCancel();
       } else {
+        // Luôn hiển thị thông báo tiếng Việt
         message.error({
-          content: res?.message || res?.error || 'Tạo feedback thất bại. Vui lòng thử lại!',
+          content: 'Tạo feedback thất bại. Vui lòng thử lại!',
           duration: 4,
         });
       }

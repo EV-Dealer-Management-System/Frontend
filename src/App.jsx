@@ -102,30 +102,13 @@ function App() {
         <Route path="/email-verification" element={<EmailVerification />} />
         <Route path="/forgot-password" element={<ResetPassword />} />
         <Route path="/api/reset-password" element={<ResetPasswordConfirm />} />
-        <Route
-          path="/EContract/contract"
-          element={
-            <PublicRoute>
-              <ContractPage />
-            </PublicRoute>
-          }
-        />
+        {/* Public contract pages - accessible by anyone regardless of login status */}
+        <Route path="/EContract/contract" element={<ContractPage />} />
         <Route
           path="/EContract/contract/get-info-to-sign-process-by-code"
-          element={
-            <PublicRoute>
-              <ContractPage />
-            </PublicRoute>
-          }
+          element={<ContractPage />}
         />
-        <Route
-          path="/EContract/View"
-          element={
-            <PublicRoute>
-              <ContractViewer />
-            </PublicRoute>
-          }
-        />
+        <Route path="/EContract/View" element={<ContractViewer />} />
         {/* Admin Routes - với catch-all route */}
         <Route
           path="/admin/*"

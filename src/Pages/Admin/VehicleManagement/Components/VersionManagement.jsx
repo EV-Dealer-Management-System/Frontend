@@ -19,6 +19,7 @@ import {
   Divider,
   Descriptions,
   ConfigProvider,
+  Tooltip,
 } from "antd";
 import viVN from 'antd/lib/locale/vi_VN';
 import {
@@ -32,6 +33,7 @@ import {
   StopOutlined,
   CalendarOutlined,
   SortAscendingOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
@@ -74,7 +76,10 @@ function ManageVersion() {
     try {
       const res = await vehicleApi.getAllVersions();
       if (res.success) {
-        setVersions(res.data || []);
+        // Tự động ẩn các version không hoạt động
+        const allVersions = res.data || [];
+        const activeVersions = allVersions.filter(version => version.isActive !== false);
+        setVersions(activeVersions);
       } else {
         message.error(res.error || "Không thể tải versions");
         setVersions([]);
@@ -188,30 +193,15 @@ function ManageVersion() {
     }
   };
 
-  // Filter data
-  const filteredVersions = versions.filter((version) => {
-    const model = models.find((m) => m.id === version.modelId);
-    const modelName = model?.modelName || "";
-
-    const matchModel = searchModel
-      ? modelName.toLowerCase().includes(searchModel.toLowerCase())
-      : true;
-
-    return matchModel;
-  });
-
   // Filter and sort data
   const filteredAndSortedVersions = React.useMemo(() => {
     // Filter
     let filtered = versions.filter((version) => {
+      if (!searchModel) return true;
       const model = models.find((m) => m.id === version.modelId);
       const modelName = model?.modelName || "";
-
-      const matchModel = searchModel
-        ? modelName.toLowerCase().includes(searchModel.toLowerCase())
-        : true;
-
-      return matchModel;
+      // So sánh chính xác với tên model đã chọn
+      return modelName === searchModel;
     });
 
     // Sort
@@ -246,34 +236,46 @@ function ManageVersion() {
   const columns = [
     {
       title: "STT",
-      width: 100,
+      width: 70,
       align: "center",
-      render: (_, __, i) => i + 1,
+      render: (_, __, i) => (
+        <Text strong style={{ color: "#1890ff", fontSize: 13 }}>{i + 1}</Text>
+      ),
     },
     {
       title: "Model",
       dataIndex: "modelId",
-      width: 100,
+      width: 150,
       render: (modelId) => {
         const m = models.find((x) => x.id === modelId);
-        return <Tag color="blue">{m?.modelName || (modelId ? modelId.slice(0, 8) : "N/A")}</Tag>;
+        return (
+          <Tag color="blue" style={{ fontSize: 12, padding: '4px 10px', borderRadius: '4px' }}>
+            {m?.modelName || (modelId ? modelId.slice(0, 8) : "N/A")}
+          </Tag>
+        );
       },
     },
     {
       title: "Version",
       dataIndex: "versionName",
-      width: 140,
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (t) => (
-        <Space>
-          <SettingOutlined style={{ color: "#1890ff" }} />
-          <Text strong>{t}</Text>
-        </Space>
+        <Tooltip placement="topLeft" title={t}>
+          <Space>
+            <SettingOutlined style={{ color: "#1890ff", fontSize: 14 }} />
+            <Text strong style={{ fontSize: 13 }}>{t}</Text>
+          </Space>
+        </Tooltip>
       ),
     },
     {
       title: "Thao tác",
-      width: 200,
+      width: 220,
       fixed: "right",
+      align: "center",
       render: (_, r) => (
         <Space>
           <Button

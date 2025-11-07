@@ -180,6 +180,7 @@ function VehicleManagement() {
           }));
         }
 
+        // Kiểm tra nếu không có template nào
         if (templatesData.length === 0) {
           message.info("Chưa có template nào.");
         }

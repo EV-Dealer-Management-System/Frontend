@@ -69,7 +69,7 @@ const CreateFeedBack = ({ onSuccess, onCancel }) => {
       });
 
       onSuccess({ attachmentKey: objectKey }, file);
-      message.success(`${file.name} upload thành công`);
+      // Không hiển thị thông báo khi upload thành công
     } catch (e) {
       onError(e);
       message.error(`${file.name} upload thất bại!`);
@@ -103,11 +103,13 @@ const CreateFeedBack = ({ onSuccess, onCancel }) => {
         form.resetFields();
         setFileList([]);
         
-        const successMessage = res?.message || 'Tạo feedback thành công!';
+        // Luôn hiển thị thông báo tiếng Việt
+        const successMessage = 'Tạo feedback thành công! Feedback của bạn đã được gửi.';
         onSuccess && onSuccess(successMessage);
         onCancel && onCancel();
       } else {
-        message.error(res?.message || res?.error || 'Tạo feedback thất bại');
+        // Luôn hiển thị thông báo tiếng Việt
+        message.error('Tạo feedback thất bại. Vui lòng thử lại!');
       }
     } catch (e) {
       message.error('Đã xảy ra lỗi khi tạo feedback. Vui lòng thử lại!');

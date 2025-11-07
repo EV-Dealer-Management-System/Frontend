@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Table, Card, Tag, Space, Input, Typography, Image, Button, Select, message, App } from 'antd';
+import { Table, Card, Tag, Space, Input, Typography, Image, Button, Select, message, App, Tooltip } from 'antd';
 import { SearchOutlined, StarOutlined, EditOutlined, FilterOutlined } from '@ant-design/icons';
 import { GetAllCustomerFeedBack } from '../../../../App/DealerStaff/FeedBackManagement/GetAllCustomerFeedBack';
 import { UpdateStatusCustomerFeedback as UpdateStatusAPI } from '../../../../App/DealerManager/ManageCustomerFeedback/UpdateStatusCustomerFeedback';
@@ -179,17 +179,33 @@ const ManageCustomerFeedback = () => {
       key: 'index',
       render: (_, __, index) => index + 1,
       align: 'center',
-      width: 60,
+      width: 50,
     },
     {
       title: 'Khách Hàng',
       dataIndex: 'customerName',
       key: 'customerName',
-      width: 180,
+      width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text, record) => (
-        <div>
-          <div><Text strong>{text || 'N/A'}</Text></div>
-          <div><Text type="secondary" style={{ fontSize: 12 }}>{record.customerPhone || 'N/A'}</Text></div>
+        <div style={{ lineHeight: 1.4 }}>
+          <Tooltip placement="topLeft" title={text || 'N/A'}>
+            <div style={{ 
+              whiteSpace: 'nowrap', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis',
+              marginBottom: 2
+            }}>
+              <Text strong style={{ fontSize: 12 }}>{text || 'N/A'}</Text>
+            </div>
+          </Tooltip>
+          <div>
+            <Text type="secondary" style={{ fontSize: 10 }}>
+              {record.customerPhone || 'N/A'}
+            </Text>
+          </div>
         </div>
       ),
     },
@@ -197,16 +213,28 @@ const ManageCustomerFeedback = () => {
       title: 'Email',
       dataIndex: 'customerEmail',
       key: 'customerEmail',
-      width: 200,
+      width: 160,
       ellipsis: true,
+      render: (text) => (
+        <Text style={{ fontSize: 12 }}>{text || 'N/A'}</Text>
+      ),
     },
     {
       title: 'Nội dung',
       dataIndex: 'feedbackContent',
       key: 'feedbackContent',
-      ellipsis: true,
+      ellipsis: false,
       render: (text) => (
-        <Text ellipsis={{ tooltip: text }}>{text || 'Không có nội dung'}</Text>
+        <div style={{ 
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          whiteSpace: 'normal',
+          lineHeight: '1.4',
+          fontSize: 12,
+          maxWidth: '100%'
+        }}>
+          <Text>{text || 'Không có nội dung'}</Text>
+        </div>
       ),
     },
     {
@@ -214,25 +242,25 @@ const ManageCustomerFeedback = () => {
       dataIndex: 'imgUrls',
       key: 'imgUrls',
       align: 'center',
-      width: 120,
+      width: 100,
       render: (imgUrls) => {
         if (!imgUrls || imgUrls.length === 0) {
-          return <Text type="secondary">Không có</Text>;
+          return <Text type="secondary" style={{ fontSize: 11 }}>Không có</Text>;
         }
         return (
-          <Space>
+          <Space size="small">
             <Image.PreviewGroup>
-              {imgUrls.slice(0, 3).map((url, index) => (
+              {imgUrls.slice(0, 2).map((url, index) => (
                 <Image
                   key={index}
-                  width={30}
-                  height={30}
+                  width={28}
+                  height={28}
                   src={url}
                   style={{ objectFit: 'cover', borderRadius: 4 }}
                 />
               ))}
             </Image.PreviewGroup>
-            {imgUrls.length > 3 && <Text type="secondary">+{imgUrls.length - 3}</Text>}
+            {imgUrls.length > 2 && <Text type="secondary" style={{ fontSize: 10 }}>+{imgUrls.length - 2}</Text>}
           </Space>
         );
       },
@@ -242,7 +270,7 @@ const ManageCustomerFeedback = () => {
       dataIndex: 'status',
       key: 'status',
       align: 'center',
-      width: 120,
+      width: 100,
       render: (status, record) => {
         // Đảm bảo status được parse đúng
         const statusNum = typeof status === 'string' ? parseInt(status, 10) : status;
@@ -253,7 +281,7 @@ const ManageCustomerFeedback = () => {
       title: 'Cập nhật trạng thái',
       key: 'updateStatus',
       align: 'center',
-      width: 180,
+      width: 150,
       render: (_, record) => {
         // Đảm bảo status là number
         const recordStatus = typeof record.status === 'string' ? parseInt(record.status, 10) : record.status;
@@ -266,7 +294,8 @@ const ManageCustomerFeedback = () => {
             onChange={(value) => handleUpdateStatus(record.id, value, recordStatus)}
             loading={updatingId === record.id}
             disabled={isDisabled}
-            style={{ width: 150 }}
+            style={{ width: 130 }}
+            size="small"
           >
             <Option value={0}>Chờ xử lý</Option>
             <Option value={3} disabled={recordStatus !== 0}>Đã trả lời</Option>
@@ -279,8 +308,12 @@ const ManageCustomerFeedback = () => {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 130,
-      render: (date) => new Date(date).toLocaleDateString('vi-VN'),
+      width: 100,
+      render: (date) => (
+        <Text style={{ fontSize: 11 }}>
+          {date ? new Date(date).toLocaleDateString('vi-VN') : 'N/A'}
+        </Text>
+      ),
     },
   ];
 
@@ -314,6 +347,7 @@ const ManageCustomerFeedback = () => {
             allowClear
             suffixIcon={<FilterOutlined />}
           >
+            <Option value={null}>Tất cả</Option>
             <Option value={0}>Chờ xử lý</Option>
             <Option value={3}>Đã trả lời</Option>
             <Option value={4}>Đã hủy</Option>
@@ -332,7 +366,7 @@ const ManageCustomerFeedback = () => {
           defaultPageSize: 10,
           showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} feedback`,
         }}
-        scroll={{ x: true }}
+        size="small"
       />
     </Card>
   );

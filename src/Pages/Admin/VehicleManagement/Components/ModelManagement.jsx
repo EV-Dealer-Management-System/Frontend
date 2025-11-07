@@ -16,6 +16,7 @@ import {
   Divider,
   Select,
   ConfigProvider,
+  Tooltip,
 } from "antd";
 import viVN from 'antd/lib/locale/vi_VN';
 import {
@@ -27,6 +28,7 @@ import {
   CheckCircleOutlined,
   SearchOutlined,
   SortAscendingOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../../App/EVMAdmin/VehiclesManagement/Vehicles";
@@ -57,7 +59,10 @@ function ManageModel() {
     try {
       const result = await vehicleApi.getAllModels();
       if (result.success) {
-        setModels(result.data || []);
+        // Tự động ẩn các model không hoạt động
+        const allModels = result.data || [];
+        const activeModels = allModels.filter(model => model.isActive !== false);
+        setModels(activeModels);
       } else {
         message.error("Không thể tải danh sách model");
         setModels([]);
@@ -140,11 +145,9 @@ function ManageModel() {
   const filteredAndSortedModels = React.useMemo(() => {
     // Filter
     let filtered = models.filter((model) => {
-      const keyword = searchKeyword.toLowerCase();
-      return (
-        model.modelName?.toLowerCase().includes(keyword) ||
-        model.description?.toLowerCase().includes(keyword)
-      );
+      if (!searchKeyword) return true;
+      // So sánh chính xác với tên model đã chọn
+      return model.modelName === searchKeyword;
     });
 
     // Sort
@@ -175,46 +178,60 @@ function ManageModel() {
       title: "STT",
       width: 70,
       align: "center",
-      render: (_, __, index) => index + 1,
+      render: (_, __, index) => (
+        <Text strong style={{ color: "#1890ff", fontSize: 13 }}>{index + 1}</Text>
+      ),
     },
     {
       title: "Tên Model",
       dataIndex: "modelName",
-      width: 260,
+      width: 220,
       render: (text) => (
         <Space>
-          <CarOutlined style={{ color: "#1890ff" }} />
-          <Text strong>{text}</Text>
+          <CarOutlined style={{ color: "#1890ff", fontSize: 14 }} />
+          <Text strong style={{ fontSize: 13 }}>{text}</Text>
         </Space>
       ),
     },
     {
       title: "Mô tả",
       dataIndex: "description",
-      width: 100,
-      render: (text) => <Text type="secondary">{text || "Chưa có mô tả"}</Text>,
+      width: 250,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text || "Chưa có mô tả"}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {text || "Chưa có mô tả"}
+          </Text>
+        </Tooltip>
+      ),
     },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
-      width: 160,
-      render: (date) => (date ? new Date(date).toLocaleDateString("vi-VN") : "N/A"),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
       width: 140,
-      render: (val) => (
-        <Tag color={val ? "success" : "default"}>{val ? "Đang hoạt động" : "Ngừng"}</Tag>
+      render: (date) => (
+        <Text style={{ fontSize: 12 }}>
+          {date ? new Date(date).toLocaleDateString("vi-VN") : "N/A"}
+        </Text>
       ),
     },
+    
     {
       title: "Thao tác",
-      width: 170,
+      width: 150,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+        <Space size="small">
+          <Button 
+            size="small" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEdit(record)}
+            type="primary"
+          >
             Sửa
           </Button>
           <Popconfirm
