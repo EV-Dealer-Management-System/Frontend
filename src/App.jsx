@@ -70,6 +70,7 @@ import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
 import DepositSettings from "./Pages/DealerManager/DepositSettings/DepositSettings";
 import UpdateAllEVDepositSettings from "./Pages/Admin/DepositSettings/UpdatAllEVDepositSettings";
 import GetAllContract from "./Pages/DealerManager/ViewAllOrderContract/GetAllContract";
+import GetAllContractManager from "./Pages/DealerStaff/ViewAllOrderContract/GetAllContractManage";
 function App() {
   return (
     <BrowserRouter>
@@ -278,6 +279,7 @@ function App() {
           element={
             <DealerStaffRoute>
               <Routes>
+                <Route path="orders-and-contracts/get-all-contracts" element={<GetAllContractManager />} />
                 <Route path="" element={<DealerStaff />} />
                 <Route
                   path="settings/change-password"

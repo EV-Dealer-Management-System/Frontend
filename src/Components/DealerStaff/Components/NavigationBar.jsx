@@ -98,6 +98,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <FileTextOutlined />,
             component: "./AllOrders",
           },
+          {
+            path: "/dealer-staff/orders-and-contracts/get-all-contracts",
+            name: "Danh sách hợp đồng",
+            icon: <FileTextOutlined />,
+            component: "./GetAllContractManage",
+          }
         ],
       },
       {

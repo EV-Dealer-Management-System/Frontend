@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
 import { Table, Button, message, Tag, Space, Modal, Typography, Tooltip, App } from 'antd';
-import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
+import { EyeOutlined, CheckOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getAllEcontractList } from '../../../App/DealerManager/GetAllContract/GetAllEcontract';
-import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
+import { confirmEcontract } from '../../../App/DealerManager/GetAllContract/ConfirmEcontract';
+import DealerStaffLayout from '../../../Components/DealerStaff/DealerStaffLayout';
 
 const { Title } = Typography;
 
-function GetAllContract() {
+function GetAllContractManager() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const { message, modal } = App.useApp();
 
   // Hàm lấy danh sách hợp đồng
@@ -30,6 +32,39 @@ function GetAllContract() {
     }
   };
 
+  // Hàm duyệt hợp đồng
+  const handleConfirmContract = async (contractId, contractName) => {
+    modal.confirm({
+      title: 'Xác nhận duyệt hợp đồng',
+      content: `Bạn có chắc chắn muốn duyệt hợp đồng "${contractName}"?`,
+      okText: 'Duyệt',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        setConfirmLoading(true);
+        try {
+          const response = await confirmEcontract(contractId);
+          if (response.success) {
+            message.success(response.message);
+            // Cập nhật status trong danh sách local
+            setContracts(prevContracts => 
+              prevContracts.map(contract => 
+                contract.id === contractId 
+                  ? { ...contract, status: 2 }
+                  : contract
+              )
+            );
+          } else {
+            message.error(response.error);
+          }
+        } catch (error) {
+          message.error('Có lỗi khi duyệt hợp đồng');
+        } finally {
+          setConfirmLoading(false);
+        }
+      }
+    });
+  };
+
   // Hàm hiển thị trạng thái hợp đồng
   const getStatusTag = (status) => {
     const statusMap = {
@@ -48,7 +83,7 @@ function GetAllContract() {
     return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
   };
 
-  // Hàm xem chi tiết hợp đồng (có thể mở PDF hoặc HTML)
+  // Hàm xem chi tiết hợp đồng
   const handleViewContract = (contract) => {
     modal.info({
       title: `Chi tiết hợp đồng: ${contract.name}`,
@@ -121,7 +156,7 @@ function GetAllContract() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 150,
+      width: 180,
       align: 'center',
       render: (_, record) => (
         <Space>
@@ -133,6 +168,22 @@ function GetAllContract() {
               className="text-blue-600 hover:bg-blue-50"
             />
           </Tooltip>
+          
+          {/* Nút duyệt chỉ hiện khi status = 1 (Draft) */}
+          {record.status === 1 && (
+            <Tooltip title="Duyệt hợp đồng">
+              <Button
+                type="primary"
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={() => handleConfirmContract(record.id, record.name)}
+                loading={confirmLoading}
+                className="bg-green-500 hover:bg-green-600 border-green-500"
+              >
+                Duyệt
+              </Button>
+            </Tooltip>
+          )}
         </Space>
       )
     }
@@ -144,52 +195,59 @@ function GetAllContract() {
   }, []);
 
   return (
-    <DealerManagerLayout>
-        <App>
-    <PageContainer
-      title={
-        <div className="flex items-center gap-2">
-          <Title level={3} className="!mb-0">
-            Danh sách hợp đồng điện tử
-          </Title>
-        </div>
-      }
-      extra={[
-        <Button
-          key="refresh"
-          icon={<ReloadOutlined />}
-          onClick={fetchContracts}
-          loading={loading}
-          className="flex items-center"
+    <DealerStaffLayout>
+      <App>
+        <PageContainer
+          title={
+            <div className="flex items-center gap-2">
+              <Title level={3} className="!mb-0">
+                Quản lý & Duyệt hợp đồng điện tử
+              </Title>
+            </div>
+          }
+          extra={[
+            <Button
+              key="refresh"
+              icon={<ReloadOutlined />}
+              onClick={fetchContracts}
+              loading={loading}
+              className="flex items-center"
+            >
+              Làm mới
+            </Button>
+          ]}
+          className="bg-gray-50 min-h-screen"
         >
-          Làm mới
-        </Button>
-      ]}
-      className="bg-gray-50 min-h-screen"
-    >
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <Table
-          columns={columns}
-          dataSource={contracts}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) => 
-              `${range[0]}-${range[1]} của ${total} hợp đồng`
-          }}
-          
-          className="w-full"
-          size="middle"
-        />
-      </div>
-    </PageContainer>
-    </App>
-    </DealerManagerLayout>
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+              <p className="text-blue-800 mb-1">
+                <strong>Hướng dẫn:</strong> Chỉ các hợp đồng ở trạng thái "Nháp" mới có thể được duyệt.
+              </p>
+              <p className="text-blue-600 text-sm">
+                Sau khi duyệt, trạng thái sẽ chuyển thành "Sẵn sàng" và có thể tiến hành ký kết.
+              </p>
+            </div>
+            
+            <Table
+              columns={columns}
+              dataSource={contracts}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => 
+                  `${range[0]}-${range[1]} của ${total} hợp đồng`
+              }}
+              className="w-full"
+              size="middle"
+            />
+          </div>
+        </PageContainer>
+      </App>
+    </DealerStaffLayout>
   );
-
 }
 
-export default GetAllContract;
+export default GetAllContractManager;
