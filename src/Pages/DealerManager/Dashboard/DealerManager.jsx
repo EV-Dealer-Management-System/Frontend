@@ -82,7 +82,7 @@ function DealerManager() {
             Làm mới dữ liệu
           </Button>
         }
-        style={{ maxWidth: 'none', width: '120%', marginLeft: '-100px' }}
+        style={{ maxWidth: 'none', width: '100%', marginLeft: '0px' }}
         className="w-full"
         contentStyle={{ padding: '8px 16px', width: '120%' }}
       >
