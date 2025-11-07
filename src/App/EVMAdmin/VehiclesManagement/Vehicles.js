@@ -548,10 +548,10 @@ export const vehicleApi = {
       console.log("🔄 [API] Calling: /EVTemplate/Get-all-template-vehicles");
       console.log("📤 [API] Parameters:", params);
 
-      // Xây dựng query parameters
+      // Lấy tất cả templates (không phân trang)
       const queryParams = new URLSearchParams({
         pageNumber: params.pageNumber || 1,
-        pageSize: params.pageSize || 10,
+        pageSize: params.pageSize || 1000, // Lấy số lượng lớn để get hết
         ...(params.search && { search: params.search }),
         ...(params.templateId && { templateId: params.templateId })
       });
@@ -561,14 +561,20 @@ export const vehicleApi = {
       console.log("📥 [API] getAllTemplateVehicles Response:", response.data);
 
       if (response.data?.isSuccess) {
-        const templates = response.data.result || response.data.data || [];
+        // Xử lý đúng cấu trúc response: result.data 
+        const templates = response.data.result?.data || [];
+        const pagination = response.data.result?.pagination || null;
+
         console.log(`✅ [API] Loaded ${templates.length} templates`);
+        console.log("📊 [API] Pagination info:", pagination);
 
         return {
           success: true,
-          data: templates,
+          isSuccess: true,
+          result: response.data.result, // Trả về toàn bộ result
+          data: templates, // Chỉ templates data
           message: response.data.message || "Lấy danh sách template thành công",
-          pagination: response.data.pagination || null
+          pagination: pagination
         };
       } else {
         return {

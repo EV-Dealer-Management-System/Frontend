@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   Row,
@@ -7,12 +7,10 @@ import {
   Spin,
   message,
   Button,
-  Input
+  Input,
+  Pagination,
 } from "antd";
-import {
-  ReloadOutlined,
-  CarOutlined,
-} from "@ant-design/icons";
+import { ReloadOutlined, CarOutlined } from "@ant-design/icons";
 import { PageContainer } from "@ant-design/pro-components";
 import { vehicleApi } from "../../../App/EVMAdmin/VehiclesManagement/Vehicles";
 import EVMStaffLayout from "../../../Components/EVMStaff/EVMStaffLayout";
@@ -25,61 +23,100 @@ const { Search } = Input;
 function TemplateOverview() {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState([]);
+  const [pagination, setPagination] = useState(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedVersionId, setSelectedVersionId] = useState(null);
-  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState("");
 
-  useEffect(() => {
-    loadAllTemplates();
-  }, []);
+  // Pagination params
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12); // 12 items per page for grid layout
 
-  const loadAllTemplates = async () => {
-    try {
-      setLoading(true);
-      const result = await vehicleApi.getAllTemplateVehicles();
+  // Load all templates function - defined before useEffect
+  const loadAllTemplates = useCallback(
+    async (page = 1, size = 12, search = "") => {
+      try {
+        setLoading(true);
 
-      console.log("📥 Template API Response:", result);
+        // Gọi API với pagination params
+        const params = {
+          pageNumber: page,
+          pageSize: size,
+          ...(search && search.trim() && { search: search.trim() }),
+        };
 
-      if (result.success) {
-        // ✅ Xử lý nhiều trường hợp: result.data có thể là array hoặc object có data property
-        let templatesData = [];
-        
-        if (Array.isArray(result.data)) {
-          // Nếu result.data là array trực tiếp
-          templatesData = result.data;
-        } else if (result.data && Array.isArray(result.data.data)) {
-          // Nếu result.data là object có property data là array
-          templatesData = result.data.data;
-        } else if (result.data && result.data.result && Array.isArray(result.data.result)) {
-          // Nếu result.data có property result là array
-          templatesData = result.data.result;
-        } else {
-          // Fallback: thử lấy từ result.result hoặc result.data
-          templatesData = result.result || result.data || [];
-          // Đảm bảo là array
-          if (!Array.isArray(templatesData)) {
-            templatesData = [];
+        console.log("📤 Loading templates with params:", params);
+        const result = await vehicleApi.getAllTemplateVehicles(params);
+
+        console.log("📥 Template API Response:", result);
+
+        if (result.isSuccess) {
+          // Xử lý cấu trúc dữ liệu từ API
+          const templatesData = Array.isArray(result.data) ? result.data : [];
+          const paginationInfo = result.pagination;
+
+          console.log("✅ Loaded templates:", templatesData);
+          console.log("📊 Pagination info:", paginationInfo);
+
+          setTemplates(templatesData);
+          setPagination(paginationInfo);
+
+          if (templatesData.length === 0) {
+            message.info("Chưa có template nào.");
           }
+        } else {
+          message.error(result.message || "Không thể tải danh sách templates!");
+          setTemplates([]);
         }
-        
-        console.log("✅ Loaded templates:", templatesData);
-        console.log("✅ Templates is array:", Array.isArray(templatesData));
-        setTemplates(templatesData);
-
-        if (templatesData.length === 0) {
-          message.info("Chưa có template nào.");
-        }
-      } else {
-        message.error(result.error || "Không thể tải danh sách templates!");
+      } catch (error) {
+        console.error("❌ Error loading templates:", error);
+        message.error("Lỗi khi tải danh sách templates!");
         setTemplates([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("❌ Error loading templates:", error);
-      message.error("Lỗi khi tải danh sách templates!");
-      setTemplates([]);
-    } finally {
-      setLoading(false);
+    },
+    []
+  );
+
+  // useEffect to load initial data
+  useEffect(() => {
+    loadAllTemplates(1, 12, "");
+  }, [loadAllTemplates]);
+
+  // Handle search
+  const handleSearch = (value) => {
+    setSearchKeyword(value);
+    setCurrentPage(1); // Reset to first page when searching
+    loadAllTemplates(1, pageSize, value);
+  };
+
+  // Handle search input change (for real-time search)
+  const handleSearchInputChange = (e) => {
+    const value = e.target.value;
+    setSearchKeyword(value);
+
+    // Debounce search - only search when user stops typing
+    if (value === "") {
+      setCurrentPage(1);
+      loadAllTemplates(1, pageSize, "");
     }
+  };
+
+  // Handle pagination change
+  const handlePageChange = (page, size) => {
+    setCurrentPage(page);
+    if (size !== pageSize) {
+      setPageSize(size);
+    }
+    loadAllTemplates(page, size || pageSize, searchKeyword);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (current, size) => {
+    setCurrentPage(1);
+    setPageSize(size);
+    loadAllTemplates(1, size, searchKeyword);
   };
 
   // Xử lý khi click xem chi tiết
@@ -101,15 +138,29 @@ function TemplateOverview() {
     <EVMStaffLayout>
       <PageContainer
         title="Tổng Quan Xe Điện"
-        subTitle={`${Array.isArray(templates) ? templates.filter(t => t.isActive !== false && t.status !== 0).length : 0} mẫu xe điện có sẵn`}
+        subTitle={
+          pagination
+            ? `${pagination.totalItems} mẫu xe điện (${
+                Array.isArray(templates)
+                  ? templates.filter((t) => t.isActive === true).length
+                  : 0
+              } đang hoạt động)`
+            : `${
+                Array.isArray(templates)
+                  ? templates.filter((t) => t.isActive === true).length
+                  : 0
+              } mẫu xe điện có sẵn`
+        }
         extra={[
           <Search
             key="search"
-            placeholder="Tìm kiếm theo tên mẫu"
-            onSearch={(value) => console.log('Search value:', value)}
-            style={{ width: 300 }}
-            onChange={(e) => setSearchKeyword(e.target.value)}
+            placeholder="Tìm kiếm theo tên mẫu, màu sắc, mô tả..."
+            onSearch={handleSearch}
+            value={searchKeyword}
+            onChange={handleSearchInputChange}
+            style={{ width: 350 }}
             allowClear
+            loading={loading}
           />,
           <Button
             key="refresh"
@@ -130,7 +181,7 @@ function TemplateOverview() {
         )}
 
         {/* Empty State */}
-        {!loading && (!Array.isArray(templates) || templates.length === 0) && (
+        {!loading && Array.isArray(templates) && templates.length === 0 && (
           <Card className="text-center py-20">
             <CarOutlined style={{ fontSize: 64, color: "#d9d9d9" }} />
             <Text type="secondary" className="block mt-4">
@@ -141,28 +192,22 @@ function TemplateOverview() {
 
         {/* Template Grid */}
         {!loading && Array.isArray(templates) && templates.length > 0 && (
-          <Row gutter={[16, 16]}>
-            {templates
-              .filter((template) => {
-                // Ẩn những template có status ngừng hoạt động
-                const isActive = template.isActive !== false && template.status !== 0;
-
-                const keyword = searchKeyword.toLowerCase();
-                const matchKeyword = (
-                  template.version?.modelName?.toLowerCase().includes(keyword) ||
-                  template.version?.versionName?.toLowerCase().includes(keyword) ||
-                  template.color?.colorName?.toLowerCase().includes(keyword)
-                );
-
-                return isActive && matchKeyword;
-              })
-              .map((template) => {
+          <>
+            <Row gutter={[16, 16]}>
+              {(Array.isArray(templates) ? templates : []).map((template) => {
                 // Chuẩn hóa data để khớp với VehicleCard
                 const vehicleData = {
                   ...template,
                   modelName: template.version?.modelName,
                   versionName: template.version?.versionName,
                   colorName: template.color?.colorName,
+                  // Thêm các thông tin khác từ API response
+                  price: template.price,
+                  description: template.description,
+                  imgUrl: template.imgUrl || [],
+                  versionId: template.version?.versionId,
+                  modelId: template.version?.modelId,
+                  colorId: template.color?.colorId,
                 };
 
                 return (
@@ -174,7 +219,28 @@ function TemplateOverview() {
                   </Col>
                 );
               })}
-          </Row>
+            </Row>
+
+            {/* Pagination */}
+            {pagination && pagination.totalItems > 0 && (
+              <div className="flex justify-center mt-8">
+                <Pagination
+                  current={currentPage}
+                  pageSize={pageSize}
+                  total={pagination.totalItems}
+                  showSizeChanger
+                  showQuickJumper
+                  showTotal={(total, range) =>
+                    `${range[0]}-${range[1]} của ${total} mẫu xe`
+                  }
+                  onChange={handlePageChange}
+                  onShowSizeChange={handlePageSizeChange}
+                  pageSizeOptions={["8", "12", "16", "24", "32"]}
+                  size="default"
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Modal chi tiết template */}

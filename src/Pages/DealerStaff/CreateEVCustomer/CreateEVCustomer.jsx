@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 import { createCustomer } from "../../../App/DealerStaff/EVCustomerManagement/CreateEVCustomer";
 import DealerStaffLayout from "../../../Components/DealerStaff/DealerStaffLayout";
-import SuccessModal from "../../../Components/DealerStaff/Components/SuccessModal";
+import CreateCustomerSuccessModal from "./Components/CreateCustomerSuccessModal";
 import dayjs from "dayjs";
 
 function CreateEVCustomer() {
@@ -90,10 +90,13 @@ function CreateEVCustomer() {
                   loading,
                   size: "large",
                   icon: <SaveOutlined />,
+                  type: "primary",
+                  className: "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border-none shadow-lg hover:shadow-xl font-semibold",
                 },
                 resetButtonProps: {
                   size: "large",
                   icon: <ClearOutlined />,
+                  className: "border-gray-300 hover:border-gray-400",
                 },
                 render: (props, doms) => (
                   <Row gutter={16} className="mt-8">
@@ -209,7 +212,7 @@ function CreateEVCustomer() {
         </div>
 
         {/* Success Modal */}
-        <SuccessModal
+        <CreateCustomerSuccessModal
           visible={successModalVisible}
           onClose={handleCloseSuccessModal}
           customerInfo={customerInfo}

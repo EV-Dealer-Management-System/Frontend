@@ -32,6 +32,7 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     const [selectedStatus, setSelectedStatus] = useState(currentStatus);
     const [loading, setLoading] = useState(false);
     const [accidentNote, setAccidentNote] = useState('');
+    const [delayNote, setDelayNote] = useState('');
 
     // Không cho phép cập nhật nếu đã xác nhận
     if (currentStatus === DeliveryStatus.Confirmed) {
@@ -51,18 +52,32 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
             return;
         }
 
+        // Kiểm tra nếu chọn "Chậm trễ" thì phải nhập ghi chú
+        if (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim()) {
+            message.warning('Vui lòng nhập lý do chậm trễ');
+            return;
+        }
+
         setLoading(true);
         try {
+            let statusNote = "";
+            if (selectedStatus === DeliveryStatus.Accident) {
+                statusNote = accidentNote;
+            } else if (selectedStatus === DeliveryStatus.Delayed) {
+                statusNote = delayNote;
+            }
+
             const response = await updateEVDeliveryStatus(
                 deliveryId,
                 selectedStatus,
-                selectedStatus === DeliveryStatus.Accident ? accidentNote : ""
+                statusNote
             );
 
             if (response.isSuccess) {
                 message.success('Cập nhật trạng thái thành công');
                 setIsEditing(false);
                 setAccidentNote('');
+                setDelayNote('');
                 if (onSuccess) {
                     onSuccess();
                 }
@@ -81,6 +96,7 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     const handleCancel = () => {
         setSelectedStatus(currentStatus);
         setAccidentNote('');
+        setDelayNote('');
         setIsEditing(false);
     };
 
@@ -124,7 +140,8 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
                     onConfirm={handleUpdateStatus}
                     okText="Xác nhận"
                     cancelText="Hủy"
-                    disabled={selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()}
+                    disabled={(selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) ||
+                        (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim())}
                 >
                     <Button
                         type="primary"
@@ -151,6 +168,19 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
                     value={accidentNote}
                     onChange={(e) => setAccidentNote(e.target.value)}
                     placeholder="Nhập mô tả chi tiết về sự cố..."
+                    rows={3}
+                    className="w-full"
+                    maxLength={500}
+                    showCount
+                />
+            )}
+
+            {/* Hiển thị textarea khi chọn trạng thái Chậm trễ */}
+            {selectedStatus === DeliveryStatus.Delayed && (
+                <TextArea
+                    value={delayNote}
+                    onChange={(e) => setDelayNote(e.target.value)}
+                    placeholder="Nhập lý do chi tiết về việc chậm trễ giao hàng..."
                     rows={3}
                     className="w-full"
                     maxLength={500}

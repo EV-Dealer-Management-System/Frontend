@@ -30,8 +30,8 @@ function DealerStaffStats({ dashboardData, loading }) {
     return (
         <Row gutter={[16, 16]} className="mb-6">
             <Col xs={24} sm={12} lg={6}>
-                <ProCard 
-                    className="hover:shadow-lg transition-shadow cursor-pointer" 
+                <ProCard
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
                     loading={loading}
                     onClick={handleQuotesClick}
                 >
@@ -50,8 +50,8 @@ function DealerStaffStats({ dashboardData, loading }) {
             </Col>
 
             <Col xs={24} sm={12} lg={6}>
-                <ProCard 
-                    className="hover:shadow-lg transition-shadow cursor-pointer" 
+                <ProCard
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
                     loading={loading}
                     onClick={handleInventoryClick}
                 >
@@ -71,8 +71,8 @@ function DealerStaffStats({ dashboardData, loading }) {
             </Col>
 
             <Col xs={24} sm={12} lg={6}>
-                <ProCard 
-                    className="hover:shadow-lg transition-shadow cursor-pointer" 
+                <ProCard
+                    className="hover:shadow-lg transition-shadow cursor-pointer"
                     loading={loading}
                     onClick={handleCustomersClick}
                 >

@@ -74,6 +74,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DollarOutlined />,
             component: "./EVQuotes",
           },
+          {
+            path: "/dealer-manager/orders-and-contracts/get-all-contracts",
+            name: "Hợp đồng Đơn hàng",
+            icon: <FileTextOutlined />,
+            component: "./ViewAllOrderContract/GetAllContract",
+          }
           // {
           //   path: "/dealer/sales/create-order",
           //   name: "Tạo đơn hàng mới",
