@@ -197,7 +197,7 @@ function CreateTemplateVehicle() {
         setColors(colorsRes.data || colorsRes.result || []);
       }
     } catch (err) {
-      console.error("❌ Error loading dropdown data:", err);
+      console.error("Error loading dropdown data:", err);
     }
   };
 
@@ -255,21 +255,21 @@ function CreateTemplateVehicle() {
 
         // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
         if (showNotification) {
-          if (templatesData.length === 0) {
-            message.info("Chưa có template nào.");
+          if (activeTemplates.length === 0) {
+            message.info("Chưa có template nào đang hoạt động.");
           } else {
             message.success(`Đã tải lại danh sách templates thành công!`);
           }
         }
       } else {
-        console.warn("⚠️ API returned unsuccessful:", result);
+        // API returned unsuccessful
         if (showNotification) {
           message.error(result.error || "Không thể tải templates!");
         }
         setTemplatesList([]);
       }
     } catch (error) {
-      console.error("❌ Error loading templates:", error);
+      console.error("Error loading templates:", error);
       if (showNotification) {
         message.error("Lỗi khi tải templates!");
       }
@@ -317,7 +317,7 @@ function CreateTemplateVehicle() {
         message.error(res?.message || res?.error || "Xóa template thất bại");
       }
     } catch (err) {
-      console.error("❌ Delete error:", err);
+      console.error("Delete error:", err);
       message.destroy("deleting");
       message.error(extractErrorMessage(err));
     } finally {
@@ -327,7 +327,6 @@ function CreateTemplateVehicle() {
 
   // ✅ Handle Edit Template
   const handleEdit = (record) => {
-    console.log("✏️ Editing template:", record);
     setEditingTemplate(record);
 
     // Set form values
@@ -506,7 +505,6 @@ function CreateTemplateVehicle() {
         if (!hexCode) {
           // Nếu API không trả về hex code, tìm từ colorName
           hexCode = getColorHexByName(colorName);
-          console.log("🎨 Generated hex from colorName:", colorName, "=>", hexCode);
         }
 
         // 🔍 Debug log để kiểm tra
@@ -556,31 +554,6 @@ function CreateTemplateVehicle() {
       ),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 120,
-      align: "center",
-      render: (isActive) => {
-        const status = isActive === true || isActive === 1;
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <div
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: "50%",
-                backgroundColor: status ? "#52c41a" : "#ff4d4f",
-              }}
-            />
-            <Text strong style={{ color: status ? "#52c41a" : "#ff4d4f", fontSize: 12 }}>
-              {status ? "Hoạt động" : "Không hoạt động"}
-            </Text>
-          </div>
-        );
-      },
-    },
-    {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
@@ -608,7 +581,6 @@ function CreateTemplateVehicle() {
               icon={<EyeOutlined />}
               size="small"
               onClick={() => {
-                console.log("👁️ Viewing template:", record);
                 setSelectedTemplate(record);
                 setIsViewModalVisible(true);
               }}
@@ -628,7 +600,6 @@ function CreateTemplateVehicle() {
               icon={<DeleteOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                console.log("🖱️ Delete button ONCLICK fired! Record:", record);
                 handleDelete(record.id);
               }}
             />
@@ -1304,7 +1275,6 @@ function CreateTemplateVehicle() {
                           key={idx}
                           className="cursor-pointer hover:opacity-80 transition-opacity group relative"
                           onClick={() => {
-                            console.log("🖼️ Opening image:", url);
                             setPreviewImage(url);
                             setPreviewVisible(true);
                           }}
@@ -1320,7 +1290,7 @@ function CreateTemplateVehicle() {
                               border: '1px solid #e0e0e0'
                             }}
                             onError={(e) => {
-                              console.error("❌ Image load error:", url);
+                              console.error("Image load error:", url);
                               e.target.src = 'https://via.placeholder.com/300x160?text=No+Image';
                             }}
                           />

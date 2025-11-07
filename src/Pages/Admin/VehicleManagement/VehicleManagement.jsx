@@ -180,8 +180,8 @@ function VehicleManagement() {
           }));
         }
 
-        if (templatesData.length === 0) {
-          message.info("Chưa có template nào.");
+        if (activeTemplates.length === 0) {
+          message.info("Chưa có template nào đang hoạt động.");
         }
       } else {
         message.error(result.error || "Không thể tải danh sách templates!");

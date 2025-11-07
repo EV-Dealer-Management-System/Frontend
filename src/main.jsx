@@ -12,14 +12,17 @@ import './polyfills.js'
 import React from 'react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { App as AntdApp } from 'antd'
+import { App as AntdApp, ConfigProvider } from 'antd'
+import viVN from 'antd/locale/vi_VN'
 import './index.css'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AntdApp>
-      <App />
-    </AntdApp>
+    <ConfigProvider locale={viVN}>
+      <AntdApp>
+        <App />
+      </AntdApp>
+    </ConfigProvider>
   </StrictMode>,
 )

@@ -101,11 +101,9 @@ function ColorManagement() {
     // Filter
     let filtered = colors;
     if (query) {
-      const q = query.toLowerCase();
+      // So sánh chính xác với tên màu đã chọn
       filtered = (colors || []).filter(
-        (c) =>
-          c.colorName?.toLowerCase().includes(q) ||
-          c.colorCode?.toLowerCase().includes(q)
+        (c) => c.colorName === query
       );
     }
 
@@ -271,14 +269,24 @@ function ColorManagement() {
         title: "Quản lý Màu sắc Xe Điện",
         subTitle: "Tạo và quản lý các màu sắc cho xe điện",
         extra: [
-          <Input
+          <Select
             key="search"
             allowClear
-            prefix={<SearchOutlined />}
-            placeholder="Tìm theo tên/mã màu..."
-            onChange={(e) => setQuery(e.target.value)}
+            showSearch
+            placeholder="Chọn màu để tìm kiếm..."
+            value={query || undefined}
+            onChange={setQuery}
             style={{ width: 260 }}
-          />,
+            filterOption={(input, option) =>
+              (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {colors.map((color) => (
+              <Option key={color.id} value={color.colorName}>
+                {color.colorName}
+              </Option>
+            ))}
+          </Select>,
           <Button key="reload" icon={<ReloadOutlined />} onClick={loadColors} loading={loading}>
             Tải lại
           </Button>,
@@ -306,14 +314,24 @@ function ColorManagement() {
           {/* Search and Sort Section */}
           <Row gutter={[16, 16]} className="mb-4">
             <Col xs={24} sm={16} md={12}>
-              <Input
+              <Select
                 allowClear
-                prefix={<SearchOutlined />}
-                placeholder="Tìm theo tên/mã màu..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                showSearch
+                placeholder="Chọn màu để tìm kiếm..."
+                value={query || undefined}
+                onChange={setQuery}
                 size="large"
-              />
+                style={{ width: "100%" }}
+                filterOption={(input, option) =>
+                  (option?.children ?? "").toString().toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {colors.map((color) => (
+                  <Option key={color.id} value={color.colorName}>
+                    {color.colorName}
+                  </Option>
+                ))}
+              </Select>
             </Col>
             <Col xs={24} sm={8} md={6}>
               <Select
