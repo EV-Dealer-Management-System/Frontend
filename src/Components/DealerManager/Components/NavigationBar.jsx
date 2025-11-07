@@ -238,12 +238,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
       },
       {
         path: "/dealer-manager/staff-feedback",
-        name: "Feedback Hãng ",
+        name: "Feedback Đại Lý ",
         icon: <CommentOutlined />,
         routes: [
           {
             path: "/dealer-manager/staff-feedback/all",
-            name: "Danh sách Feedback Hãng",
+            name: "Danh sách Feedback Đại lý",
             icon: <CommentOutlined />,
             component: "./StaffFeedback/FeedbackDealerStaff",
           },

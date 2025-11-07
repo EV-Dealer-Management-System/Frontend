@@ -69,7 +69,7 @@ const GetStaffFeedbackComponent = () => {
 
   const columns = [
     { title: 'STT', dataIndex: 'index', render: (_, __, idx) => idx + 1, align: 'center', width: 60 },
-    { title: 'Đại lý', dataIndex: 'dealerName', key: 'dealerName', width: 200, render: (text) => <Text strong>{text}</Text> },
+    // { title: 'Đại lý', dataIndex: 'dealerName', key: 'dealerName', width: 200, render: (text) => <Text strong>{text}</Text> },
     { title: 'Nội dung', dataIndex: 'feedbackContent', key: 'feedbackContent', ellipsis: true, render: (text) => <Text ellipsis={{ tooltip: text }}>{text || 'Không có nội dung'}</Text> },
     { title: 'Hình ảnh', dataIndex: 'imgUrls', key: 'imgUrls', align: 'center', width: 120, render: (imgUrls) => {
       if (!imgUrls || imgUrls.length === 0) return <Text type="secondary">Không có</Text>;

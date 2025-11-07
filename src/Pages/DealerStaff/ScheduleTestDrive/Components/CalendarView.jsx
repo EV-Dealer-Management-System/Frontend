@@ -77,7 +77,7 @@ const getDayNameVietnamese = (date) => {
   return dayNamesMap[dayName] || dayName;
 };
 
-const CalendarView = () => {
+const CalendarView = ({ onRefresh }) => {
   // Đảm bảo locale được set lại khi component mount
   useEffect(() => {
     moment.locale('vi');
@@ -99,11 +99,6 @@ const CalendarView = () => {
     '16:00', '17:00'
   ];
 
-  useEffect(() => {
-    fetchAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const fetchAppointments = async () => {
     try {
       setLoading(true);
@@ -121,6 +116,24 @@ const CalendarView = () => {
       setLoading(false);
     }
   };
+
+  // Initial load and expose refresh function to parent
+  useEffect(() => {
+    fetchAppointments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Expose refresh function to parent component via window (for cross-component communication)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.refreshCalendarView = fetchAppointments;
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete window.refreshCalendarView;
+      }
+    };
+  }, []);
 
   const parseDateTime = (dateTimeStr) => {
     if (!dateTimeStr) return null;

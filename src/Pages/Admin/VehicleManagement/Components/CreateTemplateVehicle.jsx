@@ -167,7 +167,7 @@ function CreateTemplateVehicle() {
   const [templateSearchKeyword, setTemplateSearchKeyword] = useState("");
   const [templateFilterModel, setTemplateFilterModel] = useState("");
   const [templateFilterColor, setTemplateFilterColor] = useState("");
-  const [templateSortBy, setTemplateSortBy] = useState("price-asc"); // price-asc, price-desc, model-asc, version-asc, color-asc
+  const [templateSortBy, setTemplateSortBy] = useState("newest"); // newest, price-asc, price-desc, model-asc, version-asc, color-asc, all
 
   // Delete state
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
@@ -218,40 +218,105 @@ function CreateTemplateVehicle() {
       const result = await vehicleApi.getAllTemplateVehicles(params);
 
       console.log("📥 Template API Response:", result);
+      console.log("📥 Result.success:", result.success);
+      console.log("📥 Result.data:", result.data);
 
       if (result.success) {
-        // Xử lý cả 2 trường hợp: result.data.data (nested) hoặc result.data (flat)
+        // Xử lý cấu trúc response từ API
+        // API wrapper trả về: { success: true, data: templates }
+        // templates có thể là array trực tiếp hoặc object có data/result
         let templatesData = [];
 
+        // Xử lý giống hệt VehicleManagement.jsx để đảm bảo consistency
+        // Case 1: result.data.data là array (nested structure từ backend)
         if (result.data && result.data.data && Array.isArray(result.data.data)) {
-          // Trường hợp nested: result.data.data
           templatesData = result.data.data;
-          console.log("✅ Using nested data structure:", templatesData.length, "templates");
-        } else if (Array.isArray(result.data)) {
-          // Trường hợp flat: result.data
+          console.log("✅ Using nested data.data structure:", templatesData.length, "templates");
+        } 
+        // Case 2: result.data là array trực tiếp (từ API wrapper)
+        else if (Array.isArray(result.data)) {
           templatesData = result.data;
-          console.log("✅ Using flat data structure:", templatesData.length, "templates");
+          console.log("✅ Using flat array structure:", templatesData.length, "templates");
+        } 
+        // Case 3: result.data.result là array
+        else if (result.data && Array.isArray(result.data.result)) {
+          templatesData = result.data.result;
+          console.log("✅ Using result.result structure:", templatesData.length, "templates");
+        }
+        // Case 4: result.data là object có property là array (fallback)
+        else if (result.data && typeof result.data === 'object' && result.data !== null) {
+          // Tìm property nào là array
+          const arrayKey = Object.keys(result.data).find(key => Array.isArray(result.data[key]));
+          if (arrayKey) {
+            templatesData = result.data[arrayKey];
+            console.log(`✅ Using result.data.${arrayKey} structure:`, templatesData.length, "templates");
+          } else {
+            console.warn("⚠️ Unexpected data structure - no array found:", {
+              resultData: result.data,
+              keys: Object.keys(result.data || {})
+            });
+            templatesData = [];
+          }
+        } 
+        else {
+          // Nếu không match case nào, log để debug
+          console.warn("⚠️ Unexpected data structure:", {
+            resultData: result.data,
+            resultDataType: typeof result.data,
+            isArray: Array.isArray(result.data),
+            keys: result.data ? Object.keys(result.data) : []
+          });
+          templatesData = [];
         }
 
         console.log("✅ Final templates data:", templatesData);
+        console.log("✅ Total templates loaded:", templatesData.length);
+        
+        // Warning nếu không có template nào
+        if (templatesData.length === 0) {
+          console.warn("⚠️ No templates found in response!");
+        }
 
         // Log chi tiết về isActive
         const activeCount = templatesData.filter(t => t.isActive === true || t.isActive === 1).length;
         const inactiveCount = templatesData.filter(t => t.isActive === false || t.isActive === 0).length;
         console.log(`📊 Templates status: Active=${activeCount}, Inactive=${inactiveCount}`);
 
-        // 🔍 Debug màu sắc
-        console.log("🎨 Color Debug - First template:", templatesData[0]);
-        if (templatesData[0]) {
-          console.log("🎨 Color object:", templatesData[0].color);
-          console.log("🎨 Color properties:", {
-            colorName: templatesData[0].color?.colorName,
-            colorCode: templatesData[0].color?.colorCode,
-            hexCode: templatesData[0].color?.hexCode
-          });
+        // 🔍 Debug: Log tất cả màu sắc và createdAt để tìm template mới tạo
+        console.log("🎨 All templates with createdAt:", templatesData.map(t => ({
+          id: t.id,
+          colorName: t.color?.colorName,
+          versionName: t.version?.versionName,
+          createdAt: t.createdAt,
+          createdAtType: typeof t.createdAt,
+          createdAtParsed: t.createdAt ? new Date(t.createdAt).getTime() : null
+        })));
+
+        // 🔍 Debug màu sắc - First template
+        if (templatesData.length > 0) {
+          console.log("🎨 Color Debug - First template:", templatesData[0]);
+          console.log("🎨 Color Debug - Last template:", templatesData[templatesData.length - 1]);
+          if (templatesData[0]) {
+            console.log("🎨 Color object:", templatesData[0].color);
+            console.log("🎨 Color properties:", {
+              colorName: templatesData[0].color?.colorName,
+              colorCode: templatesData[0].color?.colorCode,
+              hexCode: templatesData[0].color?.hexCode
+            });
+          }
         }
 
+        // Đảm bảo templatesData là array hợp lệ trước khi set
+        if (!Array.isArray(templatesData)) {
+          console.error("❌ templatesData is not an array:", templatesData);
+          templatesData = [];
+        }
+        
+        console.log("📝 Setting templatesList with", templatesData.length, "templates");
         setTemplatesList(templatesData);
+        
+        // Force re-render bằng cách log
+        console.log("✅ State updated. templatesList should now have", templatesData.length, "items");
 
         // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
         if (showNotification) {
@@ -263,6 +328,7 @@ function CreateTemplateVehicle() {
         }
       } else {
         // API returned unsuccessful
+        console.error("❌ API returned unsuccessful:", result);
         if (showNotification) {
           message.error(result.error || "Không thể tải templates!");
         }
@@ -440,8 +506,14 @@ function CreateTemplateVehicle() {
     });
 
     // Sort
+    console.log("🔄 Sorting with templateSortBy:", templateSortBy, "Filtered count:", filtered.length);
     const sorted = [...filtered].sort((a, b) => {
       switch (templateSortBy) {
+        case "newest":
+          // Template mới nhất lên đầu (theo createdAt desc)
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate; // Mới nhất lên đầu
         case "price-asc":
           return (a.price || 0) - (b.price || 0);
         case "price-desc":
@@ -458,8 +530,17 @@ function CreateTemplateVehicle() {
           const aColor = a.color?.colorName || "";
           const bColor = b.color?.colorName || "";
           return aColor.localeCompare(bColor, "vi");
+        case "all":
+          // Sort theo mới nhất khi chọn "all"
+          const aDateAll = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDateAll = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDateAll - aDateAll; // Mới nhất lên đầu
         default:
-          return 0;
+          // Default: sort theo mới nhất
+          console.warn("⚠️ Unknown sort option:", templateSortBy, "- defaulting to newest");
+          const aDateDefault = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDateDefault = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDateDefault - aDateDefault; // Mới nhất lên đầu
       }
     });
 
@@ -499,12 +580,23 @@ function CreateTemplateVehicle() {
 
         const colorName = record.color?.colorName || "N/A";
 
-        // ✅ Ưu tiên lấy từ API, nếu không có thì tìm từ colorName
+        // ✅ Ưu tiên lấy từ API (colorCode hoặc hexCode)
         let hexCode = record.color?.colorCode || record.color?.hexCode;
 
-        if (!hexCode) {
-          // Nếu API không trả về hex code, tìm từ colorName
-          hexCode = getColorHexByName(colorName);
+        // Nếu không có từ API, tìm trong danh sách colors đã load (từ state colors)
+        if (!hexCode && colorName !== "N/A") {
+          const foundColor = colors.find(
+            (c) => c.colorName?.toLowerCase() === colorName.toLowerCase()
+          );
+          if (foundColor?.colorCode) {
+            hexCode = foundColor.colorCode;
+            console.log("✅ Found colorCode from colors list:", hexCode, "for", colorName);
+          } else {
+            console.warn("⚠️ No hexCode found for color:", colorName, "in API or colors list");
+            hexCode = "#cccccc"; // Màu xám mặc định thay vì map sai
+          }
+        } else if (!hexCode) {
+          hexCode = "#cccccc"; // Màu xám mặc định
         }
 
         // 🔍 Debug log để kiểm tra
@@ -517,8 +609,11 @@ function CreateTemplateVehicle() {
           rawHexCode: record.color?.hexCode,
         });
 
-        // ✅ Lấy tên màu đẹp từ popularColors nếu có
-        const prettyName = getColorNameByCode(hexCode) || colorName;
+        // ✅ ƯU TIÊN dùng colorName từ API (database), chỉ dùng getColorNameByCode làm fallback
+        // Nếu colorName từ API có giá trị, dùng nó. Nếu không có thì mới tìm từ hexCode
+        const prettyName = colorName && colorName !== "N/A" 
+          ? colorName 
+          : (getColorNameByCode(hexCode) || "N/A");
 
         return (
           <div className="flex items-center gap-2">
@@ -698,7 +793,32 @@ function CreateTemplateVehicle() {
         setCurrentStep(0);
         form.resetFields();
         setUploadedImages([]);
-        await loadAllTemplates(false); // Không hiển thị thông báo load lại
+        
+        // Clear filters và set sort TRƯỚC KHI refresh
+        setTemplateSearchKeyword("");
+        setTemplateFilterModel("");
+        setTemplateFilterColor("");
+        setTemplateSortBy("newest");
+        
+        // Refresh ngay lập tức - đảm bảo load lại danh sách
+        console.log("🔄 Refreshing template list after creation...");
+        // Gọi trực tiếp và đợi hoàn thành
+        try {
+          await loadAllTemplates(false);
+          console.log("✅ Template list refreshed successfully");
+          
+          // Double check: Refresh lại sau 500ms để đảm bảo
+          setTimeout(async () => {
+            console.log("🔄 Double-check refresh...");
+            await loadAllTemplates(false);
+          }, 500);
+        } catch (refreshError) {
+          console.error("❌ Error refreshing template list:", refreshError);
+          // Thử lại sau 1 giây nếu lỗi
+          setTimeout(async () => {
+            await loadAllTemplates(false);
+          }, 1000);
+        }
       } else {
         message.error(normalized.message || "Không thể tạo template");
       }
@@ -826,11 +946,17 @@ function CreateTemplateVehicle() {
             <Col xs={24} sm={12} md={4}>
               <Select
                 value={templateSortBy}
-                onChange={setTemplateSortBy}
+                onChange={(value) => {
+                  console.log("🔄 Sort changed from", templateSortBy, "to", value);
+                  setTemplateSortBy(value);
+                }}
                 size="large"
                 style={{ width: "100%" }}
                 suffixIcon={<SortAscendingOutlined />}
+                placeholder="Sắp xếp"
               >
+                <Option value="newest">Mới nhất</Option>
+                <Option value="all">Tất cả</Option>
                 <Option value="price-asc">Giá thấp → cao</Option>
                 <Option value="price-desc">Giá cao → thấp</Option>
                 <Option value="model-asc">Model A-Z</Option>
@@ -980,11 +1106,13 @@ function CreateTemplateVehicle() {
                         style={{ width: "100%" }}
                         formatter={(value) => {
                           if (!value && value !== 0) return '';
-                          return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                          const numStr = String(value);
+                          return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                         }}
                         parser={(value) => {
                           if (!value) return '';
-                          const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                          // Loại bỏ tất cả ký tự không phải số
+                          const parsed = value.toString().replace(/[^\d]/g, "");
                           return parsed === '' ? '' : Number(parsed);
                         }}
                       />
@@ -1061,7 +1189,8 @@ function CreateTemplateVehicle() {
                       {(() => {
                         const selectedColor = colors.find((c) => c.id === form.getFieldValue("colorId"));
                         const colorCode = selectedColor?.colorCode;
-                        const prettyName = getColorNameByCode(colorCode) || selectedColor?.colorName;
+                        // Ưu tiên dùng colorName từ API, chỉ dùng getColorNameByCode làm fallback
+                        const prettyName = selectedColor?.colorName || getColorNameByCode(colorCode) || 'N/A';
                         return prettyName || "—";
                       })()}
                     </p>
@@ -1213,7 +1342,7 @@ function CreateTemplateVehicle() {
                         />
                         <div>
                           <Text strong style={{ fontSize: 12 }}>
-                            {getColorNameByCode(selectedTemplate.color?.colorCode) || selectedTemplate.color?.colorName || 'Chưa rõ'}
+                            {selectedTemplate.color?.colorName || getColorNameByCode(selectedTemplate.color?.colorCode) || 'Chưa rõ'}
                           </Text>
                           <br />
                           <Text type="secondary" style={{ fontSize: 10 }}>
@@ -1387,7 +1516,7 @@ function CreateTemplateVehicle() {
                         }}
                       />
                       <Text strong style={{ fontSize: 12 }}>
-                        {getColorNameByCode(editingTemplate.color?.colorCode) || editingTemplate.color?.colorName || 'N/A'}
+                        {editingTemplate.color?.colorName || getColorNameByCode(editingTemplate.color?.colorCode) || 'N/A'}
                       </Text>
                     </div>
                   </Col>
@@ -1407,11 +1536,13 @@ function CreateTemplateVehicle() {
                     style={{ width: "100%" }}
                     formatter={(value) => {
                       if (!value && value !== 0) return '';
-                      return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                      const numStr = String(value);
+                      return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                     }}
                     parser={(value) => {
                       if (!value) return '';
-                      const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                      // Loại bỏ tất cả ký tự không phải số
+                      const parsed = value.toString().replace(/[^\d]/g, "");
                       return parsed === '' ? '' : Number(parsed);
                     }}
                     size="large"

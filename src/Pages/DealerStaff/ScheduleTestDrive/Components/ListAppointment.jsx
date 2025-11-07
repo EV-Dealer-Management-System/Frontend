@@ -106,8 +106,18 @@ const ListAppointment = () => {
   };
 
   const handleAppointmentCreated = () => {
-    fetchAppointments(); // Refresh list
+    fetchAppointments(); // Refresh list view
     setIsModalOpen(false); // Close modal
+    
+    // Trigger refresh for CalendarView component if in calendar mode
+    if (viewMode === 'calendar') {
+      // Small delay to ensure CalendarView is mounted
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.refreshCalendarView) {
+          window.refreshCalendarView();
+        }
+      }, 100);
+    }
   };
 
   const fetchAppointments = async () => {
@@ -315,7 +325,7 @@ const ListAppointment = () => {
 
       {viewMode === 'calendar' ? (
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <CalendarView />
+          <CalendarView onRefresh={fetchAppointments} />
         </div>
       ) : (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', padding: '0 20px' }}>

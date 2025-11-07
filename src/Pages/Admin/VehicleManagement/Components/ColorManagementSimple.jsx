@@ -494,11 +494,13 @@ function ColorManagement() {
                   size="large"
                   formatter={(value) => {
                     if (!value && value !== 0) return '';
-                    return `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                    const numStr = String(value);
+                    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                   }}
                   parser={(value) => {
                     if (!value) return '';
-                    const parsed = value.toString().replace(/\$\s?|(,*)/g, "");
+                    // Loại bỏ tất cả ký tự không phải số
+                    const parsed = value.toString().replace(/[^\d]/g, "");
                     return parsed === '' ? '' : Number(parsed);
                   }}
                   addonAfter="₫"
