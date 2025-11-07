@@ -255,7 +255,7 @@ function CreateTemplateVehicle() {
 
         // Chỉ hiển thị thông báo nếu người dùng chủ động refresh hoặc sau khi thao tác
         if (showNotification) {
-          if (activeTemplates.length === 0) {
+          if (activeCount === 0) {
             message.info("Chưa có template nào đang hoạt động.");
           } else {
             message.success(`Đã tải lại danh sách templates thành công!`);
