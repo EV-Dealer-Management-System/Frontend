@@ -10,6 +10,7 @@ import {
   AuditOutlined,
   CarOutlined,
   FileTextOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import EVBookingUpdateStatus from "../../../../App/DealerManager/EVBooking/EVBookingUpdateStatus";
 import BookingReviewModal from "./BookingReviewModal";
@@ -25,6 +26,8 @@ function BookingTable({
   formatDateTime,
   onStatusUpdate,
   onOpenPdf,
+  onEditContract,
+  templateEditorLoading,
 }) {
   const [updatingStatus, setUpdatingStatus] = useState({});
   const [reviewModal, setReviewModal] = useState({
@@ -415,6 +418,25 @@ function BookingTable({
                   style={{
                     borderRadius: 6,
                     fontSize: 12,
+                  }}
+                />
+              </Tooltip>
+            )}
+
+            {/* Sửa hợp đồng - chỉ hiển thị với status 0 (Draft) và 1 (WaittingDealerSign) */}
+            {record?.eContract && onEditContract && (isDraft || isWaittingDealerSign) && (
+              <Tooltip title="Sửa Hợp đồng">
+                <Button
+                  type="default"
+                  icon={<EditOutlined />}
+                  onClick={() => onEditContract(record)}
+                  loading={templateEditorLoading}
+                  size="small"
+                  style={{
+                    borderRadius: 6,
+                    fontSize: 12,
+                    color: '#1890ff',
+                    borderColor: '#1890ff',
                   }}
                 />
               </Tooltip>

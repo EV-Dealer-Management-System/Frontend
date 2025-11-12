@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import 'quill/dist/quill.snow.css';
+import { Editor } from '@tinymce/tinymce-react';
+import tinymce from 'tinymce/tinymce';
 import { 
   Modal, 
   Button, 
@@ -21,7 +22,7 @@ import {
   EditFilled
 } from '@ant-design/icons';
 
-import { useQuillEditor } from './useQuillEditor';
+import { useTinyEditor } from './useTinyEditor';
 import { useHtmlParser } from './useHtmlParser';
 import { useTemplateActions } from './useTemplateActions';
 
@@ -37,14 +38,12 @@ function PDFEditMain({
   onCancel
 }) {
   // States cơ bản
-  const [htmlContent, setHtmlContent] = useState(''); // chỉ chứa editableBody cho Quill
+  const [htmlContent, setHtmlContent] = useState(''); // chỉ chứa editableBody cho TinyMCE
   const [originalContent, setOriginalContent] = useState('');
   const [contractSubject, setContractSubject] = useState('');
   const [activeTab, setActiveTab] = useState('editor');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isUpdatingFromCode, setIsUpdatingFromCode] = useState(false);
-  const [signContent, setSignContent] = useState('');
-  const [headerContent, setHeaderContent] = useState('');
   const [fullPreviewHtml, setFullPreviewHtml] = useState(''); // full HTML cho Preview và HTML tab
   
   // States mới cho cấu trúc phân tách
@@ -68,13 +67,11 @@ function PDFEditMain({
   } = useHtmlParser();
 
   const {
-    quill,
-    quillRef,
-    isPasted,
-    setIsPasted,
     resetQuillContent,
-    getCurrentContent
-  } = useQuillEditor(visible, htmlContent, setHasUnsavedChanges, isUpdatingFromCode);
+    getCurrentContent,
+    tinyMCEConfig,
+    handleEditorChange
+  } = useTinyEditor(visible, htmlContent, setHasUnsavedChanges, isUpdatingFromCode);
 
   const {
     loading,
@@ -118,53 +115,46 @@ function PDFEditMain({
     };
   }, []);
 
-  // Xử lý template loading và parsing
+  // ✅ Parse template khi templateData thay đổi - Fix race condition
   useEffect(() => {
-    const handleTemplateLoad = async () => {
-      if (visible && contractId && !templateLoaded) {
-        const template = await loadTemplate();
-        if (template) {
-          // ✅ Parse HTML từ BE - tách các phần rõ ràng
-          const rawHtml = template.htmlTemplate || '';
-          const parsedResult = parseHtmlFromBE(rawHtml);
-          
-          // Set editableBody cho Quill Editor
-          setHtmlContent(parsedResult.editableBody || '');
-          setOriginalContent(parsedResult.editableBody || '');
-          
-          // Set fullHtml cho Preview và HTML tab
-          setFullPreviewHtml(parsedResult.fullHtml || rawHtml);
-          
-          // Lưu cấu trúc phân tách
-          setParsedStructure({
-            headerBody: parsedResult.headerBody || '',
-            metaBlocks: parsedResult.metaBlocks || '',
-            signBody: parsedResult.signBody || '',
-            footerBody: parsedResult.footerBody || ''
-          });
-          
-          // Lưu structure vào state
-          updateParsedStructure(parsedResult);
+    if (!visible || !templateData) return;
 
-          window.__PDF_TEMPLATE_CACHE__ = {
-            allStyles: parsedResult.allStyles,
-            htmlHead: parsedResult.htmlHead,
-            htmlAttributes: parsedResult.htmlAttributes
-          }
-          
-          setContractSubject(template.name);
+    // Parse HTML từ BE - tách các phần rõ ràng
+    const rawHtml = templateData.htmlTemplate || '';
+    const parsedResult = parseHtmlFromBE(rawHtml);
+    
+    // Set editableBody cho TinyMCE Editor
+    setHtmlContent(parsedResult.editableBody || '');
+    setOriginalContent(parsedResult.editableBody || '');
+    
+    // Set fullHtml cho Preview và HTML tab
+    setFullPreviewHtml(parsedResult.fullHtml || rawHtml);
+    
+    // Lưu cấu trúc phân tách
+    setParsedStructure({
+      headerBody: parsedResult.headerBody || '',
+      metaBlocks: parsedResult.metaBlocks || '',
+      signBody: parsedResult.signBody || '',
+      footerBody: parsedResult.footerBody || ''
+    });
+    
+    // Lưu structure vào state
+    updateParsedStructure(parsedResult);
 
-          // ✅ Ghi log an toàn
-          console.log('✅ Template loaded và parsed successfully');
-          console.log('- Editable body length:', parsedResult.editableBody?.length || 0);
-          console.log('- Template body length:', parsedResult.templateBody?.length || 0);
-          console.log('- All styles length:', parsedResult.allStyles?.length || 0);
-        }
-      }
-    };
+    window.__PDF_TEMPLATE_CACHE__ = {
+      allStyles: parsedResult.allStyles,
+      htmlHead: parsedResult.htmlHead,
+      htmlAttributes: parsedResult.htmlAttributes
+    }
+    
+    setContractSubject(templateData.name);
 
-    handleTemplateLoad();
-  }, [visible, contractId, templateLoaded]);
+    // ✅ Ghi log an toàn
+    console.log('✅ Template parsed successfully from templateData');
+    console.log('- Editable body length:', parsedResult.editableBody?.length || 0);
+    console.log('- Template body length:', parsedResult.templateBody?.length || 0);
+    console.log('- All styles length:', parsedResult.allStyles?.length || 0);
+  }, [visible, templateData]);
 
   // Reset editor khi tạo contract mới
   useEffect(() => {
@@ -198,8 +188,8 @@ function PDFEditMain({
       // ✅ Reset HTML structure states
       resetStructureStates();
       
-      // Clear Quill content
-      resetQuillContent();
+      // Clear TinyMCE content
+      resetQuillContent(); // Alias function - works for TinyMCE too
     }
   };
 
@@ -208,153 +198,38 @@ function PDFEditMain({
     if (!visible) {
       // Reset các flag và states
       setIsUpdatingFromCode(false);
-      setIsPasted(false);
       resetStates();
       
       console.log('✅ Modal closed → Reset all states + cleanup');
     }
   }, [visible]);
 
-  // CSS để ẩn các phần không cần thiết trong Quill Editor
+  // ✅ TinyMCE CSS - Chỉ cần minimal styling vì TinyMCE tự handle
   useEffect(() => {
     const styleSheet = document.createElement("style");
     styleSheet.innerText = `
-      /* Ẩn phần header với class non-editable-header */
-      .ql-editor .non-editable-header { 
-        display: none !important; 
-      }
-      
-      /* Ẩn phần meta blocks (Bên A, Bên B) */
-      .ql-editor .meta-block { 
-        display: none !important; 
-      }
-      
-      /* Ẩn phần sign block */
-      .ql-editor .sign-block,
-      .ql-editor table.sign-block { 
-        display: none !important; 
-      }
-      
-      /* Ẩn phần footer */
-      .ql-editor .footer { 
-        display: none !important; 
-      }
-      
-
-      .ql-editor {
-        font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif !important;
-        font-size: 12pt !important;
-        line-height: 1.4 !important;
-        min-height: 400px !important;
-        height: auto !important;
-        overflow-y: visible !important;
-        word-wrap: break-word !important;
-        word-break: break-word !important;
-      }
-      
-      /* Bảo tồn style HTML trong Quill */
-      .ql-editor p, .ql-editor div, .ql-editor span {
-        margin-bottom: 0.5em !important;
-      }
-      
-      .ql-editor table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-        margin-bottom: 1em !important;
-      }
-      
-      .ql-editor td, .ql-editor th {
-        border: 1px solid #ddd !important;
-        padding: 8px !important;
-        text-align: left !important;
-        vertical-align: top !important;
-      }
-      
-      .ql-editor th {
-        background-color: #f5f5f5 !important;
-        font-weight: bold !important;
-      }
-      
-      .ql-editor .text-center {
-        text-align: center !important;
-      }
-      
-      .ql-editor .text-right {
-        text-align: right !important;
-      }
-      
-      .ql-editor .font-bold {
-        font-weight: bold !important;
-      }
-      
-      .ql-editor .underline {
-        text-decoration: underline !important;
-      }
-      
-      .ql-editor strong {
-        font-weight: bold !important;
-      }
-      
-      .ql-editor em {
-        font-style: italic !important;
-      }
-      
-      .ql-editor u {
-        text-decoration: underline !important;
-      }
-      
-      .ql-toolbar {
-        position: sticky !important;
-        top: 0;
-        z-index: 10;
+      /* TinyMCE container styling */
+      .tox-tinymce {
+        border-radius: 6px !important;
         border-color: #d1d5db !important;
-        background-color: #f9fafb !important;
+      }
+      
+      .tox .tox-editor-header {
         border-radius: 6px 6px 0 0 !important;
       }
       
-      .ql-container {
-        border-color: #d1d5db !important;
+      .tox .tox-edit-area {
         border-radius: 0 0 6px 6px !important;
-        height: auto !important;
-      }
-
-      /* Highlight placeholder variables với TailwindCSS classes */
-      .ql-editor .placeholder-variable {
-        background-color: #dbeafe !important;
-        color: #1d4ed8 !important;
-        padding: 2px 4px !important;
-        border-radius: 3px !important;
-        font-family: 'Monaco', 'Consolas', monospace !important;
-        font-size: 13px !important;
-      }
-
-      /* Đảm bảo quill container có đúng kích thước và luôn hiển thị */
-      .ql-editor-container {
-        height: calc(100vh - 300px) !important;
-        max-height: calc(100vh - 300px) !important;
-        overflow: auto !important;
-        display: block !important;
-        visibility: visible !important;
       }
       
-      .ql-editor-container .ql-toolbar.ql-snow {
-        border-top: 1px solid #d1d5db !important;
-        display: block !important;
-        visibility: visible !important;
+      /* Modal z-index fix for TinyMCE dialogs */
+      .tox-dialog-wrap {
+        z-index: 10000 !important;
       }
       
-      /* Fix cho React 19 và react-quilljs */
-      .quill {
-        display: block !important;
-        visibility: visible !important;
-      }
-      
-      .quill > .ql-container {
-        display: block !important;
-      }
-      
-      .quill > .ql-toolbar {
-        display: block !important;
+      /* Prevent aux overlay from blocking editor */
+      .tox-tinymce-aux {
+        pointer-events: none !important;
       }
     `;
     document.head.appendChild(styleSheet);
@@ -474,40 +349,28 @@ function PDFEditMain({
                     </span>
                   ),
                   children: (
-                    <div className="h-full relative">
-                      {/* ✅ quillRef LUÔN được render - không phụ thuộc vào quill instance */}
-                      <div className="ql-editor-container h-full">
-                        <div 
-                          ref={quillRef} 
-                          className="border border-gray-300 rounded bg-white h-full"
-                          style={{ 
-                            height: '100%',
-                            visibility: 'visible',
-                            opacity: 1
+                    <div 
+                      className="h-full relative" 
+                      style={{ 
+                        height: 'calc(100vh - 300px)', 
+                        minHeight: '500px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      {/* ✅ TinyMCE Editor - Full height modal */}
+                      <div style={{ flex: 1, minHeight: 0 }}>
+                        <Editor
+                          tinymce={tinymce}       // ✅ truyền instance local
+                          value={htmlContent}
+                          init={{
+                            ...tinyMCEConfig,
+                            height: '100%'
                           }}
+                          onEditorChange={handleEditorChange}
+                          disabled={false}
                         />
                       </div>
-
-                      {/* ✅ Loading overlay - chỉ hiển thị khi chưa có Quill */}
-                      {!quill && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 bg-opacity-90 backdrop-blur-sm rounded">
-                          <Spin size="large" tip="Đang khởi tạo editor..." />
-                          <div className="mt-4 text-center">
-                            <div className="text-sm text-gray-500 mb-2">
-                              📦 Async polling DOM mount...
-                            </div>
-                            <div className="text-xs text-gray-400 space-y-1">
-                              <div>Modal: {visible ? '✓' : '✗'}</div>
-                              <div>DOM Ref: {quillRef.current ? '✓' : '✗'}</div>
-                              <div>In Document: {quillRef.current && document.contains(quillRef.current) ? '✓' : '✗'}</div>
-                              <div>Instance: {quill ? '✓' : '✗'}</div>
-                            </div>
-                            <div className="text-xs text-blue-500 mt-2">
-                              Đợi Portal DOM + Quill init...
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )
                 },
@@ -536,7 +399,7 @@ function PDFEditMain({
                       {/* ✅ Preview hiển thị full HTML đầy đủ */}
                       <div dangerouslySetInnerHTML={{ 
                         __html: fullPreviewHtml || rebuildCompleteHtml({
-                          editableBody: getCurrentContent(),
+                          editableBody: htmlContent,
                           headerBody: parsedStructure.headerBody,
                           metaBlocks: parsedStructure.metaBlocks,
                           signBody: parsedStructure.signBody,

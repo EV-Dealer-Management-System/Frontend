@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import 'quill/dist/quill.snow.css';
 import {
   Modal,
   Button,
@@ -21,8 +20,9 @@ import {
   CodeOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
+import { Editor } from '@tinymce/tinymce-react';
 import { useTemplateEditor } from './useTemplateEditor';
-import { useQuillEditor } from './useQuillEditor';
+import { useQuillEditor } from './useTinyEditor'; // Import TinyMCE editor hook
 import { useHtmlParser } from './useHtmlParser';
 import PreviewModal from './PreviewModal';
 
@@ -30,7 +30,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 // ========================================
-// 📝 TEMPLATE EDITOR MODAL - QUILL + HTML
+// 📝 TEMPLATE EDITOR MODAL - TINYMCE + HTML
 // ========================================
 
 function TemplateEditorModal({ visible, onClose, template }) {
@@ -65,14 +65,16 @@ function TemplateEditorModal({ visible, onClose, template }) {
     setFullHtml
   } = useTemplateEditor();
 
-  // Hook quản lý Quill editor - truyền htmlContent và onContentChange
+  // Hook quản lý TinyMCE editor - truyền htmlContent và onContentChange
   const {
     quill,
     quillRef,
     isReady,
+    tinyMCEConfig,
+    handleEditorChange,
     getCurrentContent,
     setContent,
-    resetPasteState
+    resetContent
   } = useQuillEditor(
     htmlContent,
     (val) => { setHtmlContent(val); setHasUnsavedChanges(true); },
@@ -86,7 +88,7 @@ function TemplateEditorModal({ visible, onClose, template }) {
   useEffect(() => {
     if (visible && template && template.id !== lastIngestedId.current) {
       console.log('📋 Loading template into modal:', template.name);
-      resetPasteState();
+      resetContent();
       
       // Parse HTML thành các phần riêng biệt
       if (template.contentHtml) {
@@ -101,7 +103,7 @@ function TemplateEditorModal({ visible, onClose, template }) {
       ingestTemplate(template); // nạp template prop vào hook
       lastIngestedId.current = template.id;
     }
-  }, [visible, template, resetPasteState, ingestTemplate, parseHtmlFromBE, updateParsedStructure, setFullHtml, setHtmlContent]);
+  }, [visible, template, resetContent, ingestTemplate, parseHtmlFromBE, updateParsedStructure, setFullHtml, setHtmlContent]);
 
   // ✅ Reset states khi đóng modal
   useEffect(() => {
@@ -264,13 +266,14 @@ function TemplateEditorModal({ visible, onClose, template }) {
         }
         open={visible}
         onCancel={handleClose}
-        width="95vw"
-        style={{ top: 20 }}
+        width="90vw"
+        style={{ top: 10 }}
         destroyOnHidden
         styles={{
           body: { 
-            height: 'calc(100vh - 150px)', 
-            padding: '24px',
+            height: 'calc(100vh - 200px)', 
+            maxHeight: '800px',
+            padding: '16px',
             overflow: 'hidden'
           }
         }}
@@ -349,34 +352,34 @@ function TemplateEditorModal({ visible, onClose, template }) {
                     label: (
                       <span>
                         <EditOutlined />
-                        Quill Editor
+                        TinyMCE Editor
                       </span>
                     ),
                     children: (
                       <div className="h-full overflow-hidden relative">
-                        {/* Quill Editor Container */}
-                        <div className="h-full">
-                          <div 
-                            ref={quillRef} 
-                            className="h-full border border-gray-300 rounded bg-white"
-                            style={{ 
-                              height: 'calc(100vh - 350px)',
-                              minHeight: '400px'
-                            }}
-                          />
-                        </div>
-
-                        {/* Loading Overlay */}
-                        {!isReady && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90">
-                            <div className="text-center">
-                              <Spin size="large" />
-                              <div className="mt-3 text-gray-600">
-                                Đang khởi tạo editor...
-                              </div>
-                            </div>
+                        {/* TinyMCE Editor Container - Full height */}
+                        <div 
+                          className="h-full"
+                          style={{ 
+                            height: 'calc(100vh - 400px)', 
+                            maxHeight: '600px',
+                            minHeight: '400px',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                        >
+                          <div style={{ flex: 1, minHeight: 0 }}>
+                            <Editor
+                              value={htmlContent}
+                              init={{
+                                ...tinyMCEConfig,
+                                height: '100%'
+                              }}
+                              onEditorChange={handleEditorChange}
+                              disabled={false}
+                            />
                           </div>
-                        )}
+                        </div>
                       </div>
                     )
                   },
@@ -427,8 +430,9 @@ function TemplateEditorModal({ visible, onClose, template }) {
                                         }
                             className="h-full resize-none font-mono text-sm border-2 border-dashed border-green-200 focus:border-green-400"
                             style={{ 
-                              height: 'calc(100vh - 400px)',
-                              minHeight: '400px',
+                              height: 'calc(100vh - 450px)',
+                              maxHeight: '500px',
+                              minHeight: '350px',
                               fontFamily: '"Fira Code", "Monaco", "Consolas", "Courier New", monospace',
                               fontSize: '13px',
                               lineHeight: '1.6',
@@ -464,16 +468,16 @@ function TemplateEditorModal({ visible, onClose, template }) {
                 ]}
               />
             </div>
-
+            
+            {!selectedTemplate && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Spin size="large" />
+                  <div className="mt-4 text-gray-600">Đang tải nội dung...</div>
+                </div>
+              </div>
+            )}
           </div>
-        {!selectedTemplate && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <Spin size="large" />
-              <div className="mt-4 text-gray-600">Đang tải nội dung...</div>
-            </div>
-          </div>
-        )}
       </Modal>
 
       {/* Preview Modal */}
@@ -499,31 +503,72 @@ function TemplateEditorModal({ visible, onClose, template }) {
           height: 100% !important;
         }
         
-        .ql-toolbar {
-          border-top: 1px solid #d9d9d9 !important;
-          border-left: 1px solid #d9d9d9 !important;
-          border-right: 1px solid #d9d9d9 !important;
-          border-bottom: 1px solid #d9d9d9 !important;
+        /* Responsive Modal styling */
+        @media (max-width: 1200px) {
+          .ant-modal {
+            width: 95vw !important;
+            max-width: none !important;
+          }
+          .ant-modal-body {
+            height: calc(100vh - 220px) !important;
+            max-height: 700px !important;
+          }
+        }
+        
+        @media (max-width: 768px) {
+          .ant-modal {
+            width: 98vw !important;
+            margin: 5px !important;
+          }
+          .ant-modal-body {
+            height: calc(100vh - 180px) !important;
+            padding: 12px !important;
+          }
+        }
+        
+        /* TinyMCE styling */
+        .tox-tinymce {
+          border-radius: 6px !important;
+          border-color: #d9d9d9 !important;
+          height: 100% !important;
+        }
+        
+        .tox .tox-editor-header {
           border-radius: 6px 6px 0 0 !important;
-          background: #fafafa;
-          padding: 12px 16px;
+          background: #fafafa !important;
         }
         
-        .ql-container {
-          border-left: 1px solid #d9d9d9 !important;
-          border-right: 1px solid #d9d9d9 !important;
-          border-bottom: 1px solid #d9d9d9 !important;
+        .tox .tox-edit-area {
           border-radius: 0 0 6px 6px !important;
-          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif !important;
-          font-size: 14px !important;
-          line-height: 1.6 !important;
+          overflow: auto !important;
         }
         
-        .ql-editor {
-          spell-check: false;
-          padding: 20px !important;
-          min-height: 350px !important;
-          background: white;
+        .tox .tox-edit-area__iframe {
+          height: 100% !important;
+          min-height: 400px !important;
+        }
+        
+        /* Đảm bảo nội dung editor có thể scroll */
+        .tox-edit-area iframe {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+        }
+        
+        .mce-content-body {
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          min-height: 400px !important;
+        }
+        
+        /* Ensure TinyMCE is properly sized */
+        .tox-tinymce-aux {
+          z-index: 1000 !important;
+          pointer-events: none !important;
+        }
+        
+        /* Modal z-index fix for TinyMCE dialogs */
+        .tox-dialog-wrap {
+          z-index: 10000 !important;
         }
         
         /* Template variables styling */
@@ -535,21 +580,6 @@ function TemplateEditorModal({ visible, onClose, template }) {
           font-family: "Monaco", "Consolas", monospace !important;
           font-size: 12px !important;
           border: 1px solid #91d5ff !important;
-        }
-
-        /* Ẩn các phần non-editable trong Quill editor */
-        .ql-editor .non-editable-header,
-        .ql-editor .meta-block,
-        .ql-editor .sign-block,
-        .ql-editor .footer {
-          display: none !important;
-        }
-
-        /* Đảm bảo chỉ hiển thị phần editable content */
-        .ql-editor div[class*="non-editable"],
-        .ql-editor table[class*="sign-block"],
-        .ql-editor div[class*="footer"] {
-          display: none !important;
         }
       `}</style>
     </>

@@ -137,7 +137,7 @@ export const useTemplateEditor = () => {
         htmlAttrs: parsedResult.htmlAttrs || "",
       });
 
-      setHtmlContent(parsedResult.bodyContent || ""); // body vào quill
+      setHtmlContent(parsedResult.bodyContent || ""); // body vào TinyMCE
       loadedTemplateIdRef.current = selectedTemplate.id;
       setHasUnsavedChanges(false);
     };
@@ -151,12 +151,12 @@ export const useTemplateEditor = () => {
     try {
       console.log('💾 Saving template...');
       
-      // Lấy content từ getCurrentContent (có thể là function hoặc string)
+      // ✅ Lấy content từ TinyMCE getCurrentContent (tương thích với Quill API)
       const finalContent = typeof getCurrentContent === 'function'
-        ? getCurrentContent()
+        ? getCurrentContent() // TinyMCE: editor.getContent() + postprocess
         : (getCurrentContent || htmlContent);
 
-      console.log('📝 Final content to save:', finalContent?.substring(0, 200) + '...');
+      console.log('📝 Final content to save (TinyMCE):', finalContent?.substring(0, 200) + '...');
 
       // gọi API lưu với content đã được process
       const res = await updateTemplate(

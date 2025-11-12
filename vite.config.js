@@ -21,8 +21,8 @@ export default defineConfig({
       'react-dom', 
       'axios', 
       'antd', 
-      'quill', 
-      'react-quilljs',
+      'tinymce',
+      '@tinymce/tinymce-react',
       'jwt-decode',
       'dayjs'
     ],

@@ -27,6 +27,7 @@ import { getAllEVBookings } from "../../../App/DealerManager/EVBooking/GetAllEVB
 import { getBookingById } from "../../../App/DealerManager/EVBooking/GetBookingByID";
 import { getEContractById, getEContractPreview } from "../../../App/DealerManager/EVBooking/GetBookingContract";
 import PDFModal from "../../../Pages/Admin/SignContract/Components/PDF/PDFModal";
+import EContractPDFEditor from './Components/EContractPDFEditor';
 import NavigationBar from "../../../Components/DealerManager/Components/NavigationBar";
 import BookingFilters from "./Components/BookingFilters";
 import BookingTable from "./Components/BookingTable";
@@ -55,6 +56,11 @@ function GetAllEVBooking() {
   const [pdfLoading, setPdfLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Template Editor states
+  const [templateEditorVisible, setTemplateEditorVisible] = useState(false);
+  const [selectedEContract, setSelectedEContract] = useState(null);
+  const [templateEditorLoading, setTemplateEditorLoading] = useState(false);
 
   // Xử lý responsive
   useEffect(() => {
@@ -149,21 +155,24 @@ function GetAllEVBooking() {
     }
   };
 
-  // Mở eContract PDF: lấy eContractId -> getEContractById -> lấy downloadUrl -> gọi preview -> blob -> objectUrl -> open modal
+  // Mở eContract PDF: sử dụng eContract từ booking data
   const handleOpenEContractPdf = async (record) => {
-    // try multiple possible paths for eContract id
-    const eContractId = record?.eContractId || record?.eContract?.id || record?.eContract;
-    if (!eContractId) {
+    // Sử dụng eContract đã có trong booking data
+    if (!record?.eContract?.id) {
       message.warning("Không có eContract liên kết cho booking này");
       return;
     }
 
+    const eContract = record.eContract;
+    console.log('📋 Using eContract from booking for PDF:', eContract);
+
     setPdfLoading(true);
     try {
-      const res = await getEContractById(eContractId);
+      // Thử gọi API để lấy downloadUrl nếu cần
+      const res = await getEContractById(eContract.id);
       // response may have data.downloadUrl
       const downloadUrl = res?.data?.downloadUrl || res?.downloadUrl || res?.result?.data?.downloadUrl || res?.result?.downloadUrl;
-      const docNo = res?.data?.no || res?.no || res?.result?.data?.no || `EContract-${eContractId}`;
+      const docNo = eContract.name || `EContract-${eContract.id.slice(0, 8)}`;
 
       if (!downloadUrl) {
         message.error("Không tìm thấy file PDF từ eContract");
@@ -191,6 +200,39 @@ function GetAllEVBooking() {
     } finally {
       setPdfLoading(false);
     }
+  };
+
+  // Mở Template Editor để sửa hợp đồng
+  const handleEditContract = async (record) => {
+    setTemplateEditorLoading(true);
+    try {
+      // Sử dụng eContract đã có trong booking data thay vì gọi API
+      if (record.eContract && record.eContract.id) {
+        const eContract = record.eContract;
+        
+        console.log('📋 Using eContract from booking data:', eContract);
+        
+        // Truyền trực tiếp eContract object từ booking data cho EContractPDFEditor
+        setSelectedEContract(eContract);
+        setTemplateEditorVisible(true);
+        message.success('Đã tải nội dung hợp đồng để chỉnh sửa');
+      } else {
+        message.error('Không tìm thấy hợp đồng điện tử cho booking này');
+      }
+    } catch (error) {
+      console.error('Error loading contract for edit:', error);
+      message.error('Lỗi khi tải hợp đồng. Vui lòng thử lại');
+    } finally {
+      setTemplateEditorLoading(false);
+    }
+  };
+
+  // Xử lý đóng Template Editor
+  const handleCloseTemplateEditor = () => {
+    setTemplateEditorVisible(false);
+    setSelectedEContract(null);
+    // Có thể reload lại danh sách nếu cần
+    // fetchBookings();
   };
 
   // Reset bộ lọc
@@ -567,6 +609,8 @@ function GetAllEVBooking() {
                   formatDateTime={formatDateTime}
                   onStatusUpdate={fetchBookings}
                   onOpenPdf={handleOpenEContractPdf}
+                  onEditContract={handleEditContract}
+                  templateEditorLoading={templateEditorLoading}
                 />
               </ProCard>
             </ConfigProvider>
@@ -599,6 +643,18 @@ function GetAllEVBooking() {
         contractNo={pdfTitle}
         pdfUrl={pdfUrl}
         title={pdfTitle}
+      />
+
+      {/* EContract PDF Editor Modal */}
+      <EContractPDFEditor
+        visible={templateEditorVisible}
+        onClose={handleCloseTemplateEditor}
+        eContract={selectedEContract}
+        onSaveSuccess={(savedData) => {
+          message.success('Đã cập nhật hợp đồng thành công!');
+          // Có thể reload danh sách nếu cần
+          fetchBookings();
+        }}
       />
     </Layout>
   );

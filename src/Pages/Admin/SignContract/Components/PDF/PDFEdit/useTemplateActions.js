@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Modal, App } from 'antd';
 import { PDFUpdateService } from '../../../../../../App/Home/PDFconfig/PDFUpdate';
 
@@ -91,21 +91,25 @@ export const useTemplateActions = (
 
   // Lưu thay đổi template (chỉ call update-econtract) - FIX: Thêm timeout safety
   const handleSave = async () => {
+    let useOldHtmlFallback = false;
+    let usedDomFallback = false;
     if (!htmlContent.trim()) {
       message.error('Nội dung template không được rỗng');
       return;
     }
-    let latestContent = getCurrentContent ? getCurrentContent() : '';
-    let usedDomFallback = false;
-    let useOldHtmlFallback = false;
-      if (!latestContent) {
-        // an toàn: hút trực tiếp từ DOM editor nếu instance đã mount
-        const live = document.querySelector('.ql-editor')?.innerHTML;
-        if (live && typeof live === 'string') {
-          latestContent = live;
-          usedDomFallback = true;
-        }
-      }
+    let latestContent = htmlContent || '';
+    // Nếu vì lý do nào đó state chưa kịp cập nhật thì mới gọi editor.getContent()
+    if (!latestContent && typeof getCurrentContent === 'function') {
+      const live = getCurrentContent();
+      if (live) latestContent = live;
+    }
+
+    // Cuối cùng mới dùng DOM fallback (thường không cần)
+    if (!latestContent) {
+      const tinyMCEIframe = document.querySelector('.tox-edit-area iframe');
+      latestContent = tinyMCEIframe?.contentDocument?.body?.innerHTML || '';
+      usedDomFallback = true;
+    }
     setSaveLoading(true);
     
     // FIX: Thêm timeout để tránh promise treo vô hạn
@@ -114,23 +118,28 @@ export const useTemplateActions = (
     });
     
     try {
-      // ✅ Lấy nội dung người dùng đã chỉnh trong Quill
-      let quillBody = latestContent || htmlContent || '';
+      // ✅ Lấy nội dung người dùng đã chỉnh trong TinyMCE
+      let editorBody = latestContent || htmlContent || '';
       if(!latestContent && !usedDomFallback) {
         useOldHtmlFallback = true;
       }
-      quillBody = quillBody.replace(
+      
+      // ✅ TinyMCE giữ nguyên HTML structure, không cần replace như Quill
+      // Chỉ cần ensure section-title formatting nếu cần
+      editorBody = editorBody.replace(
         /<p>(\s*Điều\s+\d+[^<]*)<\/p>/gi,
         '<div class="section-title">$1</div>'
       );
-      if (useOldHtmlFallback && hasUnsavedChanges) {
+      
+      if (usedDomFallback && hasUnsavedChanges) {
         // ❌ Không lấy được bản mới nhất từ editor → DỪNG LƯU và báo lỗi
-        message.error('❌ Không thể lấy nội dung mới nhất từ editor. Vui lòng thử bấm "Lưu" lại sau 1 giây.');
+        message.error('❌ Không thể lấy nội dung mới nhất từ TinyMCE. Vui lòng thử bấm "Lưu" lại sau 1 giây.');
         setSaveLoading(false);
         return; // ⛔ DỪNG Ở ĐÂY, KHÔNG GỬI BẢN CŨ
       }
+      
       const completeHtml = rebuildCompleteHtml({
-        editableBody: quillBody,
+        editableBody: editorBody,
         headerBody: parsedStructure.headerBody,
         metaBlocks: parsedStructure.metaBlocks,
         signBody: parsedStructure.signBody,
@@ -139,12 +148,12 @@ export const useTemplateActions = (
         externalAllStyles: allStyles
       });
       const subject = contractSubject || `Hợp đồng Đại lý ${contractNo}`;
-      const currentBodyContent = quillBody || htmlContent || '';
+      const currentBodyContent = editorBody || htmlContent || '';
 
-      console.log('=== SAVE TEMPLATE CHANGES ===');
+      console.log('=== SAVE TEMPLATE CHANGES (TinyMCE) ===');
       console.log('Contract ID:', contractId);
       console.log('Subject:', subject);
-      console.log('- Quill body length:', quillBody?.length || 0);
+      console.log('- TinyMCE body length:', editorBody?.length || 0);
       console.log('- Complete HTML length:', completeHtml?.length || 0);
       
       // Gửi complete HTML với đầy đủ structure về BE
@@ -156,7 +165,7 @@ export const useTemplateActions = (
       if (result.success) {
         console.log('✅ Template changes saved successfully');
         message.success('Đã lưu thay đổi thành công');
-        setOriginalContent(quillBody);
+        setOriginalContent(editorBody);
         setHasUnsavedChanges(false);
         
         // ✅ Callback với thông tin mới từ API response
