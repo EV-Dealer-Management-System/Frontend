@@ -568,19 +568,15 @@ function BookingTable({
           closeReviewModal();
 
           try {
-            // Gọi đồng thời 2 API
-            const [eContractResponse] = await Promise.all([
-              handleEVBookingConfirmEContract(bookingId),
-              // EVBookingUpdateStatus(bookingId, 1)
-            ]);
+            // Gọi API tạo e-contract confirm
+            const eContractResponse = await handleEVBookingConfirmEContract(bookingId);
 
             console.log("E-Contract Response:", eContractResponse);
 
             if (eContractResponse?.status === 201) {
-
               setEContractModal(true);
             } else {
-              message.success("Đã cập nhật booking thành công!");
+              message.success("Đã xác nhận booking và tạo e-contract thành công!");
             }
 
             // Refresh data

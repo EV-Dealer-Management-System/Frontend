@@ -8,12 +8,10 @@ import {
 } from "@ant-design/pro-components";
 import { App, Card, Row, Col, Space } from "antd";
 import { createEVBooking } from "../../../App/DealerManager/EVBooking/EVBooking";
-import { EVBookingConfirmEContract } from "../../../App/DealerManager/EVBooking/EVBookingConfirm";
 import DealerManagerLayout from "../../../Components/DealerManager/DealerManagerLayout";
 import getAllEVModels from "../../../App/DealerManager/EVBooking/Layouts/GetAllEVModel";
 import getAllEVVersionByModelID from "../../../App/DealerManager/EVBooking/Layouts/GetAllEVVersionByModelID";
 import { getEVColorbyModelAndVersion } from "../../../App/DealerManager/EVBooking/Layouts/GetEVColorbyModelAndVersion";
-
 import VehicleSelector from "./Components/VehicleSelector";
 import BookingSummary from "./Components/BookingSummary";
 import BookingItemCard from "./Components/BookingItemCard";
@@ -198,20 +196,12 @@ function EVBooking() {
       const bookingId = bookingResponse?.data?.result?.id || bookingResponse?.result?.id;
 
       if (!bookingId) {
-
         throw new Error("Không thể lấy bookingId từ response");
-
-      }
-      try {
-        await EVBookingConfirmEContract(bookingId);
-        console.log("E-contract confirmed successfully for booking:", bookingId);
-      } catch (confirmError) {
-        console.error("Lỗi khi confirm e-contract:", confirmError); 
       }
 
       modal.success({
         title: "Đặt xe thành công!",
-        content: "Đơn đặt xe của bạn đã được tạo thành công và e-contract đã được xác nhận. Vui lòng check mail để tiến hành kí hợp đồng",
+        content: "Đơn đặt xe của bạn đã được tạo thành công. Vui lòng xác nhận booking để tạo e-contract.",
         okText: "Đóng",
         onOk: () => {
           formRef.current?.resetFields();
