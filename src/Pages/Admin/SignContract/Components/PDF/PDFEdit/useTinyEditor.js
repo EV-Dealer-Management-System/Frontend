@@ -13,19 +13,19 @@ import 'tinymce/models/dom';
 import 'tinymce/themes/silver';
 
 
-// ✅ Import các plugin bạn đã cấu hình trong tinyMCEConfig
-import 'tinymce/plugins/code';
-import 'tinymce/plugins/table';
+// ✅ Import các plugin cần thiết cho editor đơn giản
+// import 'tinymce/plugins/code';
+// import 'tinymce/plugins/table';
 import 'tinymce/plugins/lists';
 import 'tinymce/plugins/link';
-import 'tinymce/plugins/searchreplace';
+// import 'tinymce/plugins/searchreplace';
 import 'tinymce/plugins/autolink';
-import 'tinymce/plugins/charmap';
-import 'tinymce/plugins/preview';
-import 'tinymce/plugins/anchor';
-import 'tinymce/plugins/visualblocks';
-import 'tinymce/plugins/wordcount';
-import 'tinymce/plugins/fullscreen';
+// import 'tinymce/plugins/charmap';
+// import 'tinymce/plugins/preview';
+// import 'tinymce/plugins/anchor';
+// import 'tinymce/plugins/visualblocks';
+// import 'tinymce/plugins/wordcount';
+// import 'tinymce/plugins/fullscreen';
 
 // ✅ Cấu hình TinyMCE để giữ nguyên HTML structure từ BE
 const tinyMCEConfig = {
@@ -36,12 +36,9 @@ const tinyMCEConfig = {
   resize: true,
   menubar: false,
   plugins: [
-    'code', 'table', 'lists', 'link', 'searchreplace',
-    'autolink', 'charmap', 'preview', 'anchor', 'visualblocks', 
-    'wordcount', 'fullscreen'
+    'lists', 'link', 'autolink'
   ],
-  toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | ' +
-    'bullist numlist | table | removeformat | code | fullscreen',
+  toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | bullist numlist | removeformat',
   
   // ✅ Cấu hình quan trọng để giữ nguyên HTML từ BE
   valid_elements: '*[*]',           // Cho phép tất cả elements với tất cả attributes
@@ -122,6 +119,10 @@ const tinyMCEConfig = {
 
 // Function để highlight các placeholder như {{ company.name }}
 const preprocessHtmlForTinyMCE = (html) => {
+  if (!html || typeof html !== 'string') {
+    console.warn('⚠️ preprocessHtmlForTinyMCE: Invalid html input:', html);
+    return '';
+  }
   return html.replace(
     /\{\{\s*([^}]+)\s*\}\}/g, 
     '<span class="placeholder-variable">${{ $1 }}</span>'
@@ -129,6 +130,10 @@ const preprocessHtmlForTinyMCE = (html) => {
 };
 
 const postprocessHtmlFromTinyMCE = (html) => {
+  if (!html || typeof html !== 'string') {
+    console.warn('⚠️ postprocessHtmlFromTinyMCE: Invalid html input:', html);
+    return '';
+  }
   return html.replace(
     /<span class="[^"]*placeholder-variable[^"]*"[^>]*>\$?\{\{\s*([^}]+)\s*\}\}<\/span>/g,
     '{{ $1 }}'
@@ -163,6 +168,12 @@ export const useTinyEditor = (visible, htmlContent, setHasUnsavedChanges, isUpda
       return;
     }
     
+    // Kiểm tra content hợp lệ
+    if (content === null || content === undefined) {
+      console.warn('⚠️ TinyMCE: Received null/undefined content');
+      return;
+    }
+    
     const processedContent = postprocessHtmlFromTinyMCE(content);
     
     // Callback để update htmlContent trong parent
@@ -171,7 +182,7 @@ export const useTinyEditor = (visible, htmlContent, setHasUnsavedChanges, isUpda
     }
     
     setHasUnsavedChanges(true);
-    console.log('✏️ TinyMCE: Content changed, content length:', content.length);
+    console.log('✏️ TinyMCE: Content changed, content length:', content?.length || 0);
   };
 
   // ✅ TinyMCE controlled mode - không cần paste thủ công

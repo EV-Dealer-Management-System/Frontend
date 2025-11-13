@@ -9,6 +9,8 @@ import {
     SyncOutlined,
     AuditOutlined,
     CarOutlined,
+    FilePdfOutlined,
+    EditOutlined,
 } from "@ant-design/icons";
 import EVBookingUpdateStatus from "../../../../App/DealerManager/EVBooking/EVBookingUpdateStatus";
 import BookingReviewModal from "./BookingReviewModal";
@@ -21,6 +23,9 @@ function BookingTable({
     onViewDetail,
     formatDateTime,
     onStatusUpdate,
+    onOpenPdf,
+    onEditContract,
+    templateEditorLoading,
 }) {
     const [updatingStatus, setUpdatingStatus] = useState({});
     const [reviewModal, setReviewModal] = useState({
@@ -299,6 +304,43 @@ function BookingTable({
                             Chi tiết
                         </Button>
 
+                        {/* PDF eContract - hiển thị nếu có eContract */}
+                        {record?.eContract && onOpenPdf && (
+                            <Tooltip title="Xem PDF hợp đồng">
+                                <Button
+                                    type="default"
+                                    icon={<FilePdfOutlined />}
+                                    onClick={() => onOpenPdf(record)}
+                                    size="small"
+                                    style={{
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        color: '#ff4d4f',
+                                        borderColor: '#ff4d4f',
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
+
+                        {/* Sửa hợp đồng - chỉ hiển thị với eContract status = 1 cho EVMStaff */}
+                        {record?.eContract && record.eContract.status === 1 && onEditContract && (
+                            <Tooltip title="Sửa Hợp đồng">
+                                <Button
+                                    type="default"
+                                    icon={<EditOutlined />}
+                                    onClick={() => onEditContract(record)}
+                                    loading={templateEditorLoading}
+                                    size="small"
+                                    style={{
+                                        borderRadius: 6,
+                                        fontSize: 12,
+                                        color: '#1890ff',
+                                        borderColor: '#1890ff',
+                                    }}
+                                />
+                            </Tooltip>
+                        )}
+
                         {isPending && (
                             <Button
                                 type="primary"
@@ -316,24 +358,6 @@ function BookingTable({
                                 Duyệt Đơn
                             </Button>
                         )}
-
-                        {/* {isSignedByAdmin && (
-                            <Button
-                                type="primary"
-                                icon={<CheckCircleOutlined />}
-                                onClick={() => handleUpdateStatus(record.id, 7, "Hoàn thành")}
-                                loading={isUpdating}
-                                size="middle"
-                                style={{
-                                    borderRadius: 6,
-                                    fontWeight: 500,
-                                    backgroundColor: "#52c41a",
-                                    borderColor: "#52c41a",
-                                }}
-                            >
-                                Hoàn Thành Đơn
-                            </Button>
-                        )} */}
                     </Space>
                 );
             },

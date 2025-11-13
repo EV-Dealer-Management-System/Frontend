@@ -51,8 +51,8 @@ function TemplateEditorPage() {
   const {
     templates,
     loading,
-    fetchTemplates,
-    rebuildCompleteHtml
+    fetchTemplates
+    // REMOVED: rebuildCompleteHtml - chỉ dùng full HTML
   } = useTemplateEditor();
 
   // ✅ Load templates on mount với useRef chống fetch lặp React 19
@@ -243,7 +243,7 @@ function TemplateEditorPage() {
         onClose={() => setPreviewVisible(false)}
         templateData={selectedTemplate}
         htmlContent={selectedTemplate?.contentHtml}
-        rebuildCompleteHtml={rebuildCompleteHtml}
+        // REMOVED: rebuildCompleteHtml - dùng full HTML từ BE
       />
 
       {/* Custom Table Styling */}

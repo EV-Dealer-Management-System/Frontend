@@ -10,7 +10,7 @@ import {
   AuditOutlined,
   CarOutlined,
   FileTextOutlined,
-  EditOutlined,
+  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import EVBookingUpdateStatus from "../../../../App/DealerManager/EVBooking/EVBookingUpdateStatus";
 import BookingReviewModal from "./BookingReviewModal";
@@ -18,6 +18,7 @@ import EContractSuccessModal from "./EContractSuccessModal";
 import CancelBookingModal from "./CancelBookingModal";
 import CompleteBookingModal from "./CompleteBookingModal";
 import { EVBookingConfirmEContract } from "../../../../App/DealerManager/EVBooking/EVBookingConfirm";
+import { confirmBookingEContract } from "../../../../App/DealerManager/EVBooking/EVBookingConfirmContract";
 
 function BookingTable({
   dataSource,
@@ -26,10 +27,10 @@ function BookingTable({
   formatDateTime,
   onStatusUpdate,
   onOpenPdf,
-  onEditContract,
-  templateEditorLoading,
+  pdfLoading = false,
 }) {
   const [updatingStatus, setUpdatingStatus] = useState({});
+  const [confirmingContract, setConfirmingContract] = useState({});
   const [reviewModal, setReviewModal] = useState({
     visible: false,
     booking: null,
@@ -129,6 +130,30 @@ function BookingTable({
       message.error(`Không thể hoàn thành booking: ${error.message}`);
     } finally {
       setUpdatingStatus((prev) => ({ ...prev, [bookingId]: false }));
+    }
+  };
+
+  // Xử lý xác nhận hợp đồng
+  const handleConfirmContract = async (record) => {
+    if (!record?.eContract?.id) {
+      message.error("Không tìm thấy hợp đồng để xác nhận");
+      return;
+    }
+
+    setConfirmingContract((prev) => ({ ...prev, [record.id]: true }));
+
+    try {
+      await confirmBookingEContract(record.eContract.id);
+      message.success("Đã xác nhận hợp đồng thành công!");
+
+      // Refresh data
+      if (onStatusUpdate) {
+        onStatusUpdate();
+      }
+    } catch (error) {
+      message.error(`Không thể xác nhận hợp đồng: ${error.message}`);
+    } finally {
+      setConfirmingContract((prev) => ({ ...prev, [record.id]: false }));
     }
   };
 
@@ -387,10 +412,12 @@ function BookingTable({
       fixed: "right",
       render: (_, record) => {
         const isUpdating = updatingStatus[record.id];
+        const isConfirming = confirmingContract[record.id];
         const isDraft = record.status === 0;
         const isWaittingDealerSign = record.status === 1;
         const isPending = record.status === 2;
         const isSignedByAdmin = record.status === 6;
+        const hasEContractWithStatus1 = record?.eContract?.status === 1;
 
         return (
           <Space size={4} wrap>
@@ -409,11 +436,13 @@ function BookingTable({
 
             {/* Xem hợp đồng (PDF) nếu có eContract */}
             {record?.eContract && onOpenPdf && (
-              <Tooltip title="Xem Hợp đồng">
+              <Tooltip title={pdfLoading ? "Đang tải hợp đồng..." : "Xem Hợp đồng"}>
                 <Button
                   type="default"
                   icon={<FileTextOutlined />}
                   onClick={() => onOpenPdf(record)}
+                  loading={pdfLoading}
+                  disabled={pdfLoading}
                   size="small"
                   style={{
                     borderRadius: 6,
@@ -423,24 +452,28 @@ function BookingTable({
               </Tooltip>
             )}
 
-            {/* Sửa hợp đồng - chỉ hiển thị với status 0 (Draft) và 1 (WaittingDealerSign) */}
-            {record?.eContract && onEditContract && (isDraft || isWaittingDealerSign) && (
-              <Tooltip title="Sửa Hợp đồng">
+            {/* Nút xác nhận hợp đồng - chỉ hiện khi eContract status = 1 */}
+            {hasEContractWithStatus1 && (
+              <Tooltip title="Xác nhận hợp đồng">
                 <Button
-                  type="default"
-                  icon={<EditOutlined />}
-                  onClick={() => onEditContract(record)}
-                  loading={templateEditorLoading}
+                  type="primary"
+                  icon={<SafetyCertificateOutlined />}
+                  onClick={() => handleConfirmContract(record)}
+                  loading={isConfirming}
                   size="small"
                   style={{
                     borderRadius: 6,
                     fontSize: 12,
-                    color: '#1890ff',
-                    borderColor: '#1890ff',
+                    backgroundColor: "#13c2c2",
+                    borderColor: "#13c2c2",
                   }}
-                />
+                >
+                  Xác Nhận
+                </Button>
               </Tooltip>
             )}
+
+
 
             {isDraft && (
               <Button

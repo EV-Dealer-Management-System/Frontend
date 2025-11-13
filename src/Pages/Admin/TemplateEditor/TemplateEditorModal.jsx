@@ -6,7 +6,7 @@ import {
   Space,
   Spin,
   Tag,
-  Tabs,
+
   Input,
   Alert,
   App
@@ -17,12 +17,12 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   EditOutlined,
-  CodeOutlined,
+
   ReloadOutlined
 } from '@ant-design/icons';
 import { Editor } from '@tinymce/tinymce-react';
 import { useTemplateEditor } from './useTemplateEditor';
-import { useQuillEditor } from './useTinyEditor'; // Import TinyMCE editor hook
+import useTinyEditor from './useTinyEditor';
 import { useHtmlParser } from './useHtmlParser';
 import PreviewModal from './PreviewModal';
 
@@ -37,8 +37,10 @@ function TemplateEditorModal({ visible, onClose, template }) {
   const { modal } = App.useApp();
   
   // States cho modal
-  const [activeTab, setActiveTab] = useState('editor');
   const [previewVisible, setPreviewVisible] = useState(false);
+  const [htmlEditorVisible, setHtmlEditorVisible] = useState(false);
+  const [fullHtmlContent, setFullHtmlContent] = useState('');
+  const [htmlEditorSaving, setHtmlEditorSaving] = useState(false);
 
   // Hook quản lý HTML parsing cho template
   const {
@@ -46,6 +48,12 @@ function TemplateEditorModal({ visible, onClose, template }) {
     htmlHead,
     htmlAttributes,
     templateBody,
+    // 🔄 Parsed parts từ useHtmlParser
+    headerBody,
+    metaBlocks,
+    signBody,
+    footerBody,
+    editableBody,
     parseHtmlFromBE,
     rebuildCompleteHtml,
     updateParsedStructure,
@@ -65,50 +73,62 @@ function TemplateEditorModal({ visible, onClose, template }) {
     setFullHtml
   } = useTemplateEditor();
 
-  // Hook quản lý TinyMCE editor - truyền htmlContent và onContentChange
+  // Hook quản lý TinyMCE editor
   const {
-    quill,
-    quillRef,
-    isReady,
+    editor,
+    isEditorReady,
     tinyMCEConfig,
-    handleEditorChange,
     getCurrentContent,
-    setContent,
-    resetContent
-  } = useQuillEditor(
-    htmlContent,
-    (val) => { setHtmlContent(val); setHasUnsavedChanges(true); },
-    visible
-  );
+    setEditorContent,
+    resetEditorContent,
+    handleEditorChange
+  } = useTinyEditor();
   // Ref để lưu ID của template đã nạp
   const lastIngestedId = useRef(null);
   const hasInitializedRef = useRef(false);
+  
+  // 📝 State cho modal HTML editing
+  const [showHtmlModal, setShowHtmlModal] = useState(false);
+  const [htmlRawContent, setHtmlRawContent] = useState('');
 
-  // ✅ Load template khi modal mở với HTML parsing
+  // 🎯 Load template theo PDFEdit pattern - chỉ editableBody vào TinyMCE
   useEffect(() => {
     if (visible && template && template.id !== lastIngestedId.current) {
-      console.log('📋 Loading template into modal:', template.name);
-      resetContent();
+      resetEditorContent();
       
-      // Parse HTML thành các phần riêng biệt
       if (template.contentHtml) {
+        console.log('\ud83d\udcc4 Loading template with PDFEdit pattern...');
+        
+        // Parse HTML để tách các phần
         const parsed = parseHtmlFromBE(template.contentHtml);
         updateParsedStructure(parsed);
-        setFullHtml(parsed.fullHtml || template.contentHtml);
         
-        // Chỉ nạp phần editable vào Quill
-        setHtmlContent(parsed.editableBody || '');
+        // Lưu full HTML cho Preview và HTML tab
+        setFullHtml(template.contentHtml);
+        
+        // 🎯 CHỈ LƯU editableContent vào state - TinyMCE sẽ được sync qua useEffect khác
+        const editableContent = parsed.editableBody || template.contentHtml;
+        setHtmlContent(editableContent);
+        
+        // NOTE: Không gọi setEditorContent ở đây - sẽ được sync qua useEffect với editableBody
+        
+        console.log('\ud83d\udd04 Template loaded:');
+        console.log('- Full HTML length:', template.contentHtml.length);
+        console.log('- Editable body length:', editableContent.length);
       }
       
       ingestTemplate(template); // nạp template prop vào hook
       lastIngestedId.current = template.id;
+      
+      // 🔄 Reset các flags sau khi load xong
+      setHasUnsavedChanges(false);
+      hasInitializedRef.current = false; // Reset để tránh lỗi lần 2+
     }
-  }, [visible, template, resetContent, ingestTemplate, parseHtmlFromBE, updateParsedStructure, setFullHtml, setHtmlContent]);
+  }, [visible, template, resetEditorContent, ingestTemplate, parseHtmlFromBE, updateParsedStructure, setFullHtml, setHtmlContent, setHasUnsavedChanges]);
 
   // ✅ Reset states khi đóng modal
   useEffect(() => {
     if (!visible) {
-      setActiveTab('editor');
       setHasUnsavedChanges(false);
       resetStructureStates();
       hasInitializedRef.current = false;
@@ -116,57 +136,215 @@ function TemplateEditorModal({ visible, onClose, template }) {
     }
   }, [visible, setHasUnsavedChanges, resetStructureStates]);
 
-  // ✅ Sync Quill khi editor sẵn sàng và body HTML đã có
+  // 🎯 Sync TinyMCE với editableBody khi editor sẵn sàng  
   useEffect(() => {
-    if (isReady && typeof htmlContent === 'string' && !hasInitializedRef.current) {
-      // khi editor sẵn sàng và body đã có ⇒ ép paste vào Quill
-      setContent(htmlContent);
+    // Chỉ set content khi có editableBody từ parsing và editor ready
+    if (isEditorReady && editableBody && !hasInitializedRef.current) {
+      console.log('🔄 Syncing TinyMCE with editableBody:', editableBody.length);
+      setEditorContent(editableBody);
       hasInitializedRef.current = true;
     }
-  }, [isReady, htmlContent, setContent]);
+  }, [isEditorReady, editableBody, setEditorContent]);
+
+  // 🔄 Handle editor content change - CHỈ CẬP NHẬT STATE
+  const onEditorChange = (content, editor) => {
+    setHtmlContent(content);
+    // KHÔNG set hasUnsavedChanges ở đây - sẽ dùng useEffect theo dõi htmlContent
+  };
+
+  // 🔄 Theo dõi htmlContent để kiểm tra thay đổi
+  useEffect(() => {
+    // Chỉ kiểm tra khi đã load xong template và có editableBody
+    if (!editableBody || !htmlContent || !hasInitializedRef.current) {
+      return;
+    }
     
+    const normalizedOriginal = normalizeHtmlForComparison(editableBody);
+    const normalizedCurrent = normalizeHtmlForComparison(htmlContent);
+    
+    console.log('🔍 Checking changes:');
+    console.log('- Original (editableBody):', normalizedOriginal.substring(0, 100) + '...');
+    console.log('- Current (htmlContent):', normalizedCurrent.substring(0, 100) + '...');
+    console.log('- Are different:', normalizedCurrent !== normalizedOriginal);
+    
+    const hasChanges = normalizedCurrent !== normalizedOriginal;
+    
+    if (hasChanges !== hasUnsavedChanges) {
+      setHasUnsavedChanges(hasChanges);
+      console.log('📝 hasUnsavedChanges updated to:', hasChanges);
+    }
+  }, [htmlContent, editableBody, hasUnsavedChanges]);
 
+  // Helper function để extract body từ full HTML
+  const extractBodyFromHtml = (fullHtml) => {
+    if (!fullHtml) return '';
+    const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    return bodyMatch ? bodyMatch[1] : fullHtml;
+  };
 
-  // ✅ Handle save với rebuildCompleteHtml
+  // Helper function để normalize HTML cho việc so sánh
+  const normalizeHtmlForComparison = (html) => {
+    return html
+      ?.replace(/\s+/g, ' ') // Thay thế multiple spaces thành single space
+      ?.trim() // Trim đầu cuối
+      ?.toLowerCase() || ''; // Lowercase để so sánh
+  };
+
+  // Handle mở HTML editor - sử dụng trực tiếp data từ BE
+  const handleOpenHtmlEditor = () => {
+    // Sử dụng trực tiếp contentHtml từ BE thay vì parse
+    const originalHtml = selectedTemplate?.contentHtml || template?.contentHtml || '';
+    setFullHtmlContent(originalHtml);
+    setHtmlEditorVisible(true);
+  };
+
+  // ✅ Handle save từ HTML editor - GỌI LUÔN API SAVE
+  const handleSaveFromHtmlEditor = async (newHtmlContent) => {
+    if (!selectedTemplate || !newHtmlContent.trim() || htmlEditorSaving) {
+      return;
+    }
+
+    setHtmlEditorSaving(true);
+    try {
+      console.log('💾 HTML Editor: Saving content directly to BE...');
+      
+      // ✅ Gọi API save template với HTML content đầy đủ
+      const successObj = await saveTemplate(() => newHtmlContent);
+      const success = !!successObj?.success;
+      
+      if (success) {
+        // Update TinyMCE với content mới
+        setEditorContent(newHtmlContent);
+        setHtmlContent(newHtmlContent);
+        setHasUnsavedChanges(false);
+        
+        // Đóng HTML Editor modal
+        setHtmlEditorVisible(false);
+        
+        // Đóng luôn main modal sau 1 giây
+        setTimeout(() => {
+          onClose();
+        }, 1000);
+        
+        modal.success({
+          title: 'Thành công',
+          content: 'Template đã được cập nhật và lưu thành công!',
+        });
+      } else {
+        modal.error({
+          title: 'Lỗi lưu template',
+          content: successObj?.message || 'Không thể lưu template. Vui lòng thử lại.',
+        });
+      }
+    } catch (error) {
+      console.error('❌ HTML Editor: Error saving template:', error);
+      modal.error({
+        title: 'Lỗi hệ thống',
+        content: 'Có lỗi xảy ra khi lưu template. Vui lòng thử lại.',
+      });
+    } finally {
+      setHtmlEditorSaving(false);
+    }
+  };
+
+  // 🔄 Handle save theo PDFEdit pattern - rebuild từ editableBody
   const handleSave = async () => {
     if (!selectedTemplate) {
+      console.error('❌ No selected template for save');
       return;
     }
 
-    // Lấy nội dung editable từ Quill
-    const editableContent = getCurrentContent();
-    if (!editableContent.trim()) {
-      return;
-    }
-
-    // Parse lại để lấy các phần non-editable từ template gốc
-    const parsed = parseHtmlFromBE(selectedTemplate.contentHtml || '');
+    // 🔄 LẤY TRỰC TIẾP innerHTML - BỎ QUA TẤT CẢ TINYMCE PROCESSING
+    const rawContent = (() => {
+      if (!editor) return htmlContent;
+      
+      // CHỈ sử dụng innerHTML - KHÔNG dùng getContent()
+      const editorBody = editor.getBody();
+      if (editorBody && editorBody.innerHTML) {
+        console.log('📥 Direct innerHTML (no processing):', editorBody.innerHTML.substring(0, 100));
+        return editorBody.innerHTML;
+      }
+      
+      console.warn('⚠️ No editor body, using fallback content');
+      return htmlContent;
+    })();
     
-    // Rebuild HTML hoàn chỉnh với nội dung mới từ Quill
+    // 🔧 MINIMAL CLEANER - CHỈ XỬ LÝ CƠ BẢN
+    const superCleanTinyMCEContent = (content) => {
+      try {
+        let cleaned = content;
+        
+        console.log('🔧 Before cleaning:', cleaned.substring(0, 200));
+        
+        // CHỈ XỬ LÝ &nbsp; - GIỮ NGUYÊN TẤT CẢ
+        cleaned = cleaned.replace(/&nbsp;/g, ' ');
+        
+        // ❌ KHÔNG XỬ LÝ: mce:protected (để TinyMCE tự restore)
+        // ❌ KHÔNG XỬ LỸ: entity decoding (có thể phá structure)
+        // ❌ KHÔNG XỬ LÝ: attribute fixing (gây lỗi class%3d...)
+        
+        console.log('🔧 After minimal cleaning:', cleaned.substring(0, 200));
+        return cleaned;
+        
+      } catch (error) {
+        console.warn('🔧 Minimal clean error:', error);
+        return content;
+      }
+    };
+
+    const currentBodyContent = superCleanTinyMCEContent(rawContent);
+    
+    console.log('💾 Saving with current body content:', currentBodyContent.length);
+    console.log('📝 Raw body content preview:', rawContent.substring(0, 200) + '...');
+    console.log('📝 Cleaned body content preview:', currentBodyContent.substring(0, 200) + '...');
+    
+    if (!currentBodyContent.trim()) {
+      console.error('❌ Empty body content');
+      return;
+    }
+
+    console.log('🔄 Rebuilding complete HTML from parts...');
+    console.log('- Body content length:', currentBodyContent.length);
+    console.log('- Header body length:', headerBody?.length || 0);
+    console.log('- Meta blocks length:', metaBlocks?.length || 0);
+    console.log('- Sign body length:', signBody?.length || 0);
+    console.log('- Footer body length:', footerBody?.length || 0);
+
+    // 🔄 Rebuild complete HTML từ body content + các phần cố định
     const completeHtml = rebuildCompleteHtml({
-      editableBody: editableContent,
-      headerBody: parsed.headerBody,
-      metaBlocks: parsed.metaBlocks,
-      signBody: parsed.signBody,
-      footerBody: parsed.footerBody,
+      editableBody: currentBodyContent,
+      headerBody: headerBody || '',
+      metaBlocks: metaBlocks || '',
+      signBody: signBody || '',
+      footerBody: footerBody || '',
       subject: selectedTemplate.name || 'Template',
       externalAllStyles: allStyles
     });
 
+    console.log('✅ Complete HTML rebuilt, length:', completeHtml.length);
+
     // Cập nhật states
-    setHtmlContent(editableContent);
+    setHtmlContent(currentBodyContent);
     setFullHtml(completeHtml);
     
-    // Save template với HTML hoàn chỉnh
+    // Save template với HTML hoàn chỉnh đã rebuild
     const successObj = await saveTemplate(() => completeHtml);
     const success = !!successObj?.success;
     if (success) {
-      console.log('✅ Template saved successfully in modal');
+      console.log('✅ Template saved successfully with rebuilt HTML');
       setHasUnsavedChanges(false);
+      
+      // 🔄 Cập nhật editableBody baseline sau khi save
+      // Parse lại để có editableBody mới làm baseline
+      const newParsed = parseHtmlFromBE(completeHtml);
+      updateParsedStructure(newParsed);
+      
       // Đóng modal sau khi save thành công
       setTimeout(() => {
         onClose();
       }, 1000);
+    } else {
+      console.error('❌ Failed to save template');
     }
   };
 
@@ -182,12 +360,12 @@ function TemplateEditorModal({ visible, onClose, template }) {
         if (template && template.contentHtml) {
           const parsed = parseHtmlFromBE(template.contentHtml);
           updateParsedStructure(parsed);
-          setHtmlContent(parsed.editableBody || '');
+          setHtmlContent(parsed.fullHtml || template.contentHtml);
           setFullHtml(parsed.fullHtml || template.contentHtml);
           
-          // Đặt lại nội dung trong Quill
-          if (isReady) {
-            setContent(parsed.editableBody || '');
+          // Đặt lại nội dung trong TinyMCE
+          if (isEditorReady) {
+            setEditorContent(parsed.fullHtml || template.contentHtml);
           }
         }
         setHasUnsavedChanges(false);
@@ -212,17 +390,7 @@ function TemplateEditorModal({ visible, onClose, template }) {
     }
   };
 
-  // ✅ Handle HTML content change và sync với Quill
-  const handleHtmlContentChange = (e) => {
-    const newContent = e.target.value;
-    setHtmlContent(newContent);
-    setHasUnsavedChanges(true);
-    
-    // Sync ngay với Quill editor nếu ready
-    if (isReady) {
-      setContent(newContent);
-    }
-  };
+
 
   return (
     <>
@@ -283,6 +451,15 @@ function TemplateEditorModal({ visible, onClose, template }) {
             Reset
           </Button>,
           <Button 
+            key="htmledit" 
+            icon={<EditOutlined />}
+            onClick={handleOpenHtmlEditor}
+            disabled={!selectedTemplate}
+            className="border-orange-400 text-orange-600 hover:border-orange-500"
+          >
+            Sửa bằng HTML
+          </Button>,
+          <Button 
             key="preview" 
             icon={<EyeOutlined />}
             onClick={() => setPreviewVisible(true)}
@@ -339,134 +516,33 @@ function TemplateEditorModal({ visible, onClose, template }) {
               </div>
             </div>
 
-            {/* Editor Tabs */}
+            {/* TinyMCE Editor - Direct, no tabs */}
             <div className="flex-1 overflow-hidden">
-              <Tabs
-                activeKey={activeTab}
-                onChange={setActiveTab}
-                className="h-full editor-tabs"
-                type="card"
-                items={[
-                  {
-                    key: 'editor',
-                    label: (
-                      <span>
-                        <EditOutlined />
-                        TinyMCE Editor
-                      </span>
-                    ),
-                    children: (
-                      <div className="h-full overflow-hidden relative">
-                        {/* TinyMCE Editor Container - Full height */}
-                        <div 
-                          className="h-full"
-                          style={{ 
-                            height: 'calc(100vh - 400px)', 
-                            maxHeight: '600px',
-                            minHeight: '400px',
-                            display: 'flex',
-                            flexDirection: 'column'
-                          }}
-                        >
-                          <div style={{ flex: 1, minHeight: 0 }}>
-                            <Editor
-                              value={htmlContent}
-                              init={{
-                                ...tinyMCEConfig,
-                                height: '100%'
-                              }}
-                              onEditorChange={handleEditorChange}
-                              disabled={false}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  },
-                  {
-                    key: 'html',
-                    label: (
-                      <span>
-                        <CodeOutlined />
-                        HTML Editor
-                      </span>
-                    ),
-                    children: (
-                      <div className="h-full flex flex-col">
-                        {/* HTML Editor Header */}
-                        <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <CodeOutlined className="text-green-600" />
-                              <span className="font-medium text-green-800">HTML Source Editor</span>
-                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                                Raw HTML
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-4 text-xs text-gray-600">
-                              <span>{htmlContent?.length || 0} chars</span>
-                              <span>•</span>
-                              <span>{htmlContent?.split('\n').length || 0} lines</span>
-                              <span>•</span>
-                              <span>{(htmlContent?.match(/\{\{[^}]+\}\}/g) || []).length} variables</span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* HTML TextArea */}
-                        <div className="flex-1 relative">
-                         <TextArea
-                            value={fullHtml || htmlContent}
-                            onChange={(e) => {
-                              setFullHtml(e.target.value);
-                              setHasUnsavedChanges(true);
-                            }}
-
-                            placeholder={`<!-- Chỉnh sửa HTML template trực tiếp -->
-                                            <div>
-                                            <h1>Tiêu đề hợp đồng</h1>
-                                            <p>Nội dung với biến: {{ company.name }}</p>
-                                            </div>`
-                                        }
-                            className="h-full resize-none font-mono text-sm border-2 border-dashed border-green-200 focus:border-green-400"
-                            style={{ 
-                              height: 'calc(100vh - 450px)',
-                              maxHeight: '500px',
-                              minHeight: '350px',
-                              fontFamily: '"Fira Code", "Monaco", "Consolas", "Courier New", monospace',
-                              fontSize: '13px',
-                              lineHeight: '1.6',
-                              backgroundColor: '#fafafa'
-                            }}
-                          />
-
-                        
-
-                          
-                          {/* Character count overlay */}
-                          <div className="absolute bottom-2 right-2 px-2 py-1 bg-white border rounded shadow-sm text-xs text-gray-500">
-                            {htmlContent?.length || 0} / ∞
-                          </div>
-                        </div>
-                        
-                        {/* HTML Editor Tips */}
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-start space-x-2">
-                            <div className="text-blue-500">💡</div>
-                            <div className="text-xs text-blue-700">
-                              <strong>Tips:</strong> 
-                              <span className="ml-1">Thay đổi ở đây sẽ đồng bộ với Quill Editor.</span>
-                              <span className="ml-2">Sử dụng biến động: </span>
-                              <code className="bg-blue-100 px-1 rounded">{'{{ company.name }}'}</code>
-                              <code className="bg-blue-100 px-1 rounded ml-1">{'{{ contract.date }}'}</code>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }
-                ]}
-              />
+              <div className="h-full overflow-hidden relative">
+                {/* TinyMCE Editor Container - Full height */}
+                <div 
+                  className="h-full"
+                  style={{ 
+                    height: 'calc(100vh - 400px)', 
+                    maxHeight: '600px',
+                    minHeight: '400px',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <div style={{ flex: 1, minHeight: 0 }}>
+                    <Editor
+                      value={htmlContent}
+                      init={{
+                        ...tinyMCEConfig,
+                        height: '100%'
+                      }}
+                      onEditorChange={onEditorChange}
+                      disabled={false}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
             
             {!selectedTemplate && (
@@ -478,6 +554,68 @@ function TemplateEditorModal({ visible, onClose, template }) {
               </div>
             )}
           </div>
+      </Modal>
+
+      {/* HTML Editor Modal */}
+      <Modal
+        title="Sửa bằng HTML - Toàn bộ Template"
+        open={htmlEditorVisible}
+        onCancel={() => setHtmlEditorVisible(false)}
+        width="90vw"
+        style={{ top: 20 }}
+        zIndex={2000}
+        maskClosable={false}
+        data-testid="html-editor-modal"
+        footer={[
+          <Button key="cancel" onClick={() => setHtmlEditorVisible(false)} disabled={htmlEditorSaving}>
+            Hủy
+          </Button>,
+          <Button 
+            key="save"
+            type="primary"
+            loading={htmlEditorSaving}
+            onClick={async () => {
+              const textarea = document.getElementById('html-editor-textarea');
+              if (textarea) {
+                await handleSaveFromHtmlEditor(textarea.value);
+              }
+            }}
+          >
+            Cập nhật & Lưu
+          </Button>
+        ]}
+      >
+        <div className="mb-4">
+          <Alert
+            message={
+              <div className="flex items-center gap-2">
+                <span>⚠️</span>
+                <span className="font-semibold">Cẩn thận khi chỉnh sửa HTML!</span>
+              </div>
+            }
+            description={
+              <div className="text-sm">
+                • <strong>Chú trọng nội dung sửa trong đây</strong> - có thể làm hỏng cấu trúc template<br/>
+                • Chỉ sửa khi thực sự cần thiết và hiểu rõ HTML<br/>
+                • Nên backup template trước khi thực hiện thay đổi lớn
+              </div>
+            }
+            type="warning"
+            showIcon
+            className="border-yellow-300 bg-yellow-50"
+          />
+        </div>
+        <TextArea
+          id="html-editor-textarea"
+          value={fullHtmlContent}
+          onChange={(e) => setFullHtmlContent(e.target.value)}
+          rows={25}
+          style={{ 
+            fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+            fontSize: '12px'
+          }}
+          placeholder="HTML content sẽ hiển thị ở đây..."
+        />
       </Modal>
 
       {/* Preview Modal */}
@@ -494,13 +632,38 @@ function TemplateEditorModal({ visible, onClose, template }) {
 
       {/* Custom Styling cho Modal */}
       <style>{`
-        .editor-tabs .ant-tabs-content-holder {
-          height: 100% !important;
-          overflow: hidden !important;
+        /* TinyMCE trong Modal */
+        .ant-modal .tox-tinymce {
+          border: 1px solid #d9d9d9 !important;
+          border-radius: 6px !important;
         }
         
-        .editor-tabs .ant-tabs-tabpane {
-          height: 100% !important;
+        .ant-modal .tox-toolbar-overlord {
+          background: #fafafa !important;
+          border-bottom: 1px solid #d9d9d9 !important;
+        }
+        
+        .ant-modal .tox-editor-header {
+          border: none !important;
+          background: transparent !important;
+        }
+        
+        .ant-modal .tox-edit-area {
+          border: none !important;
+        }
+        
+        .ant-modal .tox-statusbar {
+          border-top: 1px solid #d9d9d9 !important;
+          background: #fafafa !important;
+        }
+        
+        /* Đảm bảo dropdown/popup hiển thị đúng */
+        .tox-pop {
+          z-index: 9999 !important;
+        }
+        
+        .tox-dialog-wrap {
+          z-index: 9999 !important;
         }
         
         /* Responsive Modal styling */
@@ -560,10 +723,10 @@ function TemplateEditorModal({ visible, onClose, template }) {
           min-height: 400px !important;
         }
         
-        /* Ensure TinyMCE is properly sized */
+        /* Make TinyMCE aux elements (toolbar dropdowns, menus) interactive inside modal */
         .tox-tinymce-aux {
-          z-index: 1000 !important;
-          pointer-events: none !important;
+          z-index: 10050 !important;
+          pointer-events: auto !important;
         }
         
         /* Modal z-index fix for TinyMCE dialogs */
@@ -580,6 +743,15 @@ function TemplateEditorModal({ visible, onClose, template }) {
           font-family: "Monaco", "Consolas", monospace !important;
           font-size: 12px !important;
           border: 1px solid #91d5ff !important;
+        }
+
+        /* HTML Editor Modal z-index */
+        .ant-modal[data-testid="html-editor-modal"] {
+          z-index: 2000 !important;
+        }
+        
+        .ant-modal-mask[data-testid="html-editor-modal-mask"] {
+          z-index: 1999 !important;
         }
       `}</style>
     </>

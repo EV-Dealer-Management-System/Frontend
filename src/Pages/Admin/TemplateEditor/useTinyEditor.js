@@ -1,28 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { App } from 'antd';
 
-// ✅ Import TinyMCE core & plugins local để dùng bản self-hosted (không cần key)
+// Import TinyMCE CSS files
+import 'tinymce/skins/ui/oxide/skin.min.css';
+import 'tinymce/skins/ui/oxide/content.min.css';
+import 'tinymce/skins/content/default/content.css';
+
+// Import TinyMCE core
 import tinymce from 'tinymce/tinymce';
 import 'tinymce/icons/default';
-import 'tinymce/themes/silver';
 import 'tinymce/models/dom';
+import 'tinymce/themes/silver';
 
-// ✅ Import các plugin bạn đã cấu hình trong tinyMCEConfig
+// Import plugins
 import 'tinymce/plugins/code';
 import 'tinymce/plugins/table';
-import 'tinymce/plugins/lists';
 import 'tinymce/plugins/link';
 import 'tinymce/plugins/searchreplace';
 import 'tinymce/plugins/autolink';
 import 'tinymce/plugins/charmap';
 import 'tinymce/plugins/preview';
 import 'tinymce/plugins/anchor';
-import 'tinymce/plugins/visualblocks';
 import 'tinymce/plugins/wordcount';
 import 'tinymce/plugins/fullscreen';
-import 'tinymce/plugins/autoresize';
 
-// ✅ Cấu hình TinyMCE cho TemplateEditor - đơn giản hóa và focus vào template editing
+// 🔥 TinyMCE config CHỐNG PHÁ FORMAT HOÀN TOÀN
 const tinyMCEConfig = {
   license_key: 'gpl',
   height: '100%',
@@ -30,315 +32,429 @@ const tinyMCEConfig = {
   resize: true,
   menubar: false,
   plugins: [
-    'code', 'table', 'lists', 'link', 'searchreplace',
-    'autolink', 'charmap', 'preview', 'anchor', 'visualblocks', 
+    'code', 'table', 'link', 'searchreplace',
+    'autolink', 'charmap', 'preview', 'anchor', 
     'wordcount', 'fullscreen'
   ],
-  toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | ' +
-    'bullist numlist | table | removeformat | code | fullscreen | wordcount',
+  external_plugins: {},  // 🔥 KHÔNG CÓ EXTERNAL PLUGINS
+  toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | table | removeformat | code | fullscreen',
   
-  // ✅ Cấu hình quan trọng để giữ nguyên HTML từ BE
-  valid_elements: '*[*]',           // Cho phép tất cả elements với tất cả attributes
-  extended_valid_elements: '*[*]',  // Mở rộng validation cho custom elements  
-  valid_styles: { 
-    '*': 'color,font-size,font-family,background,background-color,text-align,margin,padding,border,width,height,line-height,text-decoration,font-weight,display,position,top,left,right,bottom,z-index,opacity,border-radius,box-shadow,float,clear,overflow,white-space'
+  // 🔥 SIÊU BẢO VỆ HTML - KHÔNG ĐỤNG VÀO GÌ HẾT
+  valid_elements: '*[*]',           // Chấp nhận TẤT CẢ elements + attributes
+  extended_valid_elements: '*[*]',  // Mở rộng không giới hạn
+  valid_children: '+*[*]',          // Cho phép mọi element làm con của mọi element
+  valid_styles: { '*': '*' },       // Chấp nhận TẤT CẢ styles cho TẤT CẢ elements
+  verify_html: false,               // KHÔNG verify HTML
+  cleanup: false,                   // KHÔNG cleanup
+  cleanup_on_startup: false,        // KHÔNG cleanup khi khởi động
+  trim: false,                      // KHÔNG trim whitespace
+  
+  // 🚫 TẮT HOÀN TOÀN HTML NORMALIZATION
+  forced_root_block: false,         // KHÔNG force root block
+  force_br_newlines: false,         // KHÔNG force BR newlines  
+  force_p_newlines: false,          // KHÔNG force P newlines
+  convert_newlines_to_brs: false,   // KHÔNG convert newlines
+  remove_linebreaks: false,         // KHÔNG remove line breaks
+  preformatted: true,               // Giữ format gốc
+  
+  // 🚫 TẮT WHITESPACE NORMALIZATION
+  indent: false,                    // KHÔNG indent
+  indent_use_margin: false,         // KHÔNG dùng margin cho indent
+  
+  // 🔥 CHỐNG NORMALIZE MẠNH NHẤT (TinyMCE v8 compatible)
+  // Loại bỏ forced_root_block và force_p_newlines - deprecated trong v8          /
+  entities: '',                     // KHÔNG encode entities
+  convert_urls: false,              // KHÔNG convert URLs
+  relative_urls: false,             // KHÔNG relative URLs
+  remove_script_host: false,        // KHÔNG remove script host
+  document_base_url: '',            // Base URL rỗng
+  
+  // 🔧 RAW MODE - HOÀN TOÀN KHÔNG XỬ LÝ GÌ
+  encoding: 'raw',                  // Raw encoding
+  entity_encoding: 'raw',           // Raw entity encoding - QUAN TRỌNG
+  element_format: 'html',           // HTML format
+  formats: {},                      // Không có format tự động
+  keep_values: true,                // Giữ nguyên values
+  
+  // 🚫 TẮT HOÀN TOÀN URL PROCESSING
+  urlconverter_callback: function(url, node, on_save) {
+    return url; // Trả về URL nguyên gốc, không convert
   },
-  verify_html: false,               // Không verify HTML - giữ nguyên như từ BE
-  forced_root_block: '',            // Không force P tag wrapper
-  entity_encoding: 'raw',           // Không encode entities
-  convert_urls: false,              // Không convert URLs
   
-  // Note: noneditable plugin không có sẵn trong TinyMCE open source
+  // 🔥 TẮT HOÀN TOÀN DOM MUTATIONS VÀ PROCESSING
+  custom_elements: '~*',            // Cho phép custom elements
+  object_resizing: false,           // Tắt resize objects
+  resize_img_proportional: false,   // Tắt proportional resize
+  table_resize_bars: false,         // Tắt table resize
   
-  // ✅ Content style để match với template format
+  // 🚫 TẮT SERIALIZATION PROCESSING
+  // ❌ [COMMENTED OUT] init_instance_callback - GÂY VẤN ĐỀ VỚI PROTECT RESTORE
+  /*
+  init_instance_callback: function(editor) {
+    // HOÀN TOÀN TẮT serializer processing
+    if (editor.serializer) {
+      editor.serializer.serialize = function(node, args) {
+        // Trả về innerHTML trực tiếp, không xử lý gì
+        return node && node.innerHTML ? node.innerHTML : '';
+      };
+      editor.serializer.encode = function(text) { return text; };
+      editor.serializer.decode = function(text) { return text; };
+    }
+  },
+  */
+  
+  // 🔒 BẢO VỆ CHỈ CÁC PATTERNS THỰC SỰ CẦN THIẾT
+  protect: [
+    // /<!\ [CDATA\[[\s\S]*?\]\]>/g,         // CDATA (có thể không cần)                       
+    /<style[^>]*>[\s\S]*?<\/style>/gi,     // 🔒 BẢO VỆ <style>
+    /<head[^>]*>[\s\S]*?<\/head>/gi,       // 🔒 BẢO VỆ <head>
+    /<meta[^>]*\/?>/gi                     // 🔒 BẢO VỆ <meta>
+    // ❌ BỎ: style="" và class="" - để TinyMCE xử lý bình thường
+    // /style\s*=\s*["'][^"']*["']/gi,    
+    // /class\s*=\s*["'][^"']*["']/gi     
+  ],
+  
+  // 🚫 TẮT HOÀN TOÀN MỌI XỬ LÝ HTML
+  fix_list_elements: false,         // KHÔNG sửa lists
+  fix_table_elements: false,        // KHÔNG sửa tables
+  apply_source_formatting: false,   // KHÔNG format source
+  remove_trailing_brs: false,       // KHÔNG xóa <br> cuối
+  pad_empty_with_br: false,         // KHÔNG thêm <br> vào empty
+  keep_styles: true,                // GIỮ TẤT CẢ styles
+  inline_styles: false,             // KHÔNG convert inline styles
+  
+  // 🚫 TẮT HTML SANITIZATION
+  allow_html_data_urls: true,       // Cho phép data URLs
+  allow_svg_data_urls: true,        // Cho phép SVG data URLs
+  allow_script_urls: true,          // Cho phép script URLs
+  allow_unsafe_link_target: true,   // Cho phép unsafe links
+  
+  // 🛡️ BẢO VỆ STRUCTURE HOÀN TOÀN - TẮT TẤT CẢ AUTO-FORMAT
+  allow_html_in_named_anchor: true, // Cho phép HTML trong anchor
+  paste_retain_style_properties: "all", // Giữ ALL style properties
+  paste_remove_styles: false,       // KHÔNG remove styles khi paste
+  paste_remove_spans: false,        // KHÔNG remove spans
+  paste_strip_class_attributes: "none", // KHÔNG strip class attributes
+  
+  // 🚫 TẮT MARKDOWN VÀ QUOTE PROCESSING
+  convert_fonts_to_spans: false,    // KHÔNG convert fonts
+  font_size_legacy_values: '',     // KHÔNG legacy font values
+  
+  // 🚫 TẮT LIST AUTO-FORMAT (CÓ THỂ GÂY RA DẤU >)
+  lists_indent_on_tab: false,       // KHÔNG indent lists với tab
+
+  
+  // 🚫 TẮT PASTE PROCESSING
+  paste_preprocess: function(plugin, args) {
+    // KHÔNG xử lý paste content
+    return;
+  },
+  paste_postprocess: function(plugin, args) {
+    // KHÔNG xử lý paste content
+    return;
+  },
+  
+  // 🛡️ BẢO VỆ SCHEMA VÀ ELEMENTS
+  schema: 'mixed',                  // Mixed schema - chấp nhận mọi thứ
+  
+  
+  // 🎯 SIMPLE SETUP - CHỈ CALLBACK CƠ BẢN
+  setup: function(editor) {
+    if (onEditorReady) {
+      onEditorReady(editor, tinymce);
+    }
+  },
+  
+  // 🎨 CONTENT STYLE CHỐNG NORMALIZE + BẢO VỆ FORMAT  
   content_style: `
+    /* 🔥 BẢO VỆ WHITESPACE VÀ FORMAT */
     body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      font-size: 14px; 
-      line-height: 1.6; 
-      color: #000;
-      margin: 0;
-      padding: 20px;
-      background: white;
-      overflow-y: auto;
-      overflow-x: hidden;
+      white-space: pre-wrap !important;
+      word-wrap: break-word !important;
+      background: #fff; 
+      font-family: 'Noto Sans','DejaVu Sans','Arial',sans-serif; 
+      font-size: 12pt; 
+      line-height: 1.45; 
+      margin: 20px;
     }
     
-    /* Giữ nguyên các class từ BE */
-    .center { text-align: center; }
+    /* Bảo vệ structure không bị TinyMCE đụng */
+    * { box-sizing: border-box; }
+    
+    /* 📄 PRINT STYLES */
+    @page { size: A4; margin: 10mm 10mm 12mm 10mm; }
+    @media print {
+      body { margin: 0; padding: 0; }
+      .no-print { display: none !important; }
+    }
+    
+    /* 🎯 HEADINGS */
+    h1, h2, h3 { 
+      text-align: center; 
+      margin: 6px 0; 
+      white-space: pre-wrap;
+    }
+    
+    /* 📊 META BLOCK - Bảo vệ grid layout */
+    .meta-block { 
+      margin-top: 8px; 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 8px 16px;
+      white-space: pre-wrap;
+    }
+    
+    /* 📝 SECTION TITLES */
     .section-title { 
       margin-top: 12px; 
       font-weight: bold; 
-      text-transform: uppercase; 
-    }
-    .grid { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 6px 16px; 
+      text-transform: uppercase;
+      white-space: pre-wrap;
     }
     
-    /* Highlight placeholder variables */
-    .placeholder-variable {
-      background-color: #e6f7ff;
-      color: #1890ff;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: 'Monaco', 'Consolas', monospace;
-      font-size: 12px;
-      border: 1px solid #91d5ff;
-    }
-    
-    /* Style cho non-editable sections */
-    .non-editable-header,
-    .sign-block,
-    .footer,
-    .meta-block {
-      background-color: #f8f9fa;
-      border: 1px dashed #dee2e6;
-      padding: 8px;
-      margin: 8px 0;
-      opacity: 0.7;
-      position: relative;
-    }
-    
-    /* Add indicator for non-editable */
-    .non-editable-header:before,
-    .sign-block:before,
-    .footer:before,
-    .meta-block:before {
-      content: '🔒 Non-editable';
-      position: absolute;
-      top: -10px;
-      left: 8px;
-      background: #ffc107;
-      color: #000;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: bold;
-    }
-    
-    /* Table styling giữ nguyên từ BE */
-    table { 
+    /* 📋 TABLES - Bảo vệ không bị normalize */
+    .content-table { 
       width: 100%; 
       border-collapse: collapse; 
-      margin: 8px 0; 
+      margin-top: 8px;
+      white-space: pre-wrap;
     }
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 8px; 
-      vertical-align: top; 
-      text-align: left;
+    
+    /* 🔒 COMMENTS ĐƯỢC GIỮ NGUYÊN TRONG HTML */
+    
+    /* 🛡️ LIST PROTECTION - Giữ format danh sách */
+    .list-block {
+      white-space: pre-line !important;
+      margin: 8px 0;
     }
-    th {
-      background-color: #f5f5f5;
+    .content-table th, .content-table td { border: 1px solid #444; padding: 6px 8px; vertical-align: top; }
+    .right { text-align: right; }
+    .muted { color: #777; font-size: 10pt; }
+    .note { white-space: pre-line; }
+    thead { display: table-header-group; }
+    
+    /* đồng bộ sign-block + sign-box */
+    .sign-block { width:100%; table-layout:fixed; border-collapse:collapse; margin-top:24px; }
+    .sign-block td { width:50%; padding:0 6px; vertical-align:bottom; }
+    .sign-box { position:relative; padding:10px 10px 10px 10px; }
+    
+    /* đồng bộ signature-anchor */
+    .signature-anchor {
+      position:absolute; bottom:10px; left:10px;
+      font-size:1pt; line-height:1;
+      color:#ffffff;
+      opacity:0.01;
+      letter-spacing:-0.2pt;
+      user-select:none;
+    }
+    
+    /* Template variables styling */
+    .template-var { 
+      background-color: #fff3cd; 
+      padding: 2px 4px; 
+      border-radius: 3px; 
+      color: #856404;
       font-weight: bold;
     }
-    thead { display: table-header-group; }
-  `,
-  
-  // ✅ Cấu hình scroll và hiển thị
-  statusbar: true,
-  elementpath: false,
-  branding: false,
-  
-  // ✅ Quan trọng: đảm bảo editor có thể scroll
-  body_class: 'mce-content-body',
-  
-  // Setup sẽ được config trong hook
-  setup: (editor) => {
-    // Custom setup từ hook
-  }
+  `
 };
 
-// Function để highlight các placeholder như {{ company.name }}
-const preprocessHtmlForTinyMCE = (html = '') => {
-  return String(html).replace(
-    /\{\{\s*([^}]+)\s*\}\}/g, 
-    '<span class="placeholder-variable">${{ $1 }}</span>'
-  );
-};
-
-const postprocessHtmlFromTinyMCE = (html = '') => {
-  return String(html).replace(
-    /<span class="[^"]*placeholder-variable[^"]*"[^>]*>\$?\{\{\s*([^}]+)\s*\}\}<\/span>/g,
-    '{{ $1 }}'
-  );
-};
-
-// Hash function để nhận diện template đã paste
-const hash = (s = '') => {
-  let h = 0; 
-  for (let i = 0; i < s.length; i++) {
-    h = (h << 5) - h + s.charCodeAt(i) | 0;
-  }
-  return String(h);
-};
-
-// Debounce function
-const debounce = (fn, ms = 300) => {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
-  };
-};
-
-// Hook quản lý TinyMCE editor cho TemplateEditor thay thế useQuillEditor
-export const useQuillEditor = (initialContent, onContentChange, visible) => {
-  const { message } = App.useApp();
+function useTinyEditor() {
   const [editor, setEditor] = useState(null);
-  const editorRef = useRef(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isPasted, setIsPasted] = useState(false);
-  const [isReady, setIsReady] = useState(false);
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const [originalFullHtml, setOriginalFullHtml] = useState('');
+  const [originalHead, setOriginalHead] = useState('');
+  const [originalHtmlAttrs, setOriginalHtmlAttrs] = useState('');
+  const [originalDoctype, setOriginalDoctype] = useState('');
+  const { message } = App.useApp();
 
-  // ✅ Initialize editor khi modal visible
-  useEffect(() => {
-    if (visible && !isInitialized) {
-      console.log('📦 TinyMCE TemplateEditor: Modal visible → Ready to initialize');
-      setIsInitialized(true);
-    } else if (!visible && isInitialized) {
-      console.log('🗑️ TinyMCE TemplateEditor: Modal closed → Reset initialization flag');
-      setIsInitialized(false);
-      setIsPasted(false);
+  // ✅ Extract body content từ full HTML
+  const extractBodyFromFullHtml = (fullHtml) => {
+    if (!fullHtml) return '';
+    
+    const bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      return bodyMatch[1];
     }
-  }, [visible]);
-
-  // ✅ Handle content changes từ TinyMCE
-  const handleEditorChange = (content, editor) => {
-    console.log('✏️ TinyMCE TemplateEditor: Content changed, content length:', content.length);
-    const processedContent = postprocessHtmlFromTinyMCE(content);
-    onContentChange?.(processedContent);
+    
+    // Nếu không có body tag, return full content
+    return fullHtml;
   };
 
-  // ✅ TinyMCE controlled mode - không cần paste thủ công
-  // Content được đồng bộ qua value prop của Editor component
+  // ✅ Extract head NGUYÊN GỐC
+  const extractHeadFromFullHtml = (fullHtml) => {
+    if (!fullHtml) return '';
+    
+    const headMatch = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+    return headMatch ? headMatch[1] : '';
+  };
 
-  // ✅ Cleanup khi modal đóng
-  useEffect(() => {
-    if (visible || !editor) return;
-
-    console.log('�️ TinyMCE TemplateEditor: Cleaning up editor instance');
-    try {
-      // Cleanup TinyMCE instance
-      setEditor(null);
-      setIsPasted(false);
-      setIsInitialized(false);
-      console.log('✅ TinyMCE TemplateEditor: Cleanup completed');
-    } catch (error) {
-      console.warn('TinyMCE TemplateEditor cleanup warning:', error);
+  // ✅ GENERIC: Rebuild HTML với HEAD NGUYÊN GỐC cho mọi template
+  const rebuildFullHtmlFromBody = (bodyContent) => {
+    // Nếu bodyContent đã là full HTML document thì return luôn
+    if (bodyContent?.includes('<!DOCTYPE') && bodyContent?.includes('<html')) {
+      return bodyContent;
     }
-  }, [visible, editor]);
 
-  // ✅ Get current content từ TinyMCE
+    // GENERIC: Lấy toàn bộ structure từ originalFullHtml
+    if (originalFullHtml) {
+      // Thay thế nội dung body, giữ nguyên doctype + html + head
+      return originalFullHtml.replace(
+        /<body[^>]*>([\s\S]*?)<\/body>/i,
+        `<body>\n${bodyContent}\n</body>`
+      );
+    }
+
+    // Fallback: Tạo cấu trúc cơ bản
+    return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Document</title>
+</head>
+<body>
+${bodyContent}
+</body>
+</html>`;
+  };
+
+  // Handle editor change
+  const handleEditorChange = (content, editor) => {
+    console.log('✏️ TinyMCE: Content changed, length:', content?.length || 0);
+  };
+
+  // ✅ Get current content - CRITICAL FIX: Luôn trả full HTML document
   const getCurrentContent = () => {
     if (!editor || editor.removed || !editor.initialized) {
-      console.warn('⚠️ TinyMCE TemplateEditor: Editor not available, returning empty content');
-      return '';
+      return originalFullHtml || '';
     }
+    
     try {
-      if (!editor.serializer || !editor.getBody) {
-        console.warn('⚠️ TinyMCE TemplateEditor: serializer or getBody not available, returning empty content');
-        return '';
+      // Lấy body content từ TinyMCE
+      const bodyContent = editor.getContent({ 
+        format: 'html',
+        get_from_editor: true
+      });
+      
+      // CRITICAL: Kiểm tra có HEAD content không
+      if (!originalHead || originalHead.length === 0) {
+        // Thử recovery từ originalFullHtml
+        if (originalFullHtml) {
+          const recoveredHead = extractHeadFromFullHtml(originalFullHtml);
+          if (recoveredHead) {
+            setOriginalHead(recoveredHead);
+          }
+        }
       }
-      const rawContent = editor.getContent({ format: 'html' });
-      const processed = postprocessHtmlFromTinyMCE(rawContent);
-      console.log('📄 TinyMCE TemplateEditor: Getting current content, length:', processed.length);
-      return processed;
+      
+      // CRITICAL: Rebuild thành full HTML document
+      const fullHtml = rebuildFullHtmlFromBody(bodyContent);
+      
+      return fullHtml;
+      
     } catch (error) {
-      console.error('❌ TinyMCE TemplateEditor: Error getting content:', error);
-      return '';
+      console.error('❌ TinyMCE: Error getting content:', error);
+      return originalFullHtml || '';
     }
   };
 
-  // ✅ Set content vào TinyMCE
-  const setContent = (content) => {
-    if (!editor) return;
+  // ✅ Set content - BẢO VỆ HEAD HOÀN TOÀN + THÊM DEBUG
+  const setEditorContent = (content) => {
+    if (!editor || !content) {
+      console.warn('⚠️ setEditorContent: Missing editor or content');
+      return;
+    }
     
     try {
-      const processed = preprocessHtmlForTinyMCE(content);
-      editor.setContent(processed);
-      console.log('📝 TinyMCE TemplateEditor: Content set, length:', content.length);
+      console.log('📝 Setting TinyMCE content...');
+      console.log('📊 Full HTML length:', content?.length || 0);
+      
+      // 🔒 LƯU TOÀN BỘ HTML GỐC - KHÔNG CHO TINYMCE ĐỘNG VÀO
+      setOriginalFullHtml(content);
+      
+      // 🔒 EXTRACT VÀ BẢO VỆ HEAD NGUYÊN GỐC
+      const headContent = extractHeadFromFullHtml(content);
+      const doctypeMatch = content.match(/<!DOCTYPE[^>]*>/i);
+      const htmlAttrMatch = content.match(/<html([^>]*)>/i);
+      
+      console.log('🧠 Extracted HEAD content:', {
+        headLength: headContent?.length || 0,
+        hasDoctype: !!doctypeMatch,
+        hasHtmlAttrs: !!htmlAttrMatch
+      });
+      
+      // Lưu các phần nguyên gốc + backup vào localStorage
+      setOriginalHead(headContent);
+      setOriginalDoctype(doctypeMatch ? doctypeMatch[0] : '<!DOCTYPE html>');
+      setOriginalHtmlAttrs(htmlAttrMatch ? htmlAttrMatch[1] : '');
+      
+      // KHÔNG cần backup localStorage - sử dụng originalFullHtml để preserve
+      
+      // Chỉ đưa body vào TinyMCE - SỬ DỤNG innerHTML TRỰC TIẾP
+      const bodyContent = extractBodyFromFullHtml(content);
+      console.log('📝 Setting body content DIRECTLY via innerHTML, length:', bodyContent?.length || 0);
+      
+      // 🔥 SỬ DỤNG innerHTML TRỰC TIẾP - BỎ QUA TẤT CẢ TINYMCE PROCESSING
+      const editorBody = editor.getBody();
+      if (editorBody) {
+        editorBody.innerHTML = bodyContent;
+        console.log('✅ Direct innerHTML assignment completed');
+      } else {
+        // Fallback nếu không có body
+        console.warn('⚠️ No editor body, using setContent fallback');
+        editor.setContent(bodyContent, { format: 'raw', no_events: true });
+      }
+      
+      console.log('✅ TinyMCE content set successfully');
+      
     } catch (error) {
-      console.error('❌ TinyMCE TemplateEditor: Error setting content:', error);
+      console.error('❌ Error setting content:', error);
     }
   };
 
-  // ✅ Reset TinyMCE content
-  const resetContent = () => {
+  // Reset content - THÊM DEBUG LOGS
+  const resetEditorContent = () => {
     if (!editor) return;
     
     try {
+      console.log('🔄 Resetting TinyMCE editor content...');
+      console.log('📊 Before reset - HEAD length:', originalHead?.length || 0);
+      
       editor.setContent('');
-      setIsPasted(false);
-      console.log('🔄 TinyMCE TemplateEditor: Content reset');
+      setOriginalFullHtml('');
+      setOriginalHead('');
+      setOriginalHtmlAttrs('');
+      setOriginalDoctype('');
+      
+      console.log('✅ TinyMCE content reset completed');
     } catch (error) {
-      console.error('❌ TinyMCE TemplateEditor: Error resetting content:', error);
+      console.error('❌ Error resetting content:', error);
     }
   };
 
-  // ✅ TinyMCE config với setup function
+  // TinyMCE config với setup
   const finalTinyMCEConfig = {
     ...tinyMCEConfig,
+    skin: 'oxide',
+    content_css: 'oxide',
     setup: (editor) => {
-      console.log('🔧 TinyMCE TemplateEditor: Setup function called');
-      
-      // Store editor reference
       setEditor(editor);
       
-      // Handle initialization
       editor.on('init', () => {
-        console.log('✅ TinyMCE TemplateEditor: Editor initialized');
-        
-        // ✅ Đảm bảo editor có scroll khi khởi tạo
-        const editorBody = editor.getBody();
-        if (editorBody) {
-          editorBody.style.overflowY = 'auto';
-          editorBody.style.overflowX = 'hidden';
-          editorBody.style.minHeight = '400px';
-        }
-        
-        // ✅ Đảm bảo iframe có scroll
-        const iframe = editor.getContentAreaContainer().querySelector('iframe');
-        if (iframe) {
-          iframe.style.overflowY = 'auto';
-          iframe.style.overflowX = 'hidden';
-        }
-        
-        setIsReady(true);
-      });
-      
-      // Handle paste events để preserve formatting
-      editor.on('paste', (e) => {
-        console.log('📋 TinyMCE TemplateEditor: Paste event detected');
+        setIsEditorReady(true);
       });
     }
   };
 
-  // Return API tương thích với useQuillEditor cũ
   return {
-    quill: editor,           // Alias để tương thích
-    editor,                  // TinyMCE editor instance
-    quillRef: editorRef,     // Alias để tương thích  
-    editorRef,               // TinyMCE editor ref
-    isReady,
-    isInitialized,
-    isPasted,
-    setIsPasted,
+    editor,
+    isEditorReady,
     tinyMCEConfig: finalTinyMCEConfig,
-    handleEditorChange,
-
     getCurrentContent,
-    setContent,
-    resetContent,
-
-    // Processing functions
-    preprocessHtmlForTinyMCE,
-    postprocessHtmlFromTinyMCE,
-    
-    // Aliases để tương thích với code cũ
-    preprocessHtmlForQuill: preprocessHtmlForTinyMCE,
-    postprocessHtmlFromQuill: postprocessHtmlFromTinyMCE,
+    setEditorContent,
+    resetEditorContent,
+    handleEditorChange
   };
-};
+}
+
+export default useTinyEditor;

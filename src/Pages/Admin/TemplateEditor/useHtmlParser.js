@@ -6,6 +6,13 @@ export const useHtmlParser = () => {
   const [htmlHead, setHtmlHead] = useState("");
   const [htmlAttributes, setHtmlAttributes] = useState("");
   const [templateBody, setTemplateBody] = useState("");
+  
+  // 🔄 States cho các phần đã parse
+  const [headerBody, setHeaderBody] = useState("");
+  const [metaBlocks, setMetaBlocks] = useState("");
+  const [signBody, setSignBody] = useState("");
+  const [footerBody, setFooterBody] = useState("");
+  const [editableBody, setEditableBody] = useState("");
 
   const parseHtmlFromBE = (rawHtml) => {
     if (!rawHtml) return {};
@@ -28,30 +35,36 @@ export const useHtmlParser = () => {
     const _htmlAttributes = (rawHtml.match(/<html([^>]*)>/i)?.[1] || "").trim();
     let bodyContent = bodyMatch ? bodyMatch[1].trim() : "";
 
-    // 2) Tách các phần theo HTML mẫu
-    // Tách Header chỉ phần non-editable-header
-    const headerRegex = /<div class="non-editable-header">[\s\S]*?<\/div>/i;
-    const headerBody = bodyContent.match(headerRegex)?.[0] || '';
-
-    // Tách Meta blocks (Bên A, Bên B)
-    const metaBlockRegex = /<div class="meta-block">[\s\S]*?<\/div>/gi;
-    const metaBlocks = bodyContent.match(metaBlockRegex)?.join('') || '';
-
-    // Tách Sign block
-    const signBlockRegex = /<table[^>]*class="sign-block"[\s\S]*?<\/table>/i;
-    const signBody = bodyContent.match(signBlockRegex)?.[0] || '';
-
-    // Tách Footer
-    const footerRegex = /<div class="footer">[\s\S]*?<\/div>/i;
-    const footerBody = bodyContent.match(footerRegex)?.[0] || '';
-
-    // Phần editable body (chỉ Điều 1 -> Điều N)
-    let editableBody = bodyContent
-      .replace(headerRegex, '')  // bỏ header
-      .replace(metaBlockRegex, '') // bỏ meta blocks
-      .replace(signBlockRegex, '') // bỏ sign block
-      .replace(footerRegex, '')    // bỏ footer
-      .trim();
+    // 2) 🔥 SỬ DỤNG DOMParser THAY VÌ REGEX - KHÔNG BAO GIỜ SAI THẺ ĐÓNG
+    console.log('🔧 Using DOMParser for precise HTML parsing');
+    
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, "text/html");
+    
+    // Tách từng phần bằng querySelector - CHÍNH XÁC 100%
+    const headerElement = doc.querySelector(".non-editable-header");
+    const headerBody = headerElement ? headerElement.outerHTML : '';
+    
+    // Tách meta-block (có thể có nhiều block)
+    const metaBlockElements = doc.querySelectorAll(".meta-block");
+    const metaBlocks = Array.from(metaBlockElements).map(el => el.outerHTML).join('') || '';
+    
+    // Tách sign block
+    const signElement = doc.querySelector(".sign-block");
+    const signBody = signElement ? signElement.outerHTML : '';
+    
+    // Tách footer
+    const footerElement = doc.querySelector(".footer");
+    const footerBody = footerElement ? footerElement.outerHTML : '';
+    
+    // Remove các phần đã tách từ DOM để lấy editableBody
+    headerElement?.remove();
+    metaBlockElements.forEach(el => el.remove());
+    signElement?.remove();
+    footerElement?.remove();
+    
+    // Phần editable body (chỉ Điều 1 -> Điều N) - KHÔNG CÒN REGEX
+    const editableBody = doc.body.innerHTML.trim();
 
     // Lấy full HTML để dùng cho HTML tab
     const fullHtml = rawHtml;
@@ -59,12 +72,22 @@ export const useHtmlParser = () => {
     // 3) Tạo template body để rebuild (giữ cấu trúc ban đầu)
     const _templateBody = bodyContent;
 
-    console.log("Parsed results:");
+    console.log("✅ DOMParser results:");
     console.log(" - Header body length:", headerBody.length);
     console.log(" - Meta blocks length:", metaBlocks.length);
     console.log(" - Editable body length:", editableBody.length);
     console.log(" - Sign body length:", signBody.length);
     console.log(" - Footer body length:", footerBody.length);
+    
+    // 🔍 Debug: Kiểm tra thẻ đóng của meta-block
+    if (metaBlocks) {
+      const hasClosingDiv = metaBlocks.includes('</div>');
+      console.log(" - Meta-block has closing </div>:", hasClosingDiv);
+      if (!hasClosingDiv) {
+        console.warn("🚨 META-BLOCK MISSING CLOSING </div>!");
+      }
+    }
+    
     console.groupEnd();
 
     return {
@@ -82,11 +105,14 @@ export const useHtmlParser = () => {
   };
 
   /**
-   * Rebuild hoàn chỉnh với cấu trúc mới:
-   *  - editableBody: nội dung Điều 1 -> Điều N từ Quill
+   * 🔥 SIMPLE REBUILD - GIỮ NGUYÊN editableBody 100%
+   * ❌ ĐÃ LOẠI BỎ: superDecodeMultiLayer, fixBrokenHtmlStructure, formatHtmlBody
+   * ✅ CHỈ LÀM: Ghép lại header + meta + editableBody + sign + footer
+   * 
+   * THAM SỐ:
+   *  - editableBody: nội dung chính từ TinyMCE (GIỮ NGUYÊN)
    *  - headerBody, metaBlocks, signBody, footerBody: các phần cố định
-   *  - subject: tiêu đề
-   *  - externalAllStyles: styles lưu cache (nếu có)
+   *  - externalAllStyles: styles từ cache
    */
   const rebuildCompleteHtml = ({ 
     editableBody, 
@@ -99,31 +125,38 @@ export const useHtmlParser = () => {
   }) => {
     if (!editableBody) return "";
 
+    console.group("=== 🔥 SIMPLE REBUILD - GIỮ NGUYÊN editableBody ===");
+    console.log("Input editableBody length:", editableBody.length);
+    console.log("Input preview:", editableBody.substring(0, 200));
+
+    // ❗ GIỮ NGUYÊN editableBody - chỉ trim khoảng trắng
+    const cleanEditableBody = (editableBody || "").trim();
+
+    console.log("✅ editableBody preserved without processing");
+
     // Ghép lại body theo thứ tự: header + meta + editable + sign + footer
     const finalBody = [
       headerBody,
       metaBlocks, 
-      editableBody,
+      cleanEditableBody,
       signBody,
       footerBody
     ].filter(Boolean).join('\n\n');
 
-    // Merge styles
+    // Giữ nguyên styles (không thêm bớt gì, chỉ bỏ tag <style> lồng)
     let mergedStyles = (externalAllStyles || allStyles || "").trim();
-    if (!/\.center\s*\{[^}]*text-align\s*:\s*center[^}]*\}/i.test(mergedStyles)) {
-      mergedStyles += "\n.center { text-align: center; }";
-    }
+    const cleanedStyles = mergedStyles
+      .replace(/<\/?style[^>]*>/g, '')
+      .trim();
 
-    // Luôn wrap lại toàn bộ style block
-    const styleWrapped = `<style>\n${mergedStyles.replace(/<\/?style[^>]*>/g, '')}\n</style>`;
+    const styleWrapped = cleanedStyles
+      ? `<style>${cleanedStyles}</style>`
+      : "";
 
     const finalHtml = `<!doctype html>
 <html${htmlAttributes ? " " + htmlAttributes : ""}>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${subject || "Template"}</title>
-${htmlHead}
+${htmlHead || ""}
 ${styleWrapped}
 </head>
 <body>
@@ -131,9 +164,7 @@ ${finalBody}
 </body>
 </html>`;
 
-    console.group("=== REBUILT HTML STRUCTURE ===");
-    console.log("Final body length:", finalBody.length);
-    console.log("Styles length:", (mergedStyles || "").length);
+    console.log("Final HTML length:", finalHtml.length);
     console.groupEnd();
 
     return finalHtml;
@@ -144,6 +175,13 @@ ${finalBody}
     setHtmlHead(parsed.htmlHead || "");
     setHtmlAttributes(parsed.htmlAttributes || "");
     setTemplateBody(parsed.templateBody || "");
+    
+    // 🔄 Lưu các phần đã parse
+    setHeaderBody(parsed.headerBody || "");
+    setMetaBlocks(parsed.metaBlocks || "");
+    setSignBody(parsed.signBody || "");
+    setFooterBody(parsed.footerBody || "");
+    setEditableBody(parsed.editableBody || "");
   };
 
   const resetStructureStates = () => {
@@ -151,11 +189,20 @@ ${finalBody}
     setHtmlHead("");
     setHtmlAttributes("");
     setTemplateBody("");
+    
+    // 🔄 Reset các phần đã parse
+    setHeaderBody("");
+    setMetaBlocks("");
+    setSignBody("");
+    setFooterBody("");
+    setEditableBody("");
   };
 
   return {
     // states
     allStyles, htmlHead, htmlAttributes, templateBody,
+    // 🔄 parsed parts
+    headerBody, metaBlocks, signBody, footerBody, editableBody,
     // apis
     parseHtmlFromBE,
     rebuildCompleteHtml,

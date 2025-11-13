@@ -25,6 +25,9 @@ import {
 } from "@ant-design/icons";
 import { getAllEVBookings } from "../../../App/DealerManager/EVBooking/GetAllEVBooking";
 import { getBookingById } from "../../../App/DealerManager/EVBooking/GetBookingByID";
+import { getEContractById, getEContractPreview } from "../../../App/DealerManager/EVBooking/GetBookingContract";
+import PDFModal from "../../../Pages/Admin/SignContract/Components/PDF/PDFModal";
+import EVMEContractEditor from './Components/EVMEContractEditor';
 import NavigationBar from "../../../Components/EVMStaff/Components/NavigationBar";
 import HeaderBar from "../../../Components/EVMStaff/Components/HeaderBar";
 import BookingFilters from "./Components/BookingFilters";
@@ -46,6 +49,18 @@ function EVMGetAllEVBooking() {
     const [detailLoading, setDetailLoading] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    // PDF modal states
+    const [pdfModalVisible, setPdfModalVisible] = useState(false);
+    const [pdfUrl, setPdfUrl] = useState(null);
+    const [pdfTitle, setPdfTitle] = useState(null);
+    const [pdfBlobObjectUrl, setPdfBlobObjectUrl] = useState(null);
+    const [pdfLoading, setPdfLoading] = useState(false);
+    
+    // Template Editor states for EContract editing
+    const [templateEditorVisible, setTemplateEditorVisible] = useState(false);
+    const [selectedEContract, setSelectedEContract] = useState(null);
+    const [templateEditorLoading, setTemplateEditorLoading] = useState(false);
 
     // Xử lý responsive
     useEffect(() => {
@@ -148,6 +163,90 @@ function EVMGetAllEVBooking() {
         setDateRange(null);
     };
 
+    // Mở eContract PDF: sử dụng eContract từ booking data
+    const handleOpenEContractPdf = async (record) => {
+        // Sử dụng eContract đã có trong booking data
+        if (!record?.eContract?.id) {
+            message.warning("Không có eContract liên kết cho booking này");
+            return;
+        }
+
+        const eContract = record.eContract;
+        console.log('📋 Using eContract from booking for PDF (EVMStaff):', eContract);
+
+        setPdfLoading(true);
+        try {
+            // Thử gọi API để lấy downloadUrl nếu cần
+            const res = await getEContractById(eContract.id);
+            // response may have data.downloadUrl
+            const downloadUrl = res?.data?.downloadUrl || res?.downloadUrl || res?.result?.data?.downloadUrl || res?.result?.downloadUrl;
+            const docNo = eContract.name || `EContract-${eContract.id.slice(0, 8)}`;
+
+            if (!downloadUrl) {
+                message.error("Không tìm thấy file PDF từ eContract");
+                return;
+            }
+
+            // Try preview endpoint to get blob
+            try {
+                const blob = await getEContractPreview(downloadUrl);
+                const objectUrl = URL.createObjectURL(blob);
+                setPdfBlobObjectUrl(objectUrl);
+                setPdfUrl(objectUrl);
+                setPdfTitle(docNo);
+            } catch (previewErr) {
+                console.warn("Preview API failed, fallback to direct downloadUrl", previewErr);
+                // fallback: use direct downloadUrl
+                setPdfUrl(downloadUrl);
+                setPdfTitle(docNo);
+            }
+
+            setPdfModalVisible(true);
+        } catch (err) {
+            console.error("Error fetching eContract:", err);
+            message.error("Lỗi khi tải eContract. Vui lòng thử lại");
+        } finally {
+            setPdfLoading(false);
+        }
+    };
+
+    // Mở Template Editor để sửa hợp đồng - chỉ cho EVMStaff khi eContract status = 1
+    const handleEditContract = async (record) => {
+        setTemplateEditorLoading(true);
+        try {
+            // Sử dụng eContract đã có trong booking data thay vì gọi API
+            if (record.eContract && record.eContract.id) {
+                const eContract = record.eContract;
+                
+                // Kiểm tra status: chỉ cho phép sửa khi eContract status = 1
+                if (eContract.status !== 1) {
+                    message.warning('Chỉ có thể chỉnh sửa hợp đồng khi trạng thái phù hợp (status = 1)');
+                    return;
+                }
+                
+                // Truyền trực tiếp eContract object từ booking data cho EContractPDFEditor
+                setSelectedEContract(eContract);
+                setTemplateEditorVisible(true);
+                message.success('Đã tải nội dung hợp đồng để chỉnh sửa');
+            } else {
+                message.error('Không tìm thấy hợp đồng điện tử cho booking này');
+            }
+        } catch (error) {
+            console.error('Error loading contract for edit:', error);
+            message.error('Lỗi khi tải hợp đồng. Vui lòng thử lại');
+        } finally {
+            setTemplateEditorLoading(false);
+        }
+    };
+
+    // Xử lý đóng Template Editor
+    const handleCloseTemplateEditor = () => {
+        setTemplateEditorVisible(false);
+        setSelectedEContract(null);
+        // Có thể reload lại danh sách nếu cần
+        // fetchBookings();
+    };
+
     // Tính toán thống kê
     const statistics = useMemo(() => {
         const getStatus = (booking) => {
@@ -155,20 +254,23 @@ function EVMGetAllEVBooking() {
             return 0;
         };
 
+        // Đảm bảo bookings là array hợp lệ
+        const safeBookings = Array.isArray(bookings) ? bookings : [];
+        
         const stats = {
-            total: bookings.length,
-            draft: bookings.filter((b) => getStatus(b) === 0).length,              // Draft = 0
-            waittingDealerSign: bookings.filter((b) => getStatus(b) === 1).length, // WaittingDealerSign = 1
-            pending: bookings.filter((b) => getStatus(b) === 2).length,            // Pending = 2
-            approved: bookings.filter((b) => getStatus(b) === 3).length,           // Approved = 3
-            rejected: bookings.filter((b) => getStatus(b) === 4).length,           // Rejected = 4
-            cancelled: bookings.filter((b) => getStatus(b) === 5).length,          // Cancelled = 5
-            signedByAdmin: bookings.filter((b) => getStatus(b) === 6).length,      // SignedByAdmin = 6
-            completed: bookings.filter((b) => getStatus(b) === 7).length,          // Completed = 7
-            totalVehicles: bookings.reduce(
-                (sum, b) => sum + (b.totalQuantity || 0),
+            total: safeBookings.length || 0,
+            draft: safeBookings.filter((b) => getStatus(b) === 0).length || 0,              // Draft = 0
+            waittingDealerSign: safeBookings.filter((b) => getStatus(b) === 1).length || 0, // WaittingDealerSign = 1
+            pending: safeBookings.filter((b) => getStatus(b) === 2).length || 0,            // Pending = 2
+            approved: safeBookings.filter((b) => getStatus(b) === 3).length || 0,           // Approved = 3
+            rejected: safeBookings.filter((b) => getStatus(b) === 4).length || 0,           // Rejected = 4
+            cancelled: safeBookings.filter((b) => getStatus(b) === 5).length || 0,          // Cancelled = 5
+            signedByAdmin: safeBookings.filter((b) => getStatus(b) === 6).length || 0,      // SignedByAdmin = 6
+            completed: safeBookings.filter((b) => getStatus(b) === 7).length || 0,          // Completed = 7
+            totalVehicles: safeBookings.reduce(
+                (sum, b) => sum + (typeof b.totalQuantity === 'number' ? b.totalQuantity : 0),
                 0
-            ),
+            ) || 0,
         };
 
         // Tính tỷ lệ phê duyệt
@@ -188,20 +290,38 @@ function EVMGetAllEVBooking() {
 
     // Dữ liệu cho biểu đồ phân bố trạng thái
     const statusChartData = useMemo(() => {
+        // Đảm bảo tất cả values là số và có giá trị mặc định
+        const safeValue = (val) => (typeof val === 'number' && !isNaN(val)) ? val : 0;
+        
         return [
-            { type: "Bản Nháp", value: statistics.draft, color: "#8c8c8c" },
-            { type: "Chờ Dealer Ký", value: statistics.waittingDealerSign, color: "#faad14" },
-            { type: "Chờ Duyệt", value: statistics.pending, color: "#fa8c16" },
-            { type: "Đã Duyệt", value: statistics.approved, color: "#52c41a" },
-            { type: "Admin Đã Ký", value: statistics.signedByAdmin, color: "#13c2c2" },
-            { type: "Hoàn Thành", value: statistics.completed, color: "#1890ff" },
-            { type: "Từ Chối", value: statistics.rejected, color: "#ff4d4f" },
-            { type: "Đã Hủy", value: statistics.cancelled, color: "#bfbfbf" },
+            { type: "Bản Nháp", value: safeValue(statistics.draft), color: "#8c8c8c" },
+            { type: "Chờ Dealer Ký", value: safeValue(statistics.waittingDealerSign), color: "#faad14" },
+            { type: "Chờ Duyệt", value: safeValue(statistics.pending), color: "#fa8c16" },
+            { type: "Đã Duyệt", value: safeValue(statistics.approved), color: "#52c41a" },
+            { type: "Admin Đã Ký", value: safeValue(statistics.signedByAdmin), color: "#13c2c2" },
+            { type: "Hoàn Thành", value: safeValue(statistics.completed), color: "#1890ff" },
+            { type: "Từ Chối", value: safeValue(statistics.rejected), color: "#ff4d4f" },
+            { type: "Đã Hủy", value: safeValue(statistics.cancelled), color: "#bfbfbf" },
         ].filter((item) => item.value > 0);
     }, [statistics]);
 
     // Dữ liệu cho biểu đồ xu hướng 7 ngày
     const trendChartData = useMemo(() => {
+        if (!Array.isArray(bookings) || bookings.length === 0) {
+            // Trả về dữ liệu mặc định nếu không có booking
+            return Array.from({ length: 7 }, (_, i) => {
+                const date = new Date();
+                date.setDate(date.getDate() - (6 - i));
+                return {
+                    date: date.toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                    }),
+                    count: 0,
+                };
+            });
+        }
+
         const last7Days = Array.from({ length: 7 }, (_, i) => {
             const date = new Date();
             date.setDate(date.getDate() - (6 - i));
@@ -211,8 +331,13 @@ function EVMGetAllEVBooking() {
         return last7Days.map((date) => {
             const count = bookings.filter((b) => {
                 if (!b.bookingDate) return false;
-                const bookingDate = new Date(b.bookingDate).toISOString().split("T")[0];
-                return bookingDate === date;
+                try {
+                    const bookingDate = new Date(b.bookingDate).toISOString().split("T")[0];
+                    return bookingDate === date;
+                } catch (error) {
+                    console.warn('Invalid booking date:', b.bookingDate);
+                    return false;
+                }
             }).length;
 
             return {
@@ -220,7 +345,7 @@ function EVMGetAllEVBooking() {
                     day: "2-digit",
                     month: "2-digit",
                 }),
-                count,
+                count: typeof count === 'number' ? count : 0,
             };
         });
     }, [bookings]);
@@ -444,14 +569,50 @@ function EVMGetAllEVBooking() {
                         {/* Charts Section */}
                         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                             <Col xs={24} lg={12}>
-                                <StatusDistributionChart
-                                    data={statusChartData}
-                                    total={statistics.total}
-                                />
+                                {statusChartData && statusChartData.length > 0 ? (
+                                    <StatusDistributionChart
+                                        data={statusChartData}
+                                        total={statistics.total || 0}
+                                    />
+                                ) : (
+                                    <ProCard
+                                        title="Phân Bố Trạng Thái"
+                                        bordered
+                                        headerBordered
+                                    >
+                                        <div style={{ 
+                                            height: 280, 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            color: '#999'
+                                        }}>
+                                            Chưa có dữ liệu
+                                        </div>
+                                    </ProCard>
+                                )}
                             </Col>
 
                             <Col xs={24} lg={12}>
-                                <TrendChart data={trendChartData} />
+                                {trendChartData && trendChartData.length > 0 ? (
+                                    <TrendChart data={trendChartData} />
+                                ) : (
+                                    <ProCard
+                                        title="Xu Hướng 7 Ngày Gần Nhất"
+                                        bordered
+                                        headerBordered
+                                    >
+                                        <div style={{ 
+                                            height: 280, 
+                                            display: 'flex', 
+                                            alignItems: 'center', 
+                                            justifyContent: 'center',
+                                            color: '#999'
+                                        }}>
+                                            Chưa có dữ liệu
+                                        </div>
+                                    </ProCard>
+                                )}
                             </Col>
                         </Row>
 
@@ -514,6 +675,9 @@ function EVMGetAllEVBooking() {
                                 onViewDetail={handleViewDetail}
                                 formatDateTime={formatDateTime}
                                 onStatusUpdate={fetchBookings}
+                                onOpenPdf={handleOpenEContractPdf}
+                                onEditContract={handleEditContract}
+                                templateEditorLoading={templateEditorLoading}
                             />
                         </ProCard>
                     </PageContainer>
@@ -529,6 +693,35 @@ function EVMGetAllEVBooking() {
                 formatDateTime={formatDateTime}
                 formatCurrency={formatCurrency}
                 getStatusTag={getStatusTag}
+            />
+
+            {/* PDF Modal for eContract */}
+            <PDFModal
+                visible={pdfModalVisible}
+                onClose={() => {
+                    setPdfModalVisible(false);
+                    setPdfUrl(null);
+                    setPdfTitle(null);
+                    if (pdfBlobObjectUrl) {
+                        URL.revokeObjectURL(pdfBlobObjectUrl);
+                        setPdfBlobObjectUrl(null);
+                    }
+                }}
+                contractNo={pdfTitle}
+                pdfUrl={pdfUrl}
+                title={pdfTitle}
+            />
+
+            {/* EVMStaff eContract Editor Modal - Restricted editing */}
+            <EVMEContractEditor
+                visible={templateEditorVisible}
+                onClose={handleCloseTemplateEditor}
+                eContract={selectedEContract}
+                onSaveSuccess={(savedData) => {
+                    message.success('Đã cập nhật hợp đồng thành công!');
+                    // Có thể reload danh sách nếu cần
+                    fetchBookings();
+                }}
             />
         </Layout>
     );

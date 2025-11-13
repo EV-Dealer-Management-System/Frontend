@@ -4,16 +4,27 @@ import { Tag } from "antd";
 import { Pie } from "@ant-design/charts";
 
 function StatusDistributionChart({ data, total }) {
+  // Đảm bảo data là array hợp lệ và tất cả items có value là số
+  const safeData = Array.isArray(data) ? data.filter(item => 
+    item && 
+    typeof item.value === 'number' && 
+    !isNaN(item.value) && 
+    item.value > 0 &&
+    item.type
+  ) : [];
+
+  const safeTotal = typeof total === 'number' && !isNaN(total) ? total : 0;
+
   return (
     <ProCard
       title="Phân Bố Trạng Thái"
       bordered
       headerBordered
-      extra={<Tag color="blue">Tổng: {total}</Tag>}
+      extra={<Tag color="blue">Tổng: {safeTotal}</Tag>}
     >
-      {data.length > 0 ? (
+      {safeData.length > 0 ? (
         <Pie
-          data={data}
+          data={safeData}
           angleField="value"
           colorField="type"
           radius={0.8}
@@ -37,7 +48,7 @@ function StatusDistributionChart({ data, total }) {
               style: { fontSize: 14 },
             },
             content: {
-              value: total,
+              value: safeTotal,
               style: { fontSize: 24 },
             },
           }}
