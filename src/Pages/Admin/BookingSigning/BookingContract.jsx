@@ -21,7 +21,7 @@ import useContractDetails from './Components/useContractDetails';
 
 // Import tách components
 import { createBookingColumns, getSmartCAChoices } from './Components/BookingTableHelpers';
-import { createHandlers } from './Components/BookingContractHandlers';
+import { createHandlers } from './Components/BookingContractHandlers.jsx';
 import BookingContractDrawer from './Components/BookingContractDrawer';
 
 // Reuse SignContract system components

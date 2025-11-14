@@ -1,26 +1,27 @@
-// useHtmlParser.js for TemplateEditor
+// useEVMHtmlParser.js - HTML Parser cho EVM Staff dựa trên Template Editor pattern
 import { useState } from "react";
 
-export const useHtmlParser = () => {
+export const useEVMHtmlParser = () => {
   const [allStyles, setAllStyles] = useState("");
   const [htmlHead, setHtmlHead] = useState("");
   const [htmlAttributes, setHtmlAttributes] = useState("");
   const [templateBody, setTemplateBody] = useState("");
   
-  // 🔄 States cho các phần đã parse
+  // 🔄 States cho các phần đã parse - GIỐNG TEMPLATE EDITOR
   const [headerBody, setHeaderBody] = useState("");
   const [metaBlocks, setMetaBlocks] = useState("");
   const [signBody, setSignBody] = useState("");
   const [footerBody, setFooterBody] = useState("");
   const [editableBody, setEditableBody] = useState("");
 
+  // 🔥 PARSE HTML TỪNG PHẦN - COPY LOGIC TỪ TEMPLATE EDITOR
   const parseHtmlFromBE = (rawHtml) => {
     if (!rawHtml) return {};
 
-    console.group("=== PARSING HTML FROM BE (TÁCH CÁC PHẦN RÕ RÀNG) ===");
+    console.group("=== EVM PARSING HTML FROM BE (TÁCH CÁC PHẦN RÕ RÀNG) ===");
     console.log("Raw HTML length:", rawHtml.length);
 
-    // 1) Tách <style> và lấy head/body/attrs
+    // 1) Tách <style> và lấy head/body/attrs - GIỐNG TEMPLATE EDITOR
     const headSection = rawHtml.match(/<head[^>]*>[\s\S]*?<\/head>/i)?.[0] || '';
     const styleRegex = /<style[^>]*>[\s\S]*?<\/style>/gi;
     const styles = headSection.match(styleRegex)?.join("\n") || "";
@@ -35,8 +36,8 @@ export const useHtmlParser = () => {
     const _htmlAttributes = (rawHtml.match(/<html([^>]*)>/i)?.[1] || "").trim();
     let bodyContent = bodyMatch ? bodyMatch[1].trim() : "";
 
-    // 2) 🔥 SỬ DỤNG DOMParser THAY VÌ REGEX - KHÔNG BAO GIỜ SAI THẺ ĐÓNG
-    console.log('🔧 Using DOMParser for precise HTML parsing');
+    // 2) 🔥 SỬ DỤNG DOMParser THAY VÌ REGEX - CHÍNH XÁC 100% NHƯ TEMPLATE EDITOR
+    console.log('🔧 Using DOMParser for precise HTML parsing (EVM version)');
     
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHtml, "text/html");
@@ -45,7 +46,7 @@ export const useHtmlParser = () => {
     const headerElement = doc.querySelector(".non-editable-header");
     const headerBody = headerElement ? headerElement.outerHTML : '';
     
-    // 🔥 Tách meta-block (có thể có nhiều block) - SỬA LỖI LỌTHOL
+    // 🔥 Tách meta-block - SỬA LỖI LỌTHOLE GIỐNG TEMPLATE EDITOR
     const metaBlockElements = doc.querySelectorAll(".meta-block, .meta-info, [class*='meta']");
     let metaBlocks = '';
     const metaBlocksArray = [];
@@ -78,11 +79,11 @@ export const useHtmlParser = () => {
     const remainingMeta = doc.querySelectorAll('[class*="meta"], .meta-block, .meta-info');
     remainingMeta.forEach(el => {
       if (el && el.parentNode) {
-        console.log('🚨 Found remaining meta block, removing:', el.className);
+        console.log('🚨 EVM: Found remaining meta block, removing:', el.className);
         el.parentNode.removeChild(el);
       }
     });
-    
+
     // 🔥 PHẦN EDITABLE BODY - DOUBLE CHECK LOẠI BỎ META BLOCKS
     let editableBodyRaw = doc.body.innerHTML.trim();
     
@@ -102,7 +103,7 @@ export const useHtmlParser = () => {
     // 3) Tạo template body để rebuild (giữ cấu trúc ban đầu)
     const _templateBody = bodyContent;
 
-    console.log("✅ DOMParser results:");
+    console.log("✅ EVM DOMParser results:");
     console.log(" - Header body length:", headerBody.length);
     console.log(" - Meta blocks length:", metaBlocks.length);
     console.log(" - Editable body length:", editableBody.length);
@@ -111,19 +112,10 @@ export const useHtmlParser = () => {
     
     // 🔍 Debug: Kiểm tra meta blocks trong editableBody
     const hasMetaInEditable = editableBody.toLowerCase().includes('meta');
-    console.log(" - editableBody contains 'meta':", hasMetaInEditable);
+    console.log(" - EVM editableBody contains 'meta':", hasMetaInEditable);
     if (hasMetaInEditable) {
-      console.warn("🚨 EDITABLE BODY STILL CONTAINS META CONTENT!");
-      console.log(" - editableBody preview:", editableBody.substring(0, 500));
-    }
-    
-    // 🔍 Debug: Kiểm tra thẻ đóng của meta-block
-    if (metaBlocks) {
-      const hasClosingDiv = metaBlocks.includes('</div>');
-      console.log(" - Meta-block has closing </div>:", hasClosingDiv);
-      if (!hasClosingDiv) {
-        console.warn("🚨 META-BLOCK MISSING CLOSING </div>!");
-      }
+      console.warn("🚨 EVM EDITABLE BODY STILL CONTAINS META CONTENT!");
+      console.log(" - EVM editableBody preview:", editableBody.substring(0, 500));
     }
     
     console.groupEnd();
@@ -143,14 +135,9 @@ export const useHtmlParser = () => {
   };
 
   /**
-   * 🔥 SIMPLE REBUILD - GIỮ NGUYÊN editableBody 100%
+   * 🔥 SIMPLE REBUILD CHO EVM - GIỐNG TEMPLATE EDITOR
    * ❌ ĐÃ LOẠI BỎ: superDecodeMultiLayer, fixBrokenHtmlStructure, formatHtmlBody
    * ✅ CHỈ LÀM: Ghép lại header + meta + editableBody + sign + footer
-   * 
-   * THAM SỐ:
-   *  - editableBody: nội dung chính từ TinyMCE (GIỮ NGUYÊN)
-   *  - headerBody, metaBlocks, signBody, footerBody: các phần cố định
-   *  - externalAllStyles: styles từ cache
    */
   const rebuildCompleteHtml = ({ 
     editableBody, 
@@ -158,19 +145,19 @@ export const useHtmlParser = () => {
     metaBlocks = '', 
     signBody = '', 
     footerBody = '', 
-    subject = 'Template',
+    subject = 'EContract',
     externalAllStyles
   }) => {
     if (!editableBody) return "";
 
-    console.group("=== 🔥 SIMPLE REBUILD - GIỮ NGUYÊN editableBody ===");
+    console.group("=== 🔥 EVM SIMPLE REBUILD - GIỮ NGUYÊN editableBody ===");
     console.log("Input editableBody length:", editableBody.length);
     console.log("Input preview:", editableBody.substring(0, 200));
 
     // ❗ GIỮ NGUYÊN editableBody - chỉ trim khoảng trắng
     const cleanEditableBody = (editableBody || "").trim();
 
-    console.log("✅ editableBody preserved without processing");
+    console.log("✅ EVM editableBody preserved without processing");
 
     // Ghép lại body theo thứ tự: header + meta + editable + sign + footer
     const finalBody = [
@@ -202,12 +189,13 @@ ${finalBody}
 </body>
 </html>`;
 
-    console.log("Final HTML length:", finalHtml.length);
+    console.log("EVM Final HTML length:", finalHtml.length);
     console.groupEnd();
 
     return finalHtml;
   };
 
+  // Update parsed structure - GIỐNG TEMPLATE EDITOR
   const updateParsedStructure = (parsed) => {
     setAllStyles(parsed.allStyles || "");
     setHtmlHead(parsed.htmlHead || "");
@@ -222,6 +210,7 @@ ${finalBody}
     setEditableBody(parsed.editableBody || "");
   };
 
+  // Reset structure states - GIỐNG TEMPLATE EDITOR
   const resetStructureStates = () => {
     setAllStyles("");
     setHtmlHead("");

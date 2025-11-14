@@ -142,7 +142,9 @@ const BookingDetailDrawer = ({
       width={720}
       onClose={onClose}
       open={visible}
-      bodyStyle={{ paddingBottom: 80, background: "#f9fafb" }}
+      styles={{
+        body: { paddingBottom: 80, background: "#f9fafb" }
+      }}
       headerStyle={{
         background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         borderBottom: "none",

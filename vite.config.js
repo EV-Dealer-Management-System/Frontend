@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+
   define: {
     global: 'globalThis',
     'process.env': 'import.meta.env',
@@ -32,7 +33,7 @@ export default defineConfig({
     }
   },
   esbuild: {
-    // Transpile JSX in node_modules if needed
+    // Allow JSX in .js files
     include: /\.(jsx?|tsx?)$/,
     exclude: [],
     loader: 'jsx'

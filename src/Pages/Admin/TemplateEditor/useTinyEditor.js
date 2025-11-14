@@ -23,6 +23,10 @@ import 'tinymce/plugins/preview';
 import 'tinymce/plugins/anchor';
 import 'tinymce/plugins/wordcount';
 import 'tinymce/plugins/fullscreen';
+import 'tinymce/plugins/lists';
+import 'tinymce/plugins/insertdatetime';
+import 'tinymce/plugins/media';
+import 'tinymce/plugins/image';
 
 // 🔥 TinyMCE config CHỐNG PHÁ FORMAT HOÀN TOÀN
 const tinyMCEConfig = {
@@ -32,9 +36,9 @@ const tinyMCEConfig = {
   resize: true,
   menubar: false,
   plugins: [
-    'code', 'table', 'link', 'searchreplace',
-    'autolink', 'charmap', 'preview', 'anchor', 
-    'wordcount', 'fullscreen'
+    'code', 'table', 'link', 'searchreplace', 'lists',
+    'autolink', 'charmap', 'preview', 'anchor', 'image',
+    'wordcount', 'fullscreen', 'insertdatetime', 'media'
   ],
   external_plugins: {},  // 🔥 KHÔNG CÓ EXTERNAL PLUGINS
   toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | table | removeformat | code | fullscreen',
@@ -102,6 +106,7 @@ const tinyMCEConfig = {
     }
   },
   */
+
   
   // 🔒 BẢO VỆ CHỈ CÁC PATTERNS THỰC SỰ CẦN THIẾT
   protect: [
@@ -114,7 +119,28 @@ const tinyMCEConfig = {
     // /class\s*=\s*["'][^"']*["']/gi     
   ],
   
-  // 🚫 TẮT HOÀN TOÀN MỌI XỬ LÝ HTML
+  // 🔥 TABLE CONFIG - ĐẢM BẢO BẢNG HIỂN THỊ ĐÚNG
+  table_default_attributes: {
+    border: '1',
+    cellpadding: '5',
+    cellspacing: '0',
+    width: '100%'
+  },
+  table_default_styles: {
+    'border-collapse': 'collapse',
+    'border': '1px solid #ccc'
+  },
+  table_class_list: [
+    {title: 'None', value: ''},
+    {title: 'Table with borders', value: 'table-bordered'},
+    {title: 'Striped table', value: 'table-striped'}
+  ],
+  table_cell_class_list: [
+    {title: 'None', value: ''},
+    {title: 'Cell with border', value: 'cell-border'}
+  ],
+  
+  // � TẮT HOÀN TOÀN MỌI XỬ LÝ HTML
   fix_list_elements: false,         // KHÔNG sửa lists
   fix_table_elements: false,        // KHÔNG sửa tables
   apply_source_formatting: false,   // KHÔNG format source
@@ -220,6 +246,12 @@ const tinyMCEConfig = {
       white-space: pre-wrap;
     }
     
+    /* 🙈 HIDE content-table elements in editor view */
+    table.content-table.mce-item-table {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    
     /* 🔒 COMMENTS ĐƯỢC GIỮ NGUYÊN TRONG HTML */
     
     /* 🛡️ LIST PROTECTION - Giữ format danh sách */
@@ -266,7 +298,61 @@ function useTinyEditor() {
   const [originalHead, setOriginalHead] = useState('');
   const [originalHtmlAttrs, setOriginalHtmlAttrs] = useState('');
   const [originalDoctype, setOriginalDoctype] = useState('');
+  const [hiddenTables, setHiddenTables] = useState([]);
   const { message } = App.useApp();
+
+  // ✅ Extract content-table elements and hide them from editor
+  const extractContentTables = (htmlContent) => {
+    if (!htmlContent) return htmlContent;
+    
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      const contentTables = doc.querySelectorAll('table.content-table');
+      
+      const extractedTables = [];
+      contentTables.forEach((table, index) => {
+        const tableData = {
+          id: `content-table-${index}`,
+          html: table.outerHTML,
+          placeholder: `<!-- HIDDEN_TABLE_${index} -->`
+        };
+        extractedTables.push(tableData);
+        
+        // Replace table with placeholder comment
+        const placeholder = doc.createComment(`HIDDEN_TABLE_${index}`);
+        table.parentNode.replaceChild(placeholder, table);
+      });
+      
+      setHiddenTables(extractedTables);
+      console.log('📊 TemplateEditor: Extracted', extractedTables.length, 'content-table elements');
+      
+      return doc.body.innerHTML;
+    } catch (error) {
+      console.error('❌ TemplateEditor: Error extracting content-tables:', error);
+      return htmlContent;
+    }
+  };
+
+  // ✅ Restore content-table elements back to content
+  const restoreContentTables = (htmlContent) => {
+    if (!htmlContent || hiddenTables.length === 0) return htmlContent;
+    
+    try {
+      let restoredContent = htmlContent;
+      
+      hiddenTables.forEach((tableData, index) => {
+        const placeholder = `<!-- HIDDEN_TABLE_${index} -->`;
+        restoredContent = restoredContent.replace(placeholder, tableData.html);
+      });
+      
+      console.log('🔄 TemplateEditor: Restored', hiddenTables.length, 'content-table elements');
+      return restoredContent;
+    } catch (error) {
+      console.error('❌ TemplateEditor: Error restoring content-tables:', error);
+      return htmlContent;
+    }
+  };
 
   // ✅ Extract body content từ full HTML
   const extractBodyFromFullHtml = (fullHtml) => {
@@ -331,10 +417,13 @@ ${bodyContent}
     
     try {
       // Lấy body content từ TinyMCE
-      const bodyContent = editor.getContent({ 
+      let bodyContent = editor.getContent({ 
         format: 'html',
         get_from_editor: true
       });
+      
+      // 🔄 Restore hidden content-table elements
+      bodyContent = restoreContentTables(bodyContent);
       
       // CRITICAL: Kiểm tra có HEAD content không
       if (!originalHead || originalHead.length === 0) {
@@ -391,7 +480,11 @@ ${bodyContent}
       // KHÔNG cần backup localStorage - sử dụng originalFullHtml để preserve
       
       // Chỉ đưa body vào TinyMCE - SỬ DỤNG innerHTML TRỰC TIẾP
-      const bodyContent = extractBodyFromFullHtml(content);
+      let bodyContent = extractBodyFromFullHtml(content);
+      
+      // 📊 Extract content-table elements before setting to editor
+      bodyContent = extractContentTables(bodyContent);
+      
       console.log('📝 Setting body content DIRECTLY via innerHTML, length:', bodyContent?.length || 0);
       
       // 🔥 SỬ DỤNG innerHTML TRỰC TIẾP - BỎ QUA TẤT CẢ TINYMCE PROCESSING
@@ -425,6 +518,7 @@ ${bodyContent}
       setOriginalHead('');
       setOriginalHtmlAttrs('');
       setOriginalDoctype('');
+      setHiddenTables([]);
       
       console.log('✅ TinyMCE content reset completed');
     } catch (error) {
