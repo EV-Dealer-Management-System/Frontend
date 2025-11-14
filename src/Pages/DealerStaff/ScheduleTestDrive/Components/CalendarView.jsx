@@ -157,10 +157,9 @@ const CalendarView = ({ onRefresh }) => {
 
   const getStatusInfo = (status) => {
     const statusMap = {
-      1: { text: 'Chờ xác nhận', color: 'gold', bgColor: '#FEF3E2' },
-      2: { text: 'Đã duyệt', color: 'blue', bgColor: '#E6F0FF' },
-      3: { text: 'Hoàn thành', color: 'green', bgColor: '#E8F5E9' },
-      4: { text: 'Đã hủy', color: 'red', bgColor: '#FFEBEE' },
+      1: { text: 'Hoạt động', color: 'blue', bgColor: '#E6F0FF' },
+      2: { text: 'Hoàn thành', color: 'green', bgColor: '#E8F5E9' },
+      3: { text: 'Đã hủy', color: 'red', bgColor: '#FFEBEE' },
     };
     return statusMap[status] || { text: 'Không xác định', color: 'default', bgColor: '#F5F5F5' };
   };
@@ -171,7 +170,7 @@ const CalendarView = ({ onRefresh }) => {
       pending: appointments.filter(a => a.status === 1).length,
       approved: appointments.filter(a => a.status === 2).length,
       completed: appointments.filter(a => a.status === 3).length,
-      cancelled: appointments.filter(a => a.status === 4).length,
+   
     };
   }, [appointments]);
 
@@ -316,10 +315,9 @@ const CalendarView = ({ onRefresh }) => {
               placeholder="Trạng thái"
             >
               <Option value="all">Tất cả</Option>
-              <Option value="1">Chờ xác nhận</Option>
-              <Option value="2">Đã duyệt</Option>
-              <Option value="3">Hoàn thành</Option>
-              <Option value="4">Đã hủy</Option>
+              <Option value="1">Hoạt độngđộng</Option>
+              <Option value="2">Hoàn thành</Option>
+              <Option value="3">Đã hủy</Option>
             </Select>
           </Col>
           <Col xs={12} sm={8} md={6}>
@@ -343,33 +341,11 @@ const CalendarView = ({ onRefresh }) => {
 
       {/* Statistics Cards */}
       <Row gutter={[12, 12]} style={{ marginBottom: 12, flexShrink: 0 }}>
+       
         <Col xs={12} sm={12} md={6}>
           <StatisticCard
             statistic={{
-              title: 'Chờ xác nhận',
-              value: stats.pending,
-              valueStyle: { color: '#F59E0B' },
-            }}
-            chart={
-              <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #FEF3E2 0%, #FDE68A 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <ClockCircleOutlined style={{ fontSize: 20, color: '#F59E0B' }} />
-              </div>
-            }
-            chartPlacement="left"
-          />
-        </Col>
-        <Col xs={12} sm={12} md={6}>
-          <StatisticCard
-            statistic={{
-              title: 'Đã duyệt',
+              title: 'Hoạt Động',
               value: stats.approved,
               valueStyle: { color: '#2563EB' },
             }}
