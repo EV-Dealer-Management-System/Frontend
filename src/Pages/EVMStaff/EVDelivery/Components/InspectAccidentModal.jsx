@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Modal, Table, Button, message, Tag } from 'antd';
-import { ExclamationCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Modal, Table, Button, message, Tag, Input } from 'antd';
+import { ExclamationCircleOutlined, CheckCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { EVinspectAccident } from '../../../../App/EVMStaff/EVDelivery/EVDeliveryInspectAccident';
 
 // Component modal kiểm tra xe bị sự cố
 function InspectAccidentModal({ visible, onClose, delivery, templateSummary = [], onSuccess }) {
     const [selectedVehicles, setSelectedVehicles] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [searchText, setSearchText] = useState('');
 
     if (!delivery) return null;
 
@@ -34,6 +35,13 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
         // Tìm thông tin template tương ứng
         template: filteredTemplateSummary.find(t => t.vinList.includes(detail.vin))
     })) || [];
+
+    // Lọc danh sách xe theo search text
+    const filteredVehicleList = vehicleList.filter(vehicle =>
+        vehicle.vin.toLowerCase().includes(searchText.toLowerCase()) ||
+        vehicle.template?.versionName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        vehicle.template?.colorName?.toLowerCase().includes(searchText.toLowerCase())
+    );
 
     // Cột của bảng
     const columns = [
@@ -157,10 +165,21 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
                     </div>
                 </div>
 
+                {/* Thanh tìm kiếm VIN */}
+                <Input
+                    placeholder="Tìm kiếm theo VIN, mẫu xe hoặc màu sắc..."
+                    prefix={<SearchOutlined className="text-gray-400" />}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                    allowClear
+                    size="large"
+                    className="rounded-lg"
+                />
+
                 <Table
                     rowSelection={rowSelection}
                     columns={columns}
-                    dataSource={vehicleList}
+                    dataSource={filteredVehicleList}
                     pagination={false}
                     scroll={{ y: 400 }}
                     size="small"
