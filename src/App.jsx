@@ -64,7 +64,7 @@ import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/Upda
 import AdminGetAllDealerTier from "./Pages/Admin/GetAllDealerTier/GetAllDealerTier";
 import EVDelivery from "./Pages/EVMStaff/EVDelivery/EVDelivery";
 import DMEVDelivery from "./Pages/DealerManager/DMEVDelivery/EVDelivery";
-import OrderListStaffView from "./Pages/DealerStaff/CreateEVOrder/GetAllEVOrder";
+import OrderListStaffView from "./Pages/DealerStaff/GetAllEVOrder/GetAllEVOrder";
 import CreateEVOrder from "./Pages/DealerStaff/CreateEVOrder/CreateEVOder";
 import DealerProfile from "./Pages/DealerManager/DealerProfile/DealerProfile";
 import DepositSettings from "./Pages/DealerManager/DepositSettings/DepositSettings";
