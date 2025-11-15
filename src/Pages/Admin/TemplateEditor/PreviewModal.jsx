@@ -120,12 +120,17 @@ function PreviewModal({
       }
       open={visible}
       onCancel={onClose}
-      width="95vw"
-      style={{ top: 20 }}
+      width="min(95vw, 1400px)"
+      style={{ 
+        top: 20,
+        maxWidth: '1400px',
+        margin: '0 auto'
+      }}
       destroyOnHidden
       styles={{
         body: { 
           height: 'calc(100vh - 150px)', 
+          maxHeight: '80vh',
           padding: '16px',
           overflow: 'auto'
         }
@@ -149,11 +154,8 @@ function PreviewModal({
               <Text strong>Template Name:</Text>
               <div>{templateData?.name}</div>
             </div>
-            <div>
-              <Text strong>Styles Preserved:</Text>
-              <div className={`font-mono ${allStyles ? 'text-green-600' : 'text-red-500'}`}>
-                {allStyles ? `✓ ${(allStyles.match(/<style/g) || []).length} blocks` : '✗ No styles'}
-              </div>
+           <div>
+              <strong>HTML Length:</strong> {completeHtml.length} chars
             </div>
           </div>
         </Card>
@@ -220,11 +222,14 @@ function PreviewModal({
                 <textarea
                   value={completeHtml}
                   readOnly
-                  className="w-full h-full p-3 font-mono text-xs border rounded resize-none bg-gray-50"
+                  className="w-full h-full p-3 font-mono text-xs border rounded resize-y bg-gray-50"
                   style={{ 
                     fontFamily: 'Monaco, Consolas, "Courier New", monospace',
                     fontSize: '11px',
-                    lineHeight: '1.4'
+                    lineHeight: '1.4',
+                    width: '100%',
+                    minHeight: '400px',
+                    maxHeight: '70vh'
                   }}
                   placeholder="HTML source sẽ hiển thị khi có template..."
                 />
@@ -233,25 +238,6 @@ function PreviewModal({
 
           </div>
         </div>
-
-        {/* Debug Info */}
-        <Divider />
-        <Card size="small" className="mt-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-600">
-            <div>
-              <strong>Total HTML:</strong> {completeHtml.length} chars
-            </div>
-            <div>
-              <strong>Body Content:</strong> {htmlContent?.length || 0} chars
-            </div>
-            <div>
-              <strong>Styles:</strong> {allStyles?.length || 0} chars
-            </div>
-            <div>
-              <strong>Head Content:</strong> {htmlHead?.length || 0} chars
-            </div>
-          </div>
-        </Card>
 
       </div>
     </Modal>

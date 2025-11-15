@@ -111,6 +111,7 @@ function App() {
           element={<ContractPage />}
         />
         <Route path="/EContract/View" element={<ContractViewer />} />
+
         {/* Admin Routes - với catch-all route */}
         <Route
           path="/admin/*"
@@ -166,6 +167,7 @@ function App() {
                   path="settings/template-editor"
                   element={<TemplateEditorPage />}
                 />
+
                 <Route path="booking/ready-booking-signing" element={<BookingContract />} />
                 <Route path="booking/all-ev-booking" element={<AdminGetAllEVBooking />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ admin */}

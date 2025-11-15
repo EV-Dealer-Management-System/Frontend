@@ -24,16 +24,13 @@ import { ConfigProvider } from 'antd';
 import viVN from 'antd/es/locale/vi_VN';
 import { PageContainer } from '@ant-design/pro-components';
 import AdminLayout from '../../../Components/Admin/AdminLayout';
-import { useTemplateEditor } from './useTemplateEditor';
 import PreviewModal from './PreviewModal';
 import TemplateEditorModal from './TemplateEditorModal';
+import { getAllTemplates, updateTemplate } from '../../../App/Admin/TemplateEditor';
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-// ========================================
-// 📄 TEMPLATE MANAGEMENT - LIST VIEW
-// ========================================
 
 function TemplateEditorPage() {
   const { modal } = App.useApp();
@@ -47,20 +44,37 @@ function TemplateEditorPage() {
   const [editorVisible, setEditorVisible] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  // Hook quản lý templates
-  const {
-    templates,
-    loading,
-    fetchTemplates
-    // REMOVED: rebuildCompleteHtml - chỉ dùng full HTML
-  } = useTemplateEditor();
+  // Local state management
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // ✅ Load templates on mount với useRef chống fetch lặp React 19
+  // ✅ Load templates from API
+  const fetchTemplates = async () => {
+    setLoading(true);
+    try {
+      console.log(' Fetching templates from API...');
+      const response = await getAllTemplates();
+      
+      if (response?.success && response?.data) {
+        setTemplates(response.data);
+        console.log(' Templates loaded:', response.data.length, 'items');
+      } else {
+        console.error(' Failed to fetch templates:', response?.message);
+        message.error('Không thể tải danh sách template: ' + (response?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error(' Fetch templates error:', error);
+      message.error('Lỗi khi tải template: ' + (error.message || 'Network error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
     fetchTemplates();
-  }, [fetchTemplates]);
+  }, []);
 
   // ✅ Filter templates theo search
   const filteredTemplates = templates.filter(template =>
@@ -80,6 +94,50 @@ function TemplateEditorPage() {
     console.log('👁 Opening preview for template:', template.name);
     setSelectedTemplate(template);
     setPreviewVisible(true);
+  };
+
+  // ✅ Handle save template via API
+  const handleSaveTemplate = async (templateId, content) => {
+    if (!selectedTemplate) {
+      throw new Error('No template selected');
+    }
+    
+    // Handle both old (content) and new (templateId, content) parameter formats
+    if (typeof templateId === 'string' && !content) {
+      content = templateId; // Old format: just content
+    }
+    
+    if (!content) {
+      throw new Error('No content provided');
+    }
+    
+    try {
+      console.log(' Saving template via API:', selectedTemplate.name, 'Content length:', content.length);
+      
+      const response = await updateTemplate(
+        selectedTemplate.code,
+        selectedTemplate.name,
+        content
+      );
+      
+      if (response?.success) {
+        console.log(' Template saved successfully');
+        
+        // Update local state
+        setTemplates(prev => prev.map(t => 
+          t.code === selectedTemplate.code 
+            ? { ...t, contentHtml: content }
+            : t
+        ));
+        
+        return response;
+      } else {
+        throw new Error(response?.message || 'Save failed');
+      }
+    } catch (error) {
+      console.error(' Save template error:', error);
+      throw error;
+    }
   };
 
   // ✅ Handle close editor modal
@@ -234,6 +292,13 @@ function TemplateEditorPage() {
       <TemplateEditorModal
         visible={editorVisible}
         onClose={handleEditorClose}
+        onSave={async (templateId, content) => {
+          await handleSaveTemplate(templateId, content);
+          // Close all modals and reload templates after successful save
+          setEditorVisible(false);
+          setSelectedTemplate(null);
+          await fetchTemplates();
+        }}
         template={selectedTemplate}
       />
 
