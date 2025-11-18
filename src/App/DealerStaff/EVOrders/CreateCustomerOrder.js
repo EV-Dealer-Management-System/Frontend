@@ -7,5 +7,7 @@ export const CreateEVOrder = async (orderData) => {
     isPayFull: !!orderData.isPayFull,
     isCash: !!orderData.isCash,
   });
+  console.log(res.data);
   return res.data;
-};
+}; 
+

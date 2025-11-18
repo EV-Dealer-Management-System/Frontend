@@ -71,6 +71,8 @@ import DepositSettings from "./Pages/DealerManager/DepositSettings/DepositSettin
 import UpdateAllEVDepositSettings from "./Pages/Admin/DepositSettings/UpdatAllEVDepositSettings";
 import GetAllContract from "./Pages/DealerManager/ViewAllOrderContract/GetAllContract";
 import GetAllContractManager from "./Pages/DealerStaff/ViewAllOrderContract/GetAllContractManage";
+import ConfirmEcontractOrder from "./Pages/ConfirmEcontractOrder/ConfirmEcontractOrder";
+
 function App() {
   return (
     <BrowserRouter>
@@ -111,6 +113,7 @@ function App() {
           element={<ContractPage />}
         />
         <Route path="/EContract/View" element={<ContractViewer />} />
+        <Route path="/confirm-econtract" element={<ConfirmEcontractOrder />} />
 
         {/* Admin Routes - với catch-all route */}
         <Route
@@ -154,7 +157,7 @@ function App() {
                   path="settings/change-password"
                   element={<ChangePassword />}
                 />
-                <Route path ="settings/deposit-settings" element={<UpdateAllEVDepositSettings />} />
+                <Route path="settings/deposit-settings" element={<UpdateAllEVDepositSettings />} />
                 <Route
                   path="promotions/all-promotions"
                   element={<GetAllPromotion />}
@@ -192,8 +195,8 @@ function App() {
                 />
                 <Route path="ev/inventory" element={<GetAllEVInventory />} />
 
-                <Route path="settings/dealer-profile" element={<DealerProfile />} /> 
-                
+                <Route path="settings/dealer-profile" element={<DealerProfile />} />
+
                 <Route path="staff/staff-list" element={<DealerStaffList />} />
                 <Route
                   path="customers/get-all-customers"
@@ -202,11 +205,11 @@ function App() {
                 <Route
                   path="settings/change-password"
                   element={<ChangePasswordDealerManager />}
-                /> 
+                />
                 <Route path="settings/deposit-settings" element={<DepositSettings />} />
                 <Route
                   path="staff/create-dealer-staff-account"
-                    element={<CreateDealerAccount />}
+                  element={<CreateDealerAccount />}
                 />
                 <Route path="customer-feedback/all" element={<UpdateStatusCustomerFeedback />} />
                 <Route path="staff-feedback/all" element={<FeedbackDealerStaff />} />
