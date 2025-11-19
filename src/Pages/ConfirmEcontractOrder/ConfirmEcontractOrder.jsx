@@ -5,9 +5,9 @@ import { FileTextOutlined, FilePdfOutlined, DownloadOutlined, EyeOutlined, ZoomI
 import { PageContainer, ProCard } from "@ant-design/pro-components";
 import { confirmCustomerOrder, getEcontractPreview } from "../../App/DealerStaff/EVOrders/ConfirmCustomerOrder";
 import PDFViewer from "../Admin/SignContract/Components/PDF/PDFViewer";
-import ConfirmationActions from "./components/ConfirmationActions";
-import OrderInfoCard from "./components/OrderInfoCard";
-import GuideCard from "./components/GuideCard";
+import ConfirmationActions from "./Components/ConfirmationActions";
+import OrderInfoCard from "./Components/OrderInfoCard";
+import GuideCard from "./Components/GuideCard";
 
 // Trang xác nhận hợp đồng điện tử
 function ConfirmEcontractOrder() {
