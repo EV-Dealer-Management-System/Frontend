@@ -64,7 +64,28 @@ function ConfirmEcontractOrder() {
             } catch (error) {
                 console.error("Error loading PDF:", error);
                 console.error("Error response:", error.response);
-                setPdfError(error.response?.data?.message || "Không thể tải hợp đồng. Vui lòng thử lại sau.");
+                
+                // Hiển thị thông báo lỗi cụ thể dựa trên loại lỗi
+                let errorMessage = "Không thể tải hợp đồng. Vui lòng thử lại sau.";
+                
+                if (error.isNotFound) {
+                    errorMessage = "📄 " + error.message;
+                    message.error(error.message);
+                } else if (error.isUnauthorized) {
+                    errorMessage = "🔒 " + error.message;
+                    message.warning(error.message);
+                } else if (error.isForbidden) {
+                    errorMessage = "⛔ " + error.message;
+                    message.warning(error.message);
+                } else if (error.isTimeout) {
+                    errorMessage = "⏱️ " + error.message;
+                    message.error(error.message);
+                } else {
+                    errorMessage = error.message || errorMessage;
+                    message.error(error.message || "Có lỗi xảy ra khi tải hợp đồng");
+                }
+                
+                setPdfError(errorMessage);
             } finally {
                 setPdfLoading(false);
             }
@@ -216,7 +237,13 @@ function ConfirmEcontractOrder() {
                                 {pdfError && (
                                     <div>
                                         <h4 className="text-lg font-medium mb-2 text-red-600">Không thể tải PDF</h4>
-                                        <p className="text-red-500 mb-4">{pdfError}</p>
+                                        <p className="text-lg font-bold text-red-600 mb-4">{pdfError}</p>
+                                        <Button 
+                                            type="primary" 
+                                            onClick={() => window.location.reload()}
+                                        >
+                                            Thử lại
+                                        </Button>
                                     </div>
                                 )}
                                 

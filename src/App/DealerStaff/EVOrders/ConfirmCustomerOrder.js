@@ -43,6 +43,42 @@ export const getEcontractPreview = async (downloadURL) => {
     }
     catch (error) {
         console.error("Error getting econtract preview:", error);
-        throw error;
+        
+        // Xử lý các loại lỗi cụ thể
+        if (error.response?.status === 404) {
+            const errorMsg = "Tài liệu không tồn tại hoặc đã hết hạn xem. Vui lòng kiểm tra lại đường link hoặc liên hệ bộ phận hỗ trợ.";
+            const notFoundError = new Error(errorMsg);
+            notFoundError.isNotFound = true;
+            notFoundError.response = error.response;
+            throw notFoundError;
+        }
+        
+        if (error.response?.status === 401) {
+            const errorMsg = "Không có quyền truy cập tài liệu. Link có thể đã hết hạn hoặc không hợp lệ.";
+            const unauthorizedError = new Error(errorMsg);
+            unauthorizedError.isUnauthorized = true;
+            unauthorizedError.response = error.response;
+            throw unauthorizedError;
+        }
+        
+        if (error.response?.status === 403) {
+            const errorMsg = "Truy cập bị từ chối. Tài liệu có thể đã bị khóa hoặc hạn chế quyền xem.";
+            const forbiddenError = new Error(errorMsg);
+            forbiddenError.isForbidden = true;
+            forbiddenError.response = error.response;
+            throw forbiddenError;
+        }
+        
+        if (error.code === 'ECONNABORTED') {
+            const errorMsg = "Timeout khi tải tài liệu. Vui lòng kiểm tra kết nối mạng và thử lại.";
+            const timeoutError = new Error(errorMsg);
+            timeoutError.isTimeout = true;
+            throw timeoutError;
+        }
+        
+        // Lỗi khác
+        const genericError = new Error(error.response?.data?.message || "Có lỗi xảy ra khi tải tài liệu. Vui lòng thử lại sau.");
+        genericError.response = error.response;
+        throw genericError;
     }
 };
