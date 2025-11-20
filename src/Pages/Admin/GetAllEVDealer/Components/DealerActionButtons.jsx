@@ -1,9 +1,9 @@
 import React from "react";
 import { Button } from "antd";
-import { EyeOutlined, HistoryOutlined } from "@ant-design/icons";
+import { EyeOutlined, HistoryOutlined, FileTextOutlined } from "@ant-design/icons";
 
 // Component các nút hành động cho từng đại lý
-function DealerActionButtons({ record, onViewRevenue, onViewDebtDetail }) {
+function DealerActionButtons({ record, onViewRevenue, onViewDebtDetail, onViewPolicy }) {
     return (
         <div className="flex flex-col gap-1">
             <Button
@@ -23,6 +23,15 @@ function DealerActionButtons({ record, onViewRevenue, onViewDebtDetail }) {
                 onClick={() => onViewDebtDetail(record.id, record.name)}
             >
                 Chi Tiết Công Nợ
+            </Button>
+            <Button
+                type="default"
+                icon={<FileTextOutlined />}
+                size="small"
+                className="w-full border-green-500 text-green-600 hover:bg-green-50"
+                onClick={() => onViewPolicy(record.id, record.name)}
+            >
+                Xem Điều Khoản
             </Button>
         </div>
     );

@@ -10,6 +10,7 @@ import DealerInfoCard from './Components/DealerInfoCard';
 import ManagerInfoCard from './Components/ManagerInfoCard';
 import BankInfoCard from './Components/BankInfoCard';
 import ContractListCard from './Components/ContractListCard';
+import EffectivePolicyCard from './Components/EffectivePolicyCard';
 
 const { Text } = Typography;
 
@@ -59,7 +60,7 @@ function DealerProfile() {
         );
     }
 
-    const { dealer, memberTotal, econtractDealer } = dealerData;
+    const { dealer, memberTotal, econtractDealer, effectivePolicy } = dealerData;
 
     return (
         <DealerManagerLayout>
@@ -90,6 +91,9 @@ function DealerProfile() {
 
                     {/* Thông tin ngân hàng */}
                     <BankInfoCard dealer={dealer} />
+
+                    {/* Chính sách hiệu lực */}
+                    <EffectivePolicyCard effectivePolicy={effectivePolicy} />
 
                     {/* Hợp đồng điện tử */}
                     <ContractListCard econtractDealer={econtractDealer} />

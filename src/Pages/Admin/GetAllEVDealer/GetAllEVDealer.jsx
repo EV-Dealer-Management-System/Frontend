@@ -8,6 +8,8 @@ import useDealerTableColumns from "./Components/DealerTableColumns";
 import DealerSearchToolbar from "./Components/DealerSearchToolbar";
 import DealerRevenueModal from "./Components/DealerRevenueModal";
 import DealerDebtDetailModal from "./Components/DealerDebtDetailModal";
+import useDealerPolicyModal from "./Components/DealerPolicyModal";
+import useUpdateDealerPolicyModal from "./Components/UpdateDealerPolicyModal";
 
 function GetAllEVDealerPage() {
   const { modal } = App.useApp();
@@ -32,9 +34,14 @@ function GetAllEVDealerPage() {
     handleTableChange,
   } = useDealerData();
 
+  // Sử dụng modal chỉnh sửa policy
+  const { handleOpenModal: handleEditPolicy, ModalComponent: UpdatePolicyModal } = 
+    useUpdateDealerPolicyModal(modal, loadDealerData);
+
   // Sử dụng các modal components
   const { handleViewRevenue } = DealerRevenueModal({ modal });
   const { handleViewDebtDetail } = DealerDebtDetailModal({ modal });
+  const { handleViewPolicy } = useDealerPolicyModal(modal, handleEditPolicy);
 
   // Sử dụng custom hook để tạo cột bảng
   const columns = useDealerTableColumns({
@@ -45,10 +52,12 @@ function GetAllEVDealerPage() {
     modal,
     onViewRevenue: handleViewRevenue,
     onViewDebtDetail: handleViewDebtDetail,
+    onViewPolicy: handleViewPolicy,
   });
 
   return (
     <AdminLayout>
+      <UpdatePolicyModal />
       <div className="h-screen flex flex-col">
         <div className="flex-1 bg-white overflow-hidden">
           <ConfigProvider locale={viVN}>
