@@ -170,24 +170,24 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         name: "Báo cáo & Thống kê",
         icon: <BarChartOutlined />,
         routes: [
+          // {
+          //   path: "/dealer/reports/sales",
+          //   name: "Báo cáo bán hàng",
+          //   icon: <LineChartOutlined />,
+          //   component: "./SalesReport",
+          // },
           {
-            path: "/dealer/reports/sales",
-            name: "Báo cáo bán hàng",
-            icon: <LineChartOutlined />,
-            component: "./SalesReport",
-          },
-          {
-            path: "/dealer/reports/revenue",
-            name: "Báo cáo doanh thu",
+            path: "/dealer-manager/settings/dealer-debt",
+            name: "Báo cáo công nợ",
             icon: <DollarOutlined />,
             component: "./RevenueReport",
           },
-          {
-            path: "/dealer/reports/inventory",
-            name: "Báo cáo tồn kho",
-            icon: <DatabaseOutlined />,
-            component: "./InventoryReport",
-          },
+          // {
+          //   path: "/dealer/reports/inventory",
+          //   name: "Báo cáo tồn kho",
+          //   icon: <DatabaseOutlined />,
+          //   component: "./InventoryReport",
+          // },
         ],
       },
       {
