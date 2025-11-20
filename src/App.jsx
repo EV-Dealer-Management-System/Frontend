@@ -72,7 +72,7 @@ import UpdateAllEVDepositSettings from "./Pages/Admin/DepositSettings/UpdatAllEV
 import GetAllContract from "./Pages/DealerManager/ViewAllOrderContract/GetAllContract";
 import GetAllContractManager from "./Pages/DealerStaff/ViewAllOrderContract/GetAllContractManage";
 import ConfirmEcontractOrder from "./Pages/ConfirmEcontractOrder/ConfirmEcontractOrder";
-
+import GetDealerDebt from "./Pages/DealerManager/DealerDebt/GetDealerDebt";
 function App() {
   return (
     <BrowserRouter>
@@ -207,6 +207,7 @@ function App() {
                   element={<ChangePasswordDealerManager />}
                 />
                 <Route path="settings/deposit-settings" element={<DepositSettings />} />
+                <Route path="settings/dealer-debt" element={<GetDealerDebt />} />
                 <Route
                   path="staff/create-dealer-staff-account"
                   element={<CreateDealerAccount />}
