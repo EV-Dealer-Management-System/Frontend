@@ -315,7 +315,7 @@ const CalendarView = ({ onRefresh }) => {
               placeholder="Trạng thái"
             >
               <Option value="all">Tất cả</Option>
-              <Option value="1">Hoạt độngđộng</Option>
+              <Option value="1">Hoạt động</Option>
               <Option value="2">Hoàn thành</Option>
               <Option value="3">Đã hủy</Option>
             </Select>
