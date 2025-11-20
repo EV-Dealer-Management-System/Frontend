@@ -1,22 +1,16 @@
 import React from "react";
-import { Typography, Tag, Button, Space } from "antd";
+import { Typography, Tag, Button } from "antd";
 import { ProCard } from "@ant-design/pro-components";
 import {
   CarOutlined,
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  InboxOutlined,
-  BgColorsOutlined,
-  ThunderboltOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
 function VehicleCard({ vehicle, onViewDetails }) {
- 
-
-
   // Format giá VND
   const formatPrice = (price) => {
     return new Intl.NumberFormat("vi-VN").format(price);
@@ -227,7 +221,7 @@ function VehicleCard({ vehicle, onViewDetails }) {
             borderRadius: "8px",
           }}
         >
-          Xem Thông Số Kỹ Thuật
+          Xem Thông Số
         </Button>
       </div>
     </ProCard>
