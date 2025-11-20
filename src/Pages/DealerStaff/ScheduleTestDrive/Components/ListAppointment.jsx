@@ -487,13 +487,13 @@ const ListAppointment = () => {
                 placeholder="Chọn trạng thái"
               >
                 <Option value={1}>
-                  <Badge status="success" text="Hoạt Động (Active)" />
+                  <Badge status="success" text="Hoạt Động" />
                 </Option>
                 <Option value={2}>
-                  <Badge status="default" text="Đã Hoàn Thành (Completed)" />
+                  <Badge status="default" text="Đã Hoàn Thành" />
                 </Option>
                 <Option value={3}>
-                  <Badge status="error" text="Đã Hủy (Canceled)" />
+                  <Badge status="error" text="Đã Hủy" />
                 </Option>
               </Select>
             </div>
