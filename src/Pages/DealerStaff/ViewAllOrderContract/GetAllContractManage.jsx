@@ -90,7 +90,6 @@ function GetAllContractManager() {
       content: (
         <div className="space-y-2">
           <p><strong>ID:</strong> {contract.id}</p>
-          <p><strong>Loại:</strong> {contract.type}</p>
           <p><strong>Trạng thái:</strong> {getStatusTag(contract.status)}</p>
           <p><strong>Người tạo:</strong> {contract.createdBy}</p>
           <p><strong>Chủ sở hữu:</strong> {contract.ownerName}</p>

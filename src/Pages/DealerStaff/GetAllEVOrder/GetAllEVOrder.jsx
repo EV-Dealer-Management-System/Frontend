@@ -6,6 +6,7 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 import DealerStaffLayout from "../../../Components/DealerStaff/DealerStaffLayout";
 import api from "../../../api/api";
 import { cancelCustomerOrder } from "../../../App/DealerStaff/EVOrders/CancelCustormerOrder";
+import { payCustomerOrder, payDepositCustomerOrder } from "../../../App/DealerStaff/EVOrders/PaymentService";
 import { ConfigProvider } from "antd";
 import viVN from "antd/lib/locale/vi_VN";
 
@@ -155,26 +156,41 @@ function OrderListStaffView() {
   // Thanh toán
   const handlePay = async (method) => {
     if (!payingOrder || !method) return;
+    
     try {
       setPayLoading(true);
-
-      await api.put(
-        `/CustomerOrder/pay-deposit-customer-order/${payingOrder.id}?isCash=${method === "cash"}`
-      );
-
-      const successMsg =
-        method === "cash"
-          ? "Ghi nhận thanh toán tiền mặt thành công"
-          : "Tạo thanh toán VNPay thành công. Vui lòng kiểm tra email khách hàng.";
-
-      setSuccessMessage(successMsg);
-      setSuccessModalVisible(true);
-
-      closePayModal();
-      fetchOrders(pagination.current, pagination.pageSize, { silent: true });
+      
+      const isCash = method === "cash";
+      let result;
+      
+      // Xác định API cần gọi dựa trên trạng thái đơn hàng
+      if (payingOrder.status === 4) {
+        // Đang cọc - thanh toán phần còn lại
+        result = await payDepositCustomerOrder(payingOrder.id, isCash);
+      } else if (payingOrder.status === 0 || payingOrder.status === 1) {
+        // Chờ thanh toán toàn phần (0) hoặc chờ cọc (1) - thanh toán mới
+        const isPayFull = payingOrder.status === 0; // true nếu thanh toán toàn phần, false nếu chỉ cọc
+        result = await payCustomerOrder(payingOrder.id, isPayFull, isCash);
+      }
+      
+      if (result?.isSuccess) {
+        let successMsg;
+        if (isCash) {
+          successMsg = "Ghi nhận thanh toán tiền mặt thành công";
+        } else {
+          successMsg = "Tạo yêu cầu thanh toán thành công. Kính mong khách hàng kiểm tra thư điện tử để thực hiện thanh toán";
+        }
+        
+        setSuccessMessage(successMsg);
+        setSuccessModalVisible(true);
+        closePayModal();
+        fetchOrders(pagination.current, pagination.pageSize, { silent: true });
+      } else {
+        message.error(result?.message || "Thanh toán thất bại");
+      }
     } catch (e) {
       console.error(e);
-      message.error("Thanh toán thất bại");
+      message.error("Có lỗi xảy ra khi thanh toán");
     } finally {
       setPayLoading(false);
     }

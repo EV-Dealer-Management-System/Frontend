@@ -158,7 +158,8 @@ function OrderTable({
                     );
                 }
 
-                if (record.status === 4) {
+                // Hiển thị nút thanh toán cho các trạng thái: chờ cọc (1), chờ thanh toán toàn phần (0), và đang cọc (4)
+                if (record.status === 0 || record.status === 1 || record.status === 4) {
                     actionBtns.push(
                         <Button
                             key="pay"

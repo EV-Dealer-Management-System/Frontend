@@ -35,7 +35,31 @@ function PaymentModal({
             : quoteTotalFromDetails;
 
     const deposited = order?.depositAmount || 0;
-    const remain = Math.max(quoteTotal - deposited, 0);
+    
+    // Xác định loại thanh toán dựa trên status
+    const isDepositPayment = order.status === 4; // Đang cọc
+    const isFullPayment = order.status === 0;    // Chờ thanh toán toàn phần  
+    const isNewDepositPayment = order.status === 1; // Chờ cọc
+    
+    // Tính số tiền cần thanh toán
+    let amountToPay = 0;
+    let paymentType = "";
+    
+    if (isDepositPayment) {
+        // Thanh toán phần còn lại sau khi đã cọc
+        amountToPay = Math.max(quoteTotal - deposited, 0);
+        paymentType = "Thanh toán phần còn lại";
+    } else if (isFullPayment) {
+        // Thanh toán toàn bộ
+        amountToPay = quoteTotal;
+        paymentType = "Thanh toán toàn bộ";
+    } else if (isNewDepositPayment) {
+        // Thanh toán cọc mới (thường là một phần của tổng)
+        amountToPay = quoteTotal * 0.3; // Giả sử cọc 30%, có thể điều chỉnh
+        paymentType = "Thanh toán cọc";
+    }
+    
+    const remain = amountToPay;
 
     return (
         <Modal
@@ -75,11 +99,26 @@ function PaymentModal({
                             <Text strong>{formatVnd(quoteTotal)}</Text>
                         </Space>
 
+                        {isDepositPayment && (
+                            <Space align="baseline" wrap>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Đã thu (cọc)
+                                </Text>
+                                <Text>{formatVnd(deposited)}</Text>
+                            </Space>
+                        )}
+
                         <Space align="baseline" wrap>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                Đã thu (cọc)
+                                Loại thanh toán
                             </Text>
-                            <Text>{formatVnd(deposited)}</Text>
+                            <Tag color={
+                                isDepositPayment ? "geekblue" : 
+                                isFullPayment ? "blue" : 
+                                "gold"
+                            }>
+                                {paymentType}
+                            </Tag>
                         </Space>
 
                         <Space
@@ -88,7 +127,7 @@ function PaymentModal({
                             style={{ justifyContent: "space-between", width: "100%" }}
                         >
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                Cần thanh toán
+                                Số tiền thanh toán
                             </Text>
                             <Text
                                 strong
@@ -181,8 +220,8 @@ function PaymentModal({
                         title="Xác nhận thanh toán"
                         description={
                             selectedMethod === "cash"
-                                ? "Xác nhận khách đã thanh toán phần còn lại?"
-                                : "Tạo yêu cầu VNPay cho phần còn lại?"
+                                ? `Xác nhận khách đã ${paymentType.toLowerCase()} bằng tiền mặt?`
+                                : `Tạo yêu cầu thanh toán VNPay cho ${paymentType.toLowerCase()}?`
                         }
                         okText="Xác nhận"
                         cancelText="Hủy"
