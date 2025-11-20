@@ -11,7 +11,8 @@ function useDealerTableColumns({
   loadDealerData,
   modal,
   onViewRevenue,
-  onViewDebtDetail
+  onViewDebtDetail,
+  onViewPolicy
 }) {
   const columns = [
     {
@@ -117,6 +118,7 @@ function useDealerTableColumns({
           record={record}
           onViewRevenue={onViewRevenue}
           onViewDebtDetail={onViewDebtDetail}
+          onViewPolicy={onViewPolicy}
         />
       ),
     },
