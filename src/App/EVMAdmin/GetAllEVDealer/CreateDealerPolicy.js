@@ -7,5 +7,5 @@ export const updateDealerPolicy = async (dealerId, policyData) => {
     } catch (error) {
         console.error("Error updating dealer policy:", error);
         throw error;
-    }   
+    }
 };

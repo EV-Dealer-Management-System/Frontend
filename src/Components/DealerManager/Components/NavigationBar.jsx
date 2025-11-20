@@ -182,12 +182,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DollarOutlined />,
             component: "./RevenueReport",
           },
-          // {
-          //   path: "/dealer/reports/inventory",
-          //   name: "Báo cáo tồn kho",
-          //   icon: <DatabaseOutlined />,
-          //   component: "./InventoryReport",
-          // },
+          {
+            path: "/dealer-manager/settings/dealer-ai-forecast",
+            name: "Dự Báo AI ",
+            icon: <DatabaseOutlined />,
+            component: "./InventoryReport",
+          },
         ],
       },
       {

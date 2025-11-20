@@ -35,7 +35,7 @@ function GetAllEVDealerPage() {
   } = useDealerData();
 
   // Sử dụng modal chỉnh sửa policy
-  const { handleOpenModal: handleEditPolicy, ModalComponent: UpdatePolicyModal } = 
+  const { handleOpenModal: handleEditPolicy, ModalComponent: UpdatePolicyModal } =
     useUpdateDealerPolicyModal(modal, loadDealerData);
 
   // Sử dụng các modal components

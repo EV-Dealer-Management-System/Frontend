@@ -8,11 +8,11 @@ function useDealerPolicyModal(modal, onEditPolicy) {
     const handleViewPolicy = async (dealerId, dealerName) => {
         try {
             const response = await getDealerEffectivePolicy(dealerId);
-            
+
             // API trả về dữ liệu trực tiếp trong response.data
             if (response && response.data && response.status === 200) {
                 const policy = response.data;
-                
+
                 const modalInstance = modal.info({
                     title: (
                         <div className="flex items-center justify-between">
