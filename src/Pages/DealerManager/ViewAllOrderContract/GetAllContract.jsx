@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
 import { Table, Button, message, Tag, Space, Modal, Typography, Tooltip, App } from 'antd';
-import { EyeOutlined, ReloadOutlined } from '@ant-design/icons';
-import { getAllEcontractList } from '../../../App/DealerManager/GetAllContract/GetAllEcontract';
+import { EyeOutlined, ReloadOutlined, FilePdfOutlined } from '@ant-design/icons';
+import { getAllEcontractList, getVnptEcontractById, getEcontractPreview } from '../../../App/DealerManager/GetAllContract/GetAllEcontract';
 import DealerManagerLayout from '../../../Components/DealerManager/DealerManagerLayout';
+import PDFModal from '../../Admin/SignContract/Components/PDF/PDFModal';
 
 const { Title } = Typography;
 
 function GetAllContract() {
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pdfModalVisible, setPdfModalVisible] = useState(false);
+  const [currentPdfUrl, setCurrentPdfUrl] = useState('');
+  const [currentContract, setCurrentContract] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const { message, modal } = App.useApp();
 
   // Hàm lấy danh sách hợp đồng
@@ -55,7 +60,6 @@ function GetAllContract() {
       content: (
         <div className="space-y-2">
           <p><strong>ID:</strong> {contract.id}</p>
-          <p><strong>Loại:</strong> {contract.type}</p>
           <p><strong>Trạng thái:</strong> {getStatusTag(contract.status)}</p>
           <p><strong>Người tạo:</strong> {contract.createdBy}</p>
           <p><strong>Chủ sở hữu:</strong> {contract.ownerName}</p>
@@ -68,6 +72,44 @@ function GetAllContract() {
       width: 600,
       okText: 'Đóng'
     });
+  };
+
+  // Hàm xem PDF hợp đồng
+  const handleViewPDF = async (contract) => {
+    setPdfLoading(true);
+    try {
+      // Lấy thông tin hợp đồng để có downloadUrl
+      const contractInfo = await getVnptEcontractById(contract.id);
+      if (contractInfo.success && contractInfo.data?.downloadUrl) {
+        // Lấy PDF stream từ downloadUrl
+        const pdfBlob = await getEcontractPreview(contractInfo.data.downloadUrl);
+        if (pdfBlob) {
+          const pdfUrl = URL.createObjectURL(pdfBlob);
+          setCurrentPdfUrl(pdfUrl);
+          setCurrentContract(contract);
+          setPdfModalVisible(true);
+        } else {
+          message.error('Không thể tải PDF hợp đồng');
+        }
+      } else {
+        message.error('Không tìm thấy thông tin hợp đồng hoặc link PDF');
+      }
+    } catch (error) {
+      console.error('Error viewing PDF:', error);
+      message.error('Có lỗi khi tải PDF hợp đồng');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  // Hàm đóng PDF modal
+  const handleClosePdfModal = () => {
+    setPdfModalVisible(false);
+    if (currentPdfUrl) {
+      URL.revokeObjectURL(currentPdfUrl);
+      setCurrentPdfUrl('');
+    }
+    setCurrentContract(null);
   };
 
   // Cấu hình cột cho bảng
@@ -121,7 +163,7 @@ function GetAllContract() {
     {
       title: 'Thao tác',
       key: 'actions',
-      width: 150,
+      width: 200,
       align: 'center',
       render: (_, record) => (
         <Space>
@@ -131,6 +173,15 @@ function GetAllContract() {
               icon={<EyeOutlined />}
               onClick={() => handleViewContract(record)}
               className="text-blue-600 hover:bg-blue-50"
+            />
+          </Tooltip>
+          <Tooltip title="Xem PDF">
+            <Button
+              type="text"
+              icon={<FilePdfOutlined />}
+              onClick={() => handleViewPDF(record)}
+              loading={pdfLoading}
+              className="text-red-600 hover:bg-red-50"
             />
           </Tooltip>
         </Space>
@@ -185,6 +236,15 @@ function GetAllContract() {
           size="middle"
         />
       </div>
+
+      {/* PDF Modal */}
+      <PDFModal
+        visible={pdfModalVisible}
+        onClose={handleClosePdfModal}
+        contractNo={currentContract?.id}
+        pdfUrl={currentPdfUrl}
+        title={currentContract?.name}
+      />
     </PageContainer>
     </App>
     </DealerManagerLayout>
