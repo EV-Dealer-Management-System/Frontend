@@ -23,6 +23,20 @@ export default function LoginPage() {
   const { message } = App.useApp();
   const API_BASE = import.meta.env.VITE_API_URL;
 
+  // Set background đen cho body khi component mount
+  // useEffect(() => {
+  //   document.documentElement.style.background = "rgba(95, 93, 93, 0.8)";
+  //   document.body.style.background = "rgba(95, 93, 93, 0.8)";
+  //   document.body.style.margin = "0";
+  //   document.body.style.padding = "0";
+  //   return () => {
+  //     document.documentElement.style.background = "";
+  //     document.body.style.background = "";
+  //     document.body.style.margin = "";
+  //     document.body.style.padding = "";
+  //   };
+  // }, []);
+
   // Đọc lỗi từ query string (?oauthError=...&fromOAuth=1)
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
@@ -99,17 +113,8 @@ export default function LoginPage() {
   };
 
   return (
-    <PageContainer ghost>
-      <div
-        style={{
-          maxWidth: 520,
-          margin: "0 auto",
-          padding: 24,
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-        }}
-      >
+    <div className="min-h-screen w-full flex items-center justify-center p-6">
+      <div className="w-full max-w-[520px]">
         <ProCard bordered style={{ width: "100%" }} bodyStyle={{ padding: 28 }}>
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <Avatar
@@ -176,6 +181,6 @@ export default function LoginPage() {
           <Divider />
         </ProCard>
       </div>
-    </PageContainer>
+    </div>
   );
 }

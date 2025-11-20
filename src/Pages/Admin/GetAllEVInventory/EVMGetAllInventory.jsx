@@ -111,7 +111,6 @@ function EVMGetAllInventory() {
         console.log("Refreshing data with current warehouse filter:", warehouseFilter);
         fetchInventoryData(warehouseFilter || null);
     };
-
     // Xử lý thay đổi bộ lọc kho
     const handleWarehouseChange = (value) => {
         console.log("Warehouse filter changed:", value);
