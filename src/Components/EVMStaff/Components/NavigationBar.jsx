@@ -75,6 +75,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <PlusOutlined />,
             component: "./CreateVehicle",
           },
+          {
+            path:"/evm-staff/inventory/get-all-ev-inventory",
+            name:"Quản lý tồn kho xe điện",
+            icon:<BankOutlined/>,
+            component:"./GetAllEVInventory",
+          }
         ],
       },
       {

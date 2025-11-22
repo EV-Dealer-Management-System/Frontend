@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { PageContainer, ProCard } from "@ant-design/pro-components";
-import { message, Spin, Alert } from "antd";
+import { message, Spin, Alert, Row, Col } from "antd";
 import DealerManagerLayout from "../../../Components/DealerManager/DealerManagerLayout";
-import VehicleSelector from "./Components/VehicleSelector";
-import QuarterSelector from "./Components/QuarterSelector";
-import ForecastChart from "./Components/ForecastChart";
+import QuarterRangeSelector from "./Components/QuarterRangeSelector";
+import ForecastChartCard from "./Components/ForecastChartCard";
 import { GetEVDealerInventory } from "../../../App/DealerManager/DealerAlForecast/GetDealerInventory";
-import { GetEVTemplateByVersionAndColor } from "../../../App/DealerManager/DealerAlForecast/GetEVTemplateByVersionAndColor";
 import { GetEVForecastSeries } from "../../../App/DealerManager/DealerAlForecast/GetEVForecastSeries";
 
 function DealerAIForecast() {
     const [inventoryData, setInventoryData] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [selectedVehicle, setSelectedVehicle] = useState(null);
-    const [selectedTemplate, setSelectedTemplate] = useState(null);
-    const [forecastData, setForecastData] = useState([]);
     const [dateRange, setDateRange] = useState({ from: null, to: null });
+    const [forecastByVehicle, setForecastByVehicle] = useState({});
 
-    // Lấy danh sách xe trong kho
+    // Lấy danh sách xe trong kho khi load trang
     useEffect(() => {
         fetchInventory();
     }, []);
@@ -39,131 +35,108 @@ function DealerAIForecast() {
         }
     };
 
-    // Khi chọn xe, lấy template
-    const handleVehicleSelect = async (vehicle) => {
-        setSelectedVehicle(vehicle);
-        setLoading(true);
-        try {
-            const response = await GetEVTemplateByVersionAndColor(
-                vehicle.versionId,
-                vehicle.colorId
-            );
-            if (response.isSuccess) {
-                setSelectedTemplate(response.result);
-            } else {
-                message.error(response.message || "Không thể lấy thông tin template");
-            }
-        } catch (error) {
-            console.error(error);
-            message.error("Lỗi khi lấy thông tin template");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Khi chọn quý, lấy dự báo
+    // Khi chọn quý, lấy dự báo cho TẤT CẢ xe trong kho
     const handleQuarterSelect = async (quarter) => {
-        if (!selectedTemplate) {
-            message.warning("Vui lòng chọn xe trước");
+        if (inventoryData.length === 0) {
+            message.warning("Không có xe trong kho để dự báo");
             return;
         }
 
         setDateRange(quarter);
         setLoading(true);
-        try {
-            console.log("Fetching forecast with:", {
-                templateId: selectedTemplate.id,
-                from: quarter.from,
-                to: quarter.to
-            });
 
-            const response = await GetEVForecastSeries(
-                selectedTemplate.id,
-                quarter.from,
-                quarter.to
-            );
+        const forecasts = {};
+        let successCount = 0;
+        let failCount = 0;
 
-            console.log("Forecast Response:", response);
+        // Gọi API dự báo cho từng xe
+        for (const vehicle of inventoryData) {
+            try {
+                const response = await GetEVForecastSeries(
+                    vehicle.evTemplateId,
+                    quarter.from,
+                    quarter.to
+                );
 
-            if (response.isSuccess) {
-                const resultData = response.result;
-
-                // Kiểm tra và xử lý dữ liệu ngày
-                const processedData = resultData.map(item => ({
-                    ...item,
-                    targetDate: item.targetDate || new Date().toISOString()
-                }));
-
-                console.log("Processed Forecast Data:", processedData);
-                setForecastData(processedData);
-                message.success("Lấy dữ liệu dự báo thành công");
-            } else {
-                console.error("Forecast Failed:", response.message);
-                message.error(response.message || "Không thể lấy dữ liệu dự báo");
+                if (response.isSuccess && response.result) {
+                    forecasts[vehicle.evTemplateId] = response.result;
+                    successCount++;
+                } else {
+                    forecasts[vehicle.evTemplateId] = [];
+                    failCount++;
+                }
+            } catch (error) {
+                console.error(`Lỗi khi lấy dự báo cho xe ${vehicle.modelName}:`, error);
+                forecasts[vehicle.evTemplateId] = [];
+                failCount++;
             }
-        } catch (error) {
-            console.error(error);
-            message.error("Lỗi khi lấy dữ liệu dự báo");
-        } finally {
-            setLoading(false);
+        }
+
+        setForecastByVehicle(forecasts);
+        setLoading(false);
+
+        if (successCount > 0) {
+            message.success(
+                `Lấy dữ liệu dự báo thành công cho ${successCount}/${inventoryData.length} xe`
+            );
+        }
+        if (failCount > 0) {
+            message.warning(`Không thể lấy dữ liệu cho ${failCount} xe`);
         }
     };
 
     return (
         <DealerManagerLayout>
             <PageContainer
-                title="Dự Báo AI Cho Xe Điện"
+                title="Dự Báo AI Cho Tất Cả Xe Điện"
                 subTitle="Hệ thống phân tích và dự báo nhu cầu thị trường dựa trên AI"
                 className="bg-gray-50 min-h-screen"
             >
-                <Spin spinning={loading} tip="Đang xử lý dữ liệu...">
-                    <ProCard
-                        direction="column"
-                        ghost
-                        gutter={[0, 16]}
-                        className="mb-6"
-                    >
-                        {/* Control Panel */}
+                <Spin spinning={loading} tip="Đang xử lý dữ liệu dự báo...">
+                    <ProCard direction="column" ghost gutter={[0, 16]} className="mb-6">
+                        {/* Control Panel - Chỉ chọn thời gian */}
                         <ProCard
-                            title="Thiết lập tham số phân tích"
+                            title="Chọn khoảng thời gian dự báo"
                             bordered
                             headerBordered
-                            split="vertical"
                             className="shadow-sm"
                         >
-                            <ProCard colSpan={{ xs: 24, md: 12 }}>
-                                <VehicleSelector
-                                    inventoryData={inventoryData}
-                                    selectedVehicle={selectedVehicle}
-                                    onSelect={handleVehicleSelect}
-                                />
-                            </ProCard>
-                            <ProCard colSpan={{ xs: 24, md: 12 }}>
-                                {selectedTemplate ? (
-                                    <QuarterSelector
-                                        selectedTemplate={selectedTemplate}
-                                        onSelect={handleQuarterSelect}
-                                    />
-                                ) : (
-                                    <div className="flex items-center justify-center h-full text-gray-400 italic">
-                                        Vui lòng chọn xe để tiếp tục chọn thời gian
-                                    </div>
-                                )}
-                            </ProCard>
+                            <div className="max-w-md">
+                                <QuarterRangeSelector onSelect={handleQuarterSelect} />
+                            </div>
+                            {inventoryData.length > 0 && (
+                                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                                    <p className="text-sm text-blue-800">
+                                        Hiện có <strong>{inventoryData.length} loại xe</strong>{" "}
+                                        trong kho sẽ được phân tích dự báo
+                                    </p>
+                                </div>
+                            )}
                         </ProCard>
 
-                        {/* Forecast Chart Section */}
-                        {forecastData.length > 0 ? (
-                            <ForecastChart
-                                data={forecastData}
-                                vehicleName={`${selectedVehicle?.modelName} - ${selectedVehicle?.versionName} - ${selectedVehicle?.colorName}`}
-                                dateRange={dateRange}
-                            />
+                        {/* Forecast Charts Section */}
+                        {Object.keys(forecastByVehicle).length > 0 ? (
+                            <div>
+                                <Alert
+                                    message="Kết quả dự báo AI"
+                                    description={`Dự báo từ ${dateRange.from} đến ${dateRange.to}`}
+                                    type="info"
+                                    showIcon
+                                    className="mb-4"
+                                />
+                                <ForecastChartCard
+                                    allVehiclesData={inventoryData}
+                                    forecastByVehicle={forecastByVehicle}
+                                />
+                            </div>
                         ) : (
                             <ProCard bordered className="shadow-sm text-center py-12">
                                 <div className="text-gray-400">
                                     <p className="text-lg mb-2">Chưa có dữ liệu phân tích</p>
-                                    <p className="text-sm">Vui lòng chọn mẫu xe và khoảng thời gian để xem dự báo từ AI</p>
+                                    <p className="text-sm">
+                                        Vui lòng chọn khoảng thời gian để xem dự báo AI cho tất cả
+                                        xe trong kho
+                                    </p>
                                 </div>
                             </ProCard>
                         )}

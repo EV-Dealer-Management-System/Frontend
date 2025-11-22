@@ -33,6 +33,8 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
     const [loading, setLoading] = useState(false);
     const [accidentNote, setAccidentNote] = useState('');
     const [delayNote, setDelayNote] = useState('');
+    const [showAccidentError, setShowAccidentError] = useState(false);
+    const [showDelayError, setShowDelayError] = useState(false);
 
     // Không cho phép cập nhật nếu đã xác nhận
     if (currentStatus === DeliveryStatus.Confirmed) {
@@ -48,13 +50,15 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
 
         // Kiểm tra nếu chọn "Sự cố" thì phải nhập ghi chú
         if (selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) {
-            message.warning('Vui lòng nhập ghi chú sự cố');
+            setShowAccidentError(true);
+            message.error('Vui lòng nhập ghi chú sự cố');
             return;
         }
 
         // Kiểm tra nếu chọn "Chậm trễ" thì phải nhập ghi chú
         if (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim()) {
-            message.warning('Vui lòng nhập lý do chậm trễ');
+            setShowDelayError(true);
+            message.error('Vui lòng nhập lý do chậm trễ');
             return;
         }
 
@@ -97,6 +101,8 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
         setSelectedStatus(currentStatus);
         setAccidentNote('');
         setDelayNote('');
+        setShowAccidentError(false);
+        setShowDelayError(false);
         setIsEditing(false);
     };
 
@@ -140,14 +146,27 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
                     onConfirm={handleUpdateStatus}
                     okText="Xác nhận"
                     cancelText="Hủy"
-                    disabled={(selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) ||
-                        (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim())}
                 >
                     <Button
                         type="primary"
                         icon={<CheckOutlined />}
                         loading={loading}
                         className="bg-green-600 hover:bg-green-700"
+                        onClick={(e) => {
+                            // Validate trước khi hiện Popconfirm
+                            if (selectedStatus === DeliveryStatus.Accident && !accidentNote.trim()) {
+                                e.stopPropagation();
+                                setShowAccidentError(true);
+                                message.error('Vui lòng nhập ghi chú sự cố');
+                                return;
+                            }
+                            if (selectedStatus === DeliveryStatus.Delayed && !delayNote.trim()) {
+                                e.stopPropagation();
+                                setShowDelayError(true);
+                                message.error('Vui lòng nhập lý do chậm trễ');
+                                return;
+                            }
+                        }}
                     >
                         Lưu
                     </Button>
@@ -164,28 +183,63 @@ function UpdateStatusButton({ deliveryId, currentStatus, onSuccess }) {
 
             {/* Hiển thị textarea khi chọn trạng thái Sự cố */}
             {selectedStatus === DeliveryStatus.Accident && (
-                <TextArea
-                    value={accidentNote}
-                    onChange={(e) => setAccidentNote(e.target.value)}
-                    placeholder="Nhập mô tả chi tiết về sự cố..."
-                    rows={3}
-                    className="w-full"
-                    maxLength={500}
-                    showCount
-                />
+                <div className="w-full">
+                    <TextArea
+                        value={accidentNote}
+                        onChange={(e) => {
+                            setAccidentNote(e.target.value);
+                            if (e.target.value.trim()) {
+                                setShowAccidentError(false);
+                            }
+                        }}
+                        placeholder="Nhập mô tả chi tiết về sự cố..."
+                        rows={3}
+                        className="w-full"
+                        maxLength={500}
+                        showCount
+                        status={showAccidentError ? 'error' : ''}
+                        style={showAccidentError ? {
+                            borderColor: '#ff4d4f',
+                            boxShadow: '0 0 0 2px rgba(255, 77, 79, 0.2)'
+                        } : {}}
+                    />
+                    {showAccidentError && (
+                        <div className="text-red-500 text-xs mt-1 flex items-center gap-1 ">
+                            <span>Bắt buộc phải nhập mô tả</span>
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Hiển thị textarea khi chọn trạng thái Chậm trễ */}
             {selectedStatus === DeliveryStatus.Delayed && (
-                <TextArea
-                    value={delayNote}
-                    onChange={(e) => setDelayNote(e.target.value)}
-                    placeholder="Nhập lý do chi tiết về việc chậm trễ giao hàng..."
-                    rows={3}
-                    className="w-full"
-                    maxLength={500}
-                    showCount
-                />
+                <div className="w-full">
+                    <TextArea
+                        value={delayNote}
+                        onChange={(e) => {
+                            setDelayNote(e.target.value);
+                            if (e.target.value.trim()) {
+                                setShowDelayError(false);
+                            }
+                        }}
+                        placeholder="Nhập lý do chi tiết về việc chậm trễ giao hàng..."
+                        rows={3}
+                        className="w-full"
+                        maxLength={500}
+                        showCount
+                        status={showDelayError ? 'error' : ''}
+                        style={showDelayError ? {
+                            borderColor: '#ff4d4f',
+                            boxShadow: '0 0 0 2px rgba(255, 77, 79, 0.2)'
+                        } : {}}
+                    />
+                    {showDelayError && (
+                        <div className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                            <span>⚠️</span>
+                            <span>Bắt buộc phải nhập lý do chậm trễ để chuyển trạng thái</span>
+                        </div>
+                    )}
+                </div>
             )}
         </Space>
     );

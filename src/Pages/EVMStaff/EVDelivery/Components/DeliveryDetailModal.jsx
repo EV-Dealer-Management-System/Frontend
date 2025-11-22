@@ -29,6 +29,7 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
     const [showInspectModal, setShowInspectModal] = useState(false);
     const [hasInspectedAccident, setHasInspectedAccident] = useState(false);
     const [replacingVehicle, setReplacingVehicle] = useState(false);
+    const [inspectedVehicles, setInspectedVehicles] = useState([]);
 
     if (!delivery) return null;
 
@@ -61,10 +62,14 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
             if (response.isSuccess) {
                 message.success('Đã điều xe thay thế thành công');
                 setHasInspectedAccident(false);
+                setInspectedVehicles([]);
+
+                // Chờ reload dữ liệu hoàn tất
                 if (onStatusUpdated) {
-                    onStatusUpdated();
+                    await onStatusUpdated();
                 }
-                onClose();
+
+                // Không đóng modal, để user xem được kết quả cập nhật
             } else {
                 message.error(response.message || 'Không thể điều xe thay thế');
             }
@@ -143,36 +148,38 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                         )}
 
                         {/* Bên phải: Nút kiểm tra xe bị sự cố hoặc điều xe thay thế */}
-                        {delivery.status === 6 && !hasInspectedAccident && (
-                            <Button
-                                type="default"
-                                danger
-                                icon={<ToolOutlined />}
-                                onClick={() => setShowInspectModal(true)}
-                                className="flex items-center gap-2"
-                            >
-                                Kiểm tra xe bị hư hỏng
-                            </Button>
-                        )}
-
-                        {delivery.status === 6 && hasInspectedAccident && (
-                            <Popconfirm
-                                title="Xác nhận điều xe thay thế"
-                                description="Bạn có chắc chắn muốn điều xe thay thế cho các xe bị hư hỏng?"
-                                onConfirm={handleReplaceVehicle}
-                                okText="Xác nhận"
-                                cancelText="Hủy"
-                                okButtonProps={{ loading: replacingVehicle }}
-                            >
+                        {delivery.status === 6 && (
+                            <div className="flex gap-2">
                                 <Button
-                                    type="primary"
-                                    icon={<SwapOutlined />}
-                                    loading={replacingVehicle}
-                                    className="bg-orange-600 hover:bg-orange-700 flex items-center gap-2"
+                                    type="default"
+                                    danger
+                                    icon={<ToolOutlined />}
+                                    onClick={() => setShowInspectModal(true)}
+                                    className="flex items-center gap-2"
                                 >
-                                    Điều xe thay thế
+                                    {hasInspectedAccident ? 'Kiểm tra thêm xe bị hư hỏng' : 'Kiểm tra xe bị hư hỏng'}
                                 </Button>
-                            </Popconfirm>
+
+                                {hasInspectedAccident && (
+                                    <Popconfirm
+                                        title="Xác nhận điều xe thay thế"
+                                        description="Bạn có chắc chắn muốn điều xe thay thế cho các xe bị hư hỏng?"
+                                        onConfirm={handleReplaceVehicle}
+                                        okText="Xác nhận"
+                                        cancelText="Hủy"
+                                        okButtonProps={{ loading: replacingVehicle }}
+                                    >
+                                        <Button
+                                            type="primary"
+                                            icon={<SwapOutlined />}
+                                            loading={replacingVehicle}
+                                            className="bg-orange-600 hover:bg-orange-700 flex items-center gap-2"
+                                        >
+                                            Điều xe thay thế
+                                        </Button>
+                                    </Popconfirm>
+                                )}
+                            </div>
                         )}
 
 
@@ -302,10 +309,13 @@ function DeliveryDetailModal({ visible, onClose, delivery, templateSummary = [],
                 onClose={() => setShowInspectModal(false)}
                 delivery={delivery}
                 templateSummary={templateSummary}
-                onSuccess={() => {
+                inspectedVehicles={inspectedVehicles}
+                onSuccess={async (newInspectedVehicles) => {
                     setHasInspectedAccident(true);
+                    setInspectedVehicles(newInspectedVehicles);
+                    // Chờ reload dữ liệu hoàn tất
                     if (onStatusUpdated) {
-                        onStatusUpdated();
+                        await onStatusUpdated();
                     }
                 }}
             />

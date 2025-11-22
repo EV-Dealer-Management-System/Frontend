@@ -4,8 +4,8 @@ import { ExclamationCircleOutlined, CheckCircleOutlined, SearchOutlined } from '
 import { EVinspectAccident } from '../../../../App/EVMStaff/EVDelivery/EVDeliveryInspectAccident';
 
 // Component modal kiểm tra xe bị sự cố
-function InspectAccidentModal({ visible, onClose, delivery, templateSummary = [], onSuccess }) {
-    const [selectedVehicles, setSelectedVehicles] = useState([]);
+function InspectAccidentModal({ visible, onClose, delivery, templateSummary = [], onSuccess, inspectedVehicles = [] }) {
+    const [selectedVehicles, setSelectedVehicles] = useState(inspectedVehicles);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
 
@@ -80,6 +80,13 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
         }),
     };
 
+    // Đồng bộ selectedVehicles với inspectedVehicles khi modal mở lại
+    React.useEffect(() => {
+        if (visible) {
+            setSelectedVehicles(inspectedVehicles);
+        }
+    }, [visible, inspectedVehicles]);
+
     // Xử lý kiểm tra xe bị hư hỏng
     const handleInspect = async () => {
         if (selectedVehicles.length === 0) {
@@ -89,25 +96,21 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
 
         setLoading(true);
         try {
-            // Gọi API cho từng xe được chọn
-            const promises = selectedVehicles.map(electricVehicleId =>
-                EVinspectAccident(delivery.id, electricVehicleId)
-            );
+            // Gọi API một lần với mảng tất cả electricVehicleIds
+            const response = await EVinspectAccident(delivery.id, selectedVehicles);
 
-            const results = await Promise.all(promises);
-
-            // Kiểm tra kết quả
-            const allSuccess = results.every(result => result.isSuccess);
-
-            if (allSuccess) {
+            if (response.isSuccess) {
                 message.success(`Đã kiểm tra thành công ${selectedVehicles.length} xe bị hư hỏng`);
-                setSelectedVehicles([]);
+
+                // Gọi callback để cập nhật dữ liệu
                 if (onSuccess) {
-                    onSuccess();
+                    await onSuccess(selectedVehicles);
                 }
+
+                // Đóng modal sau khi cập nhật xong
                 onClose();
             } else {
-                message.error('Một số xe không thể kiểm tra, vui lòng thử lại');
+                message.error(response.message || 'Không thể kiểm tra xe, vui lòng thử lại');
             }
         } catch (error) {
             console.error('Error inspecting accident:', error);
@@ -191,6 +194,11 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
                         <div className="text-sm text-blue-800">
                             <CheckCircleOutlined className="mr-2" />
                             Đã chọn {selectedVehicles.length} xe để kiểm tra
+                            {inspectedVehicles.length > 0 && (
+                                <span className="ml-2 text-xs text-gray-600">
+                                    (Trong đó có {inspectedVehicles.length} xe đã kiểm tra trước đó)
+                                </span>
+                            )}
                         </div>
                     </div>
                 )}
