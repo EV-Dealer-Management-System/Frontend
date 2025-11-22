@@ -37,7 +37,6 @@ export default function CreateEVOrder() {
   const [step, setStep] = useState(0);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState(null); // "vnpay" | "cash"
   const [isPayFull, setIsPayFull] = useState(true); // mặc định full
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -58,7 +57,7 @@ export default function CreateEVOrder() {
   ];
 
   const canNext =
-    !!selectedCustomerId && !!selectedQuoteId && paymentMethod != null;
+    !!selectedCustomerId && !!selectedQuoteId;
 
   const handleNext = () => setStep((p) => p + 1);
   const handlePrev = () => setStep((p) => p - 1);
@@ -71,7 +70,6 @@ export default function CreateEVOrder() {
         customerId: selectedCustomerId,
         quoteId: selectedQuoteId,
         isPayFull: isPayFull === true,
-        isCash: paymentMethod === "cash",
       };
 
       const res = await createEVOrderService(payload);
@@ -161,8 +159,6 @@ export default function CreateEVOrder() {
                     quoteTotal={
                       undefined
                     }
-                    paymentMethod={paymentMethod}
-                    onChangeMethod={setPaymentMethod}
                     isPayFull={isPayFull}
                     onChangeType={setIsPayFull}
                   />
@@ -174,7 +170,6 @@ export default function CreateEVOrder() {
               customerId={selectedCustomerId}
               quoteId={selectedQuoteId}
               isPayFull={isPayFull}
-              paymentMethod={paymentMethod}
             />
           )}
 
@@ -228,7 +223,6 @@ export default function CreateEVOrder() {
             setStep(0);
             setSelectedCustomerId(null);
             setSelectedQuoteId(null);
-            setPaymentMethod(null);
             setIsPayFull(true);
             setShowSuccess(false);
           }}

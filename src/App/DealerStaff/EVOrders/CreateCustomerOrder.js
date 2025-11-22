@@ -5,7 +5,6 @@ export const CreateEVOrder = async (orderData) => {
     customerId: orderData.customerId,
     quoteId: orderData.quoteId,
     isPayFull: !!orderData.isPayFull,
-    isCash: !!orderData.isCash,
   });
   console.log(res.data);
   return res.data;

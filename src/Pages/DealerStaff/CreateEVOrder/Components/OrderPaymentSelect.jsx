@@ -22,8 +22,6 @@ const formatVnd = (n) =>
 
 export default function OrderPaymentSelect({
   quoteTotal = 0,
-  paymentMethod,
-  onChangeMethod,
   isPayFull,
   onChangeType,
 }) {
@@ -71,72 +69,11 @@ export default function OrderPaymentSelect({
       {/* Header */}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <DollarOutlined style={{ color: "#faad14" }} />
-        <Text strong>Phương thức thanh toán</Text>
+        <Text strong>Hình thức thanh toán</Text>
       </div>
 
-      {/* 1. Chọn kênh thanh toán */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12}>
-          <Card
-            hoverable
-            onClick={() => onChangeMethod?.("vnpay")}
-            style={{
-              border:
-                paymentMethod === "vnpay"
-                  ? "1.5px solid #1677ff"
-                  : "1px solid var(--ant-color-border)",
-              boxShadow:
-                paymentMethod === "vnpay"
-                  ? "0 6px 18px rgba(22,119,255,.12)"
-                  : "none",
-              borderRadius: 14,
-              height: "100%",
-            }}
-          >
-            <Space direction="vertical" size={2}>
-              <Space size={6}>
-                <BankOutlined style={{ fontSize: 20, color: "#1677ff" }} />
-                <Text strong>VNPay</Text>
-              </Space>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Thanh toán online
-              </Text>
-            </Space>
-          </Card>
-        </Col>
-        <Col xs={24} md={12}>
-          <Card
-            hoverable
-            onClick={() => onChangeMethod?.("cash")}
-            style={{
-              border:
-                paymentMethod === "cash"
-                  ? "1.5px solid #52c41a"
-                  : "1px solid var(--ant-color-border)",
-              boxShadow:
-                paymentMethod === "cash"
-                  ? "0 6px 18px rgba(82,196,26,.12)"
-                  : "none",
-              borderRadius: 14,
-              height: "100%",
-            }}
-          >
-            <Space direction="vertical" size={2}>
-              <Space size={6}>
-                <WalletOutlined style={{ fontSize: 20, color: "#52c41a" }} />
-                <Text strong>Tiền mặt</Text>
-              </Space>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Thanh toán tại đại lý
-              </Text>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 2. HÌNH THỨC – làm nổi hơn */}
-      {paymentMethod && (
-        <Card
+      {/* Hình thức thanh toán */}
+      <Card
           bodyStyle={{ padding: 14 }}
           style={{
             borderRadius: 14,
@@ -220,7 +157,6 @@ export default function OrderPaymentSelect({
             )}
           </Space>
         </Card>
-      )}
     </Space>
   );
 }
