@@ -8,7 +8,7 @@ export const GetAvailableAppointments = {
                 // Format: 2025-10-30T00:00:00Z
                 params.targetDate = targetDate;
             }
-            const response = await api.get("/AppointmentSetting/get-available-slot-appointments", { params });
+            const response = await api.get("/DealerConfiguration/generate-time-slots", { params });
             return response.data;
         } catch (error) {
             console.error("Error fetching available appointments:", error);
