@@ -17,7 +17,7 @@ export const getAllEcontractList = async (pageNumber = 1, pageSize = 1000, econt
       return {
         success: true,
         data: response.data.result || [],
-        message: response.data.message || 'Lấy danh sách hợp đồng thành công!'
+        message: 'Lấy danh sách hợp đồng thành công!'
       };
     } else {
       throw new Error(response.data?.message || 'Có lỗi khi lấy danh sách hợp đồng');
