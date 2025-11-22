@@ -78,53 +78,67 @@ function EVDelivery() {
     };
 
     // Xử lý khi cập nhật trạng thái thành công
-    const handleStatusUpdated = () => {
-        fetchDeliveries(pagination.current, pagination.pageSize, selectedStatus);
+    const handleStatusUpdated = async () => {
+        // Refresh toàn bộ danh sách
+        await fetchDeliveries(pagination.current, pagination.pageSize, selectedStatus);
+
+        // Nếu đang mở modal chi tiết, cập nhật lại selectedDelivery
+        if (selectedDelivery && detailVisible) {
+            const response = await getAllEVDelivery(pagination.current, pagination.pageSize, selectedStatus);
+            if (response.isSuccess) {
+                const updatedDelivery = response.result.data.find(d => d.id === selectedDelivery.id);
+                if (updatedDelivery) {
+                    setSelectedDelivery(updatedDelivery);
+                }
+                // Cập nhật lại templateSummary
+                setTemplateSummary(response.result.templateSummary || []);
+            }
+        }
     };
 
     return (
         <EVMStaffLayout>
             <ConfigProvider locale={viVN}>
-            <PageContainer
-                title="Theo dõi giao xe"
-                subTitle="Quản lý và theo dõi tiến trình giao xe đến đại lý"
-                extra={[
-                    <Search
-                        key="search"
-                        placeholder="Tìm kiếm theo mã giao xe hoặc tên đại lý"
-                        onSearch={(value) => console.log('Search value:', value)}
-                        style={{ width: 300 }}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        allowClear
-                    />,
-                    <StatusFilter
-                        key="status-filter"
-                        value={selectedStatus}
-                        onChange={handleStatusChange}
-                    />
-                ]}
-            >
-                <Card className="shadow-sm">
-                    <DeliveryTable
-                        data={deliveries.filter(d =>
-                            d.bookingEVId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-                            d.description?.toLowerCase().includes(searchKeyword.toLowerCase())
-                        )}
-                        loading={loading}
-                        pagination={pagination}
-                        onTableChange={handleTableChange}
-                        onViewDetail={handleViewDetail}
-                    />
-                </Card>
+                <PageContainer
+                    title="Theo dõi giao xe"
+                    subTitle="Quản lý và theo dõi tiến trình giao xe đến đại lý"
+                    extra={[
+                        <Search
+                            key="search"
+                            placeholder="Tìm kiếm theo mã giao xe hoặc tên đại lý"
+                            onSearch={(value) => console.log('Search value:', value)}
+                            style={{ width: 300 }}
+                            onChange={(e) => setSearchKeyword(e.target.value)}
+                            allowClear
+                        />,
+                        <StatusFilter
+                            key="status-filter"
+                            value={selectedStatus}
+                            onChange={handleStatusChange}
+                        />
+                    ]}
+                >
+                    <Card className="shadow-sm">
+                        <DeliveryTable
+                            data={deliveries.filter(d =>
+                                d.bookingEVId?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+                                d.description?.toLowerCase().includes(searchKeyword.toLowerCase())
+                            )}
+                            loading={loading}
+                            pagination={pagination}
+                            onTableChange={handleTableChange}
+                            onViewDetail={handleViewDetail}
+                        />
+                    </Card>
 
-                <DeliveryDetailModal
-                    visible={detailVisible}
-                    onClose={handleCloseDetail}
-                    delivery={selectedDelivery}
-                    templateSummary={templateSummary}
-                    onStatusUpdated={handleStatusUpdated}
-                />
-            </PageContainer>
+                    <DeliveryDetailModal
+                        visible={detailVisible}
+                        onClose={handleCloseDetail}
+                        delivery={selectedDelivery}
+                        templateSummary={templateSummary}
+                        onStatusUpdated={handleStatusUpdated}
+                    />
+                </PageContainer>
             </ConfigProvider>
         </EVMStaffLayout>
     );

@@ -24,7 +24,7 @@ function GetAllContract() {
       const response = await getAllEcontractList(1, 1000, 3);
       if (response.success) {
         setContracts(response.data);
-        message.success(response.message);
+        // message.success(response.message);
       } else {
         message.error(response.error);
       }

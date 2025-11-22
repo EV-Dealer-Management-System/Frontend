@@ -514,6 +514,40 @@ export const vehicleApi = {
     }
   },
 
+  getEVCWarehouses: async () => {
+    try {
+      const endpoint = "/Warehouse/get-evc-warehouses";
+      const response = await api.get(endpoint);
+
+      const isSuccessful =
+        response.data?.isSuccess === true || response.status === 200;
+
+      if (isSuccessful && response.data?.result) {
+        return {
+          success: true,
+          isSuccess: true,
+          data: response.data.result,
+          result: response.data.result,
+          message: response.data.message || "Lấy danh sách kho EVC thành công!",
+        };
+      } else {
+        return {
+          success: false,
+          error: response.data.message || "Không thể lấy danh sách kho EVC",
+        };
+      }
+    } catch (error) {
+      console.error("Error getting EVC warehouses:", error);
+      return {
+        success: false,
+        error:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể lấy danh sách kho EVC.",
+      };
+    }
+  },
+
   // === TEMPLATE MANAGEMENT ===
   getTemplateByVersionAndColor: async function (versionId, colorId) {
     try {

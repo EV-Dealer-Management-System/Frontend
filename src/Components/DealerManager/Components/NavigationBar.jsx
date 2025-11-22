@@ -194,6 +194,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DatabaseOutlined />,
             component: "./InventoryReport",
           },
+          {
+            path: "/dealer-manager/settings/dealer-ev-transactions",
+            name: "Giao dịch thanh toán",
+            icon: <DollarOutlined />,
+            component: "./TransactionReport",
+          },
         ],
       },
       {

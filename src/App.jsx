@@ -57,7 +57,8 @@ import PaymentResponse from "./Pages/Payment/PaymentResponse";
 import Createvehicle from "./Pages/EVMStaff/Vehicle/CreateVehicle";
 import TemplateOverview from "./Pages/EVMStaff/Vehicle/TemplateOverview";
 import AdminGetAllEVBooking from "./Pages/Admin/GetAllEVBooking/AdminGetAllEVBooking";
-import EVMGetAllInventory from "./Pages/Admin/GetAllEVInventory/EVMGetAllInventory";
+import AdminEVMGetAllInventory from "./Pages/Admin/GetAllEVInventory/EVMGetAllInventory";
+import EVMGetAllInventory from "./Pages/EVMStaff/GetAllEVInventory/EVMGetAllInventory";
 import FeedbackDealerStaff from "./Pages/DealerManager/StaffFeedback/FeedbackDealerStaff";
 import UpdateStatusCustomerFeedback from "./Pages/DealerManager/ManageCusFeedback/UpdateStatusCustomerFeedback";
 import UpdateStatusStaffFeedback from "./Pages/EVMStaff/StaffFeedbackManage/UpdateStatusStaffFeedback";
@@ -75,6 +76,7 @@ import ConfirmEcontractOrder from "./Pages/ConfirmEcontractOrder/ConfirmEcontrac
 import GetDealerDebt from "./Pages/DealerManager/DealerDebt/GetDealerDebt";
 import DealerAIForecast from './Pages/DealerManager/DealerAIForecast/DealerAIForecast';
 import GetAllEVOrder from "./Pages/DealerManager/GetAllEvOrder/GetAllEVOrder";
+import GetAllEVTransactionPage from "./Pages/DealerManager/GetAllEVTransaction/GetAllEVTransaction";
 function App() {
   return (
     <BrowserRouter>
@@ -135,7 +137,7 @@ function App() {
                 />
                 <Route
                   path="inventory/company-inventory"
-                  element={<EVMGetAllInventory />}
+                  element={<AdminEVMGetAllInventory />}
                 />
                 <Route
                   path="dealer/all-dealers"
@@ -211,6 +213,7 @@ function App() {
                 <Route path="settings/deposit-settings" element={<DepositSettings />} />
                 <Route path="settings/dealer-debt" element={<GetDealerDebt />} />
                 <Route path="settings/dealer-ai-forecast" element={<DealerAIForecast />} />
+                <Route path="settings/dealer-ev-transactions" element={<GetAllEVTransactionPage />} />
                 <Route
                   path="staff/create-dealer-staff-account"
                   element={<CreateDealerAccount />}
@@ -272,6 +275,10 @@ function App() {
                   element={<UpdateStatusStaffFeedback />}
                 />
                 <Route path="ev/ev-delivery" element={<EVDelivery />} />
+                <Route
+                  path="inventory/get-all-ev-inventory"
+                  element={<EVMGetAllInventory />}
+                />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ EVM Staff */}
                 <Route
                   path="*"

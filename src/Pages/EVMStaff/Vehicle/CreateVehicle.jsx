@@ -135,7 +135,7 @@ function CreateElectricVehicle() {
 
       if (result.isSuccess || result.success) {
         const vehiclesData = result.result || result.data || [];
-        
+
         // ✅ Sắp xếp theo id giảm dần (mới nhất trước) để xe mới tạo hiển thị ở đầu
         const sortedVehicles = [...vehiclesData].sort((a, b) => {
           // Sắp xếp theo id giảm dần (id lớn hơn = mới hơn)
@@ -146,7 +146,7 @@ function CreateElectricVehicle() {
           // Fallback: sắp xếp theo id giảm dần
           return (b.id || 0) - (a.id || 0);
         });
-        
+
         setVehiclesList(sortedVehicles);
 
         if (sortedVehicles.length === 0) {
@@ -172,7 +172,7 @@ function CreateElectricVehicle() {
       const [modelsRes, colorsRes, warehousesRes] = await Promise.all([
         vehicleApi.getAllModels(),
         vehicleApi.getAllColors(),
-        vehicleApi.getAllWarehouses(),
+        vehicleApi.getEVCWarehouses(),
       ]);
 
       if (modelsRes.success || modelsRes.isSuccess) {
@@ -362,7 +362,7 @@ function CreateElectricVehicle() {
   const handleCreateModal = () => {
     // ✅ Destroy tất cả loading messages khi mở modal
     message.destroy();
-    
+
     form.resetFields();
     setSelectedTemplate(null);
     setSelectedModelId(null); // ✅ Reset model selection
@@ -401,7 +401,7 @@ function CreateElectricVehicle() {
     let loadingMsg = null;
     try {
       loadingMsg = message.loading('Đang kiểm tra VIN...', 0);
-      
+
       // Gọi API để lấy danh sách vehicles mới nhất
       const latestVehiclesResult = await vehicleApi.getAllVehicles();
       const latestVehiclesList = latestVehiclesResult.isSuccess || latestVehiclesResult.success
@@ -416,7 +416,7 @@ function CreateElectricVehicle() {
 
       // Kiểm tra VIN có tồn tại trong database không
       const vinExists = latestVehiclesList.some(v => v.vin === vinValue);
-      
+
       if (vinExists) {
         message.error(`VIN ${vinValue} đã tồn tại trong hệ thống! Vui lòng nhập VIN khác.`);
         return;
@@ -439,11 +439,7 @@ function CreateElectricVehicle() {
     }
   };
 
-  // ✅ Xóa VIN khỏi danh sách
-  const handleRemoveVin = (vinToRemove) => {
-    setVinList(vinList.filter(vin => vin !== vinToRemove));
-    message.info(`Đã xóa VIN: ${vinToRemove}`);
-  };
+
 
   // ✅ Xóa tất cả VIN
   const handleClearAllVins = () => {
@@ -456,15 +452,15 @@ function CreateElectricVehicle() {
   // ✅ Xử lý onChange cho bulk VIN input - Format và validate từng dòng
   const handleBulkVinInputChange = (e) => {
     const inputValue = e.target.value.toUpperCase();
-    
+
     // Tách thành các dòng
     const lines = inputValue.split('\n');
-    
+
     // Format từng dòng: chỉ cho phép VIN + tối đa 10 số
     const formattedLines = lines.map(line => {
       // Loại bỏ khoảng trắng và ký tự đặc biệt (giữ lại VIN và số)
       let cleaned = line.replace(/[^VIN\d]/g, '');
-      
+
       // Nếu bắt đầu bằng VIN
       if (cleaned.startsWith('VIN')) {
         // Lấy phần sau VIN (chỉ số)
@@ -489,7 +485,7 @@ function CreateElectricVehicle() {
         return limitedNumbers.length > 0 ? 'VIN' + limitedNumbers : '';
       }
     });
-    
+
     // Ghép lại thành chuỗi với xuống dòng
     const formattedValue = formattedLines.join('\n');
     setBulkVinInput(formattedValue);
@@ -689,13 +685,13 @@ function CreateElectricVehicle() {
       if (normalized.success) {
         // ✅ Destroy tất cả loading messages trước khi hiển thị success
         message.destroy();
-        
+
         // ✅ Hiển thị success message với duration dài hơn để người dùng thấy
         message.success({
           content: `Đã tạo thành công ${vinList.length} xe`,
           duration: 5, // Hiển thị 5 giây
         });
-        
+
         setIsCreateModalVisible(false); // ✅ Đóng create modal
         form.resetFields();
         setSelectedTemplate(null);
@@ -705,10 +701,10 @@ function CreateElectricVehicle() {
         setVersions([]); // ✅ Reset versions list
         setVinList([]); // ✅ Reset VIN list
         setCurrentVinInput(''); // ✅ Reset current VIN input
-        
+
         // ✅ Reset về trang đầu tiên TRƯỚC KHI load lại danh sách
         setCurrentPage(1);
-        
+
         // ✅ Load lại danh sách (đã được sắp xếp theo mới nhất)
         await loadAllVehicles();
 
@@ -716,7 +712,7 @@ function CreateElectricVehicle() {
         // Sử dụng setTimeout để đảm bảo DOM đã render xong
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
-          
+
           // ✅ Scroll đến phần danh sách xe nếu có
           const vehicleListElement = document.querySelector('.ant-table-wrapper');
           if (vehicleListElement) {
@@ -986,204 +982,204 @@ function CreateElectricVehicle() {
               headStyle={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)', borderBottom: '2px solid #0ea5e9' }}
             >
 
-            <Row gutter={16}>
-              <Col span={24}>
-                <Form.Item
-                  label="Chọn Model (Mẫu xe)"
-                  name="modelId"
-                  rules={[{ required: true, message: "Vui lòng chọn model!" }]}
-                  tooltip="Chọn model trước để lọc các version phù hợp"
-                >
-                  <Select
-                    placeholder={models.length === 0 ? "Đang tải models..." : "Chọn model xe..."}
-                    showSearch
-                    onChange={handleModelChange}
-                    optionFilterProp="children"
-                    size="large"
-                    loading={models.length === 0 && loading}
-                    notFoundContent={
-                      <Empty
-                        description="Không có model nào"
-                      />
-                    }
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item
+                    label="Chọn Model (Mẫu xe)"
+                    name="modelId"
+                    rules={[{ required: true, message: "Vui lòng chọn model!" }]}
+                    tooltip="Chọn model trước để lọc các version phù hợp"
                   >
-                    {models.map((model) => {
-                      const modelName = model.name || model.modelName || 'N/A';
+                    <Select
+                      placeholder={models.length === 0 ? "Đang tải models..." : "Chọn model xe..."}
+                      showSearch
+                      onChange={handleModelChange}
+                      optionFilterProp="children"
+                      size="large"
+                      loading={models.length === 0 && loading}
+                      notFoundContent={
+                        <Empty
+                          description="Không có model nào"
+                        />
+                      }
+                    >
+                      {models.map((model) => {
+                        const modelName = model.name || model.modelName || 'N/A';
 
-                      return (
-                        <Option key={model.id} value={model.id}>
-                          {modelName}
-                        </Option>
-                      );
-                    })}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+                        return (
+                          <Option key={model.id} value={model.id}>
+                            {modelName}
+                          </Option>
+                        );
+                      })}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label="Chọn Version (Phiên bản)"
-                  name="versionId"
-                  rules={[{ required: true, message: "Vui lòng chọn version!" }]}
-                  tooltip={!selectedModelId ? "Vui lòng chọn model trước" : "Chọn version của model"}
-                >
-                  <Select
-                    placeholder={
-                      !selectedModelId
-                        ? "Vui lòng chọn model trước..."
-                        : loadingTemplate
-                          ? "Đang tải versions..."
-                          : "Chọn version..."
-                    }
-                    showSearch
-                    onChange={handleVersionChange}
-                    optionFilterProp="children"
-                    disabled={!selectedModelId}
-                    loading={loadingTemplate && selectedModelId && versions.length === 0}
-                    notFoundContent={
-                      <Empty
-                        description={
-                          !selectedModelId
-                            ? "Vui lòng chọn model trước"
-                            : "Model này chưa có version"
-                        }
-                      />
-                    }
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="Chọn Version (Phiên bản)"
+                    name="versionId"
+                    rules={[{ required: true, message: "Vui lòng chọn version!" }]}
+                    tooltip={!selectedModelId ? "Vui lòng chọn model trước" : "Chọn version của model"}
                   >
-                    {versions.map((version) => {
-                      // ✅ Lấy đúng tên version từ API response
-                      const versionName = version.versionName || version.name || 'N/A';
+                    <Select
+                      placeholder={
+                        !selectedModelId
+                          ? "Vui lòng chọn model trước..."
+                          : loadingTemplate
+                            ? "Đang tải versions..."
+                            : "Chọn version..."
+                      }
+                      showSearch
+                      onChange={handleVersionChange}
+                      optionFilterProp="children"
+                      disabled={!selectedModelId}
+                      loading={loadingTemplate && selectedModelId && versions.length === 0}
+                      notFoundContent={
+                        <Empty
+                          description={
+                            !selectedModelId
+                              ? "Vui lòng chọn model trước"
+                              : "Model này chưa có version"
+                          }
+                        />
+                      }
+                    >
+                      {versions.map((version) => {
+                        // ✅ Lấy đúng tên version từ API response
+                        const versionName = version.versionName || version.name || 'N/A';
 
-                      return (
-                        <Option key={version.id} value={version.id}>
-                          {versionName}
-                        </Option>
-                      );
-                    })}
-                  </Select>
-                </Form.Item>
-              </Col>
+                        return (
+                          <Option key={version.id} value={version.id}>
+                            {versionName}
+                          </Option>
+                        );
+                      })}
+                    </Select>
+                  </Form.Item>
+                </Col>
 
-              <Col span={12}>
-                <Form.Item
-                  label="Chọn Màu sắc"
-                  name="colorId"
-                  rules={[{ required: true, message: "Vui lòng chọn màu!" }]}
-                  tooltip={availableColors.length === 0 ? "Vui lòng chọn version trước" : "Chỉ hiển thị màu có template"}
-                >
-                  <Select
-                    placeholder={availableColors.length === 0 ? "Vui lòng chọn version trước..." : "Chọn màu khả dụng..."}
-                    showSearch
-                    disabled={availableColors.length === 0}
-                    onChange={handleVersionOrColorChange}
-                    notFoundContent={<Empty description="Không có màu khả dụng" />}
+                <Col span={12}>
+                  <Form.Item
+                    label="Chọn Màu sắc"
+                    name="colorId"
+                    rules={[{ required: true, message: "Vui lòng chọn màu!" }]}
+                    tooltip={availableColors.length === 0 ? "Vui lòng chọn version trước" : "Chỉ hiển thị màu có template"}
                   >
-                    {availableColors.map((color) => {
-                      const colorName = color.name || color.colorName || 'N/A';
-                      const hexCode = color.hexCode || color.colorCode || '#ccc';
+                    <Select
+                      placeholder={availableColors.length === 0 ? "Vui lòng chọn version trước..." : "Chọn màu khả dụng..."}
+                      showSearch
+                      disabled={availableColors.length === 0}
+                      onChange={handleVersionOrColorChange}
+                      notFoundContent={<Empty description="Không có màu khả dụng" />}
+                    >
+                      {availableColors.map((color) => {
+                        const colorName = color.name || color.colorName || 'N/A';
+                        const hexCode = color.hexCode || color.colorCode || '#ccc';
 
-                      return (
-                        <Option key={color.id} value={color.id}>
-                          <Space>
-                            <span
-                              style={{
-                                width: 16,
-                                height: 16,
-                                background: hexCode,
-                                borderRadius: "50%",
-                                border: "1px solid #d9d9d9",
-                                display: "inline-block",
-                              }}
-                            />
-                            {colorName}
-                          </Space>
-                        </Option>
-                      );
-                    })}
-                  </Select>
-                </Form.Item>
-              </Col>
-            </Row>
+                        return (
+                          <Option key={color.id} value={color.id}>
+                            <Space>
+                              <span
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  background: hexCode,
+                                  borderRadius: "50%",
+                                  border: "1px solid #d9d9d9",
+                                  display: "inline-block",
+                                }}
+                              />
+                              {colorName}
+                            </Space>
+                          </Option>
+                        );
+                      })}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
-            {loadingTemplate && (
-              <Alert
-                message="Đang tìm template..."
-                type="info"
-                showIcon
-                icon={<Spin size="small" />}
-                className="mb-4"
-              />
-            )}
+              {loadingTemplate && (
+                <Alert
+                  message="Đang tìm template..."
+                  type="info"
+                  showIcon
+                  icon={<Spin size="small" />}
+                  className="mb-4"
+                />
+              )}
 
-            {selectedTemplate && (
-              <Card
-                className="mb-4 border-2 border-green-300 shadow-md"
-                style={{
-                  background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                }}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Image Preview */}
-                  {selectedTemplate.imgUrl && Array.isArray(selectedTemplate.imgUrl) && selectedTemplate.imgUrl.length > 0 && (
-                    <div className="flex-shrink-0">
-                      <Image
-                        src={selectedTemplate.imgUrl[0]}
-                        alt="Template"
-                        width={120}
-                        height={120}
-                        className="rounded-lg object-cover border-2 border-white shadow-md"
-                        preview={{
-                          mask: 'Xem ảnh',
-                        }}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex-1">
-                    {/* Header */}
-                    <div className="flex items-center gap-2 mb-3 pb-3 border-b border-green-300">
-                      <CheckCircleOutlined className="text-green-600 text-lg" />
-                      <Text strong className="text-base">Template đã chọn</Text>
-                      <Tag color="success" className="ml-auto">
-                        <Text code copyable className="text-xs font-mono bg-white px-2 py-1 rounded">
-                          {selectedTemplate.id}
-                        </Text>
-                      </Tag>
-                    </div>
+              {selectedTemplate && (
+                <Card
+                  className="mb-4 border-2 border-green-300 shadow-md"
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+                  }}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Image Preview */}
+                    {selectedTemplate.imgUrl && Array.isArray(selectedTemplate.imgUrl) && selectedTemplate.imgUrl.length > 0 && (
+                      <div className="flex-shrink-0">
+                        <Image
+                          src={selectedTemplate.imgUrl[0]}
+                          alt="Template"
+                          width={120}
+                          height={120}
+                          className="rounded-lg object-cover border-2 border-white shadow-md"
+                          preview={{
+                            mask: 'Xem ảnh',
+                          }}
+                        />
+                      </div>
+                    )}
 
-                    {/* Info Grid */}
-                    <Row gutter={[16, 12]}>
-                      <Col span={12}>
-                        <div className="bg-white/60 p-3 rounded-lg">
-                          <Text type="secondary" className="text-xs block mb-1">Version</Text>
-                          <Text strong className="text-base text-blue-600">
-                            {selectedTemplate.version?.versionName || 'N/A'}
+                    <div className="flex-1">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-green-300">
+                        <CheckCircleOutlined className="text-green-600 text-lg" />
+                        <Text strong className="text-base">Template đã chọn</Text>
+                        <Tag color="success" className="ml-auto">
+                          <Text code copyable className="text-xs font-mono bg-white px-2 py-1 rounded">
+                            {selectedTemplate.id}
                           </Text>
-                        </div>
-                      </Col>
-                      <Col span={12}>
-                        <div className="bg-white/60 p-3 rounded-lg">
-                          <Text type="secondary" className="text-xs block mb-1">Model</Text>
-                          <Text strong className="text-base">
-                            {selectedTemplate.version?.modelName || 'N/A'}
-                          </Text>
-                        </div>
-                      </Col>
-                      {selectedTemplate.description && (
-                        <Col span={24}>
+                        </Tag>
+                      </div>
+
+                      {/* Info Grid */}
+                      <Row gutter={[16, 12]}>
+                        <Col span={12}>
                           <div className="bg-white/60 p-3 rounded-lg">
-                            <Text type="secondary" className="text-xs block mb-1">Mô tả</Text>
-                            <Text className="text-sm">{selectedTemplate.description}</Text>
+                            <Text type="secondary" className="text-xs block mb-1">Version</Text>
+                            <Text strong className="text-base text-blue-600">
+                              {selectedTemplate.version?.versionName || 'N/A'}
+                            </Text>
                           </div>
                         </Col>
-                      )}
-                    </Row>
+                        <Col span={12}>
+                          <div className="bg-white/60 p-3 rounded-lg">
+                            <Text type="secondary" className="text-xs block mb-1">Model</Text>
+                            <Text strong className="text-base">
+                              {selectedTemplate.version?.modelName || 'N/A'}
+                            </Text>
+                          </div>
+                        </Col>
+                        {selectedTemplate.description && (
+                          <Col span={24}>
+                            <div className="bg-white/60 p-3 rounded-lg">
+                              <Text type="secondary" className="text-xs block mb-1">Mô tả</Text>
+                              <Text className="text-sm">{selectedTemplate.description}</Text>
+                            </div>
+                          </Col>
+                        )}
+                      </Row>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            )}
+                </Card>
+              )}
             </Card>
 
             {/* Step 2: Vehicle Information */}
@@ -1199,336 +1195,361 @@ function CreateElectricVehicle() {
               className="mb-4 shadow-sm"
               headStyle={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', borderBottom: '2px solid #22c55e' }}
             >
-            {/* VIN List Input Section */}
-            <Row gutter={16}>
-              <Col span={24}>
-                <Card
-                  size="small"
-                  className="mb-4"
-                  title={
-                    <div className="flex items-center gap-2">
-                      <CarOutlined className="text-blue-600" />
-                      <Text strong className="text-base">Danh sách VIN</Text>
-                    </div>
-                  }
-                  extra={
-                    <Radio.Group
-                      value={isBulkInputMode}
-                      onChange={(e) => setIsBulkInputMode(e.target.value)}
-                      size="small"
-                      buttonStyle="solid"
-                    >
-                      <Radio.Button value={false}>
-                        <PlusOutlined className="mr-1" />
-                        Nhập từng VIN
-                      </Radio.Button>
-                      <Radio.Button value={true}>
-                        <FileTextOutlined className="mr-1" />
-                        Nhập hàng loạt
-                      </Radio.Button>
-                    </Radio.Group>
-                  }
-                >
-
-                  {/* Single VIN Input Mode */}
-                  {!isBulkInputMode && (
-                    <Space.Compact style={{ width: '100%' }} className="mb-3">
-                      <Input
-                        placeholder="Nhập VIN (VD: VIN1234567890)"
-                        value={currentVinInput}
-                        onChange={(e) => setCurrentVinInput(e.target.value.toUpperCase())}
-                        onPressEnter={handleAddVin}
-                        maxLength={13}
-                        style={{ textTransform: 'uppercase' }}
-                        prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
-                      />
-                      <Button type="primary" onClick={handleAddVin} icon={<PlusOutlined />}>
-                        Thêm VIN
-                      </Button>
-                    </Space.Compact>
-                  )}
-
-                  {/* Bulk VIN Input Mode */}
-                  {isBulkInputMode && (
-                    <div className="mb-3">
-                      <Input.TextArea
-                        placeholder="Nhập nhiều VIN, mỗi VIN một dòng hoặc cách nhau bởi dấu phẩy&#10;VD:&#10;VIN1234567890&#10;VIN0987654321&#10;VIN1111111111"
-                        value={bulkVinInput}
-                        onChange={handleBulkVinInputChange}
-                        rows={8}
-                        style={{ 
-                          textTransform: 'uppercase', 
-                          fontFamily: 'monospace',
-                          fontSize: '14px',
-                          lineHeight: '1.8'
-                        }}
-                        showCount
-                        maxLength={10000}
-                      />
-                      
-                      {/* Real-time validation info */}
-                      {bulkVinInput && (
-                        <div className="mt-2 mb-2">
-                          {(() => {
-                            const lines = bulkVinInput.split('\n').filter(line => line.trim().length > 0);
-                            const validLines = lines.filter(line => /^VIN\d{10}$/.test(line.trim()));
-                            const invalidLines = lines.filter(line => !/^VIN\d{10}$/.test(line.trim()));
-                            
-                            return (
-                              <div className="text-xs space-y-1">
-                                {validLines.length > 0 && (
-                                  <div className="text-green-600">
-                                    ✅ {validLines.length} VIN hợp lệ: {validLines.slice(0, 3).join(', ')}{validLines.length > 3 ? '...' : ''}
-                                  </div>
-                                )}
-                                {invalidLines.length > 0 && (
-                                  <div className="text-red-600">
-                                    ⚠️ {invalidLines.length} VIN không hợp lệ (phải là VIN + đúng 10 số): {invalidLines.slice(0, 3).join(', ')}{invalidLines.length > 3 ? '...' : ''}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-                      
-                      <Button
-                        type="primary"
-                        onClick={handleBulkAddVins}
-                        icon={<PlusOutlined />}
-                        className="mt-2 w-full"
-                        size="large"
+              {/* VIN List Input Section */}
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Card
+                    size="small"
+                    className="mb-4"
+                    title={
+                      <div className="flex items-center gap-2">
+                        <CarOutlined className="text-blue-600" />
+                        <Text strong className="text-base">Danh sách VIN</Text>
+                      </div>
+                    }
+                    extra={
+                      <Radio.Group
+                        value={isBulkInputMode}
+                        onChange={(e) => setIsBulkInputMode(e.target.value)}
+                        size="small"
+                        buttonStyle="solid"
                       >
-                        Thêm tất cả VIN
-                      </Button>
-                      <Alert
-                        message="Hướng dẫn"
-                        description={
-                          <div>
-                            <div className="mb-1">• Nhập mỗi VIN trên một dòng, hoặc cách nhau bằng dấu phẩy</div>
-                            <div className="mb-1">• Format: <strong>VIN + đúng 10 chữ số</strong> (VD: VIN1234567890)</div>
-                            <div className="text-red-600">• Hệ thống sẽ tự động giới hạn mỗi VIN chỉ có 10 số sau "VIN"</div>
-                          </div>
-                        }
-                        type="info"
-                        showIcon
-                        className="mt-2"
-                      />
-                    </div>
-                  )}
+                        <Radio.Button value={false}>
+                          <PlusOutlined className="mr-1" />
+                          Nhập từng VIN
+                        </Radio.Button>
+                        <Radio.Button value={true}>
+                          <FileTextOutlined className="mr-1" />
+                          Nhập hàng loạt
+                        </Radio.Button>
+                      </Radio.Group>
+                    }
+                  >
 
-                  {/* VIN List Display */}
-                  {vinList.length > 0 && (
-                    <Card
-                      className="mt-3"
-                      size="small"
-                      title={
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Badge count={vinList.length} showZero color="#1890ff">
-                              <Text strong className="text-base">Danh sách VIN đã thêm</Text>
-                            </Badge>
+                    {/* Single VIN Input Mode */}
+                    {!isBulkInputMode && (
+                      <Space.Compact style={{ width: '100%' }} className="mb-3">
+                        <Input
+                          placeholder="Nhập VIN (VD: VIN1234567890)"
+                          value={currentVinInput}
+                          onChange={(e) => setCurrentVinInput(e.target.value.toUpperCase())}
+                          onPressEnter={handleAddVin}
+                          maxLength={13}
+                          style={{ textTransform: 'uppercase' }}
+                          prefix={<InfoCircleOutlined style={{ color: '#1890ff' }} />}
+                        />
+                        <Button type="primary" onClick={handleAddVin} icon={<PlusOutlined />}>
+                          Thêm VIN
+                        </Button>
+                      </Space.Compact>
+                    )}
+
+                    {/* Bulk VIN Input Mode */}
+                    {isBulkInputMode && (
+                      <div className="mb-3">
+                        <Input.TextArea
+                          placeholder="Nhập nhiều VIN, mỗi VIN một dòng hoặc cách nhau bởi dấu phẩy&#10;VD:&#10;VIN1234567890&#10;VIN0987654321&#10;VIN1111111111"
+                          value={bulkVinInput}
+                          onChange={handleBulkVinInputChange}
+                          rows={8}
+                          style={{
+                            textTransform: 'uppercase',
+                            fontFamily: 'monospace',
+                            fontSize: '14px',
+                            lineHeight: '1.8'
+                          }}
+                          showCount
+                          maxLength={10000}
+                        />
+
+                        {/* Real-time validation info */}
+                        {bulkVinInput && (
+                          <div className="mt-2 mb-2">
+                            {(() => {
+                              const lines = bulkVinInput.split('\n').filter(line => line.trim().length > 0);
+                              const validLines = lines.filter(line => /^VIN\d{10}$/.test(line.trim()));
+                              const invalidLines = lines.filter(line => !/^VIN\d{10}$/.test(line.trim()));
+
+                              return (
+                                <div className="text-xs space-y-1">
+                                  {validLines.length > 0 && (
+                                    <div className="text-green-600">
+                                      ✅ {validLines.length} VIN hợp lệ: {validLines.slice(0, 3).join(', ')}{validLines.length > 3 ? '...' : ''}
+                                    </div>
+                                  )}
+                                  {invalidLines.length > 0 && (
+                                    <div className="text-red-600">
+                                      ⚠️ {invalidLines.length} VIN không hợp lệ (phải là VIN + đúng 10 số): {invalidLines.slice(0, 3).join(', ')}{invalidLines.length > 3 ? '...' : ''}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
-                          <Button
-                            size="small"
-                            danger
-                            onClick={handleClearAllVins}
-                            icon={<DeleteOutlined />}
-                          >
-                            Xóa tất cả
-                          </Button>
-                        </div>
-                      }
-                    >
-                      <div className="max-h-48 overflow-y-auto space-y-2">
-                        {vinList.map((vin, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 rounded-lg border border-blue-200 hover:shadow-md transition-all"
-                          >
+                        )}
+
+                        <Button
+                          type="primary"
+                          onClick={handleBulkAddVins}
+                          icon={<PlusOutlined />}
+                          className="mt-2 w-full"
+                          size="large"
+                        >
+                          Thêm tất cả VIN
+                        </Button>
+                        <Alert
+                          message="Hướng dẫn"
+                          description={
+                            <div>
+                              <div className="mb-1">• Nhập mỗi VIN trên một dòng, hoặc cách nhau bằng dấu phẩy</div>
+                              <div className="mb-1">• Format: <strong>VIN + đúng 10 chữ số</strong> (VD: VIN1234567890)</div>
+                              <div className="text-red-600">• Hệ thống sẽ tự động giới hạn mỗi VIN chỉ có 10 số sau "VIN"</div>
+                            </div>
+                          }
+                          type="info"
+                          showIcon
+                          className="mt-2"
+                        />
+                      </div>
+                    )}
+
+                    {/* VIN List Display */}
+                    {vinList.length > 0 && (
+                      <Card
+                        className="mt-3 border-2 border-blue-300"
+                        size="small"
+                        title={
+                          <div className="flex items-center justify-between flex-wrap gap-2">
                             <div className="flex items-center gap-3">
-                              <Badge count={idx + 1} style={{ backgroundColor: '#1890ff' }} />
-                              <Text code className="font-mono text-sm font-semibold text-blue-700">
-                                {vin}
-                              </Text>
+                              <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full">
+                                <CarOutlined className="text-blue-600" />
+                                <Text strong className="text-base text-blue-700">Danh sách VIN đã thêm</Text>
+                                <Badge
+                                  count={vinList.length}
+                                  showZero
+                                  style={{
+                                    backgroundColor: '#1890ff',
+                                    boxShadow: '0 2px 8px rgba(24, 144, 255, 0.3)'
+                                  }}
+                                />
+                              </div>
                             </div>
                             <Button
                               size="small"
                               danger
-                              type="text"
+                              onClick={handleClearAllVins}
                               icon={<DeleteOutlined />}
-                              onClick={() => handleRemoveVin(vin)}
-                              className="hover:bg-red-100"
-                            />
+                              className="hover:scale-105 transition-transform"
+                            >
+                              Xóa tất cả
+                            </Button>
                           </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
+                        }
+                        headStyle={{
+                          background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
+                          borderBottom: '2px solid #1890ff'
+                        }}
+                      >
+                        <div className="max-h-60 overflow-y-auto p-3" style={{
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: '#1890ff #f0f0f0'
+                        }}>
+                          <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 p-4 rounded-lg border-2 border-blue-200">
+                            <Text
+                              code
+                              copyable={{
+                                text: vinList.join(','),
+                                tooltips: ['Copy tất cả VIN', 'Đã copy!']
+                              }}
+                              className="font-mono text-sm font-semibold text-blue-700 bg-white p-3 rounded border border-blue-300 block break-all leading-relaxed"
+                            >
+                              {vinList.join(',')}
+                            </Text>
+                          </div>
+                        </div>
 
-                  {vinList.length === 0 && (
-                    <Alert
-                      message="Chưa có VIN nào"
-                      description="Vui lòng nhập và thêm ít nhất 1 VIN để tạo xe"
-                      type="warning"
-                      showIcon
-                      className="mt-2"
-                      icon={<InfoCircleOutlined />}
-                    />
-                  )}
-                </Card>
-              </Col>
-            </Row>
+                        {/* Summary Footer */}
+                        <div className="mt-3 pt-3 border-t border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 -mx-3 -mb-3 px-3 py-2 rounded-b-lg">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-4">
+                              <span className="text-gray-600">
+                                <strong className="text-blue-600 text-sm">{vinList.length}</strong> VIN đã thêm
+                              </span>
+                              <span className="text-gray-500">
+                                Click vào VIN để copy
+                              </span>
+                            </div>
+                            <Text type="secondary" className="text-xs italic">
+                              Hover để xem nút xóa
+                            </Text>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
 
-            <Row gutter={16} className="mb-4">
-              <Col span={12}>
-                <Form.Item
-                  label={
-                    <span className="flex items-center gap-2">
-                      <SafetyOutlined className="text-blue-600" />
-                      Chọn Kho
-                    </span>
-                  }
-                  name="warehouseId"
-                  rules={[{ required: true, message: "Vui lòng chọn kho!" }]}
-                >
-                  <Select 
-                    placeholder="Chọn kho..." 
-                    showSearch
-                    size="large"
-                    optionFilterProp="children"
-                  >
-                    {warehouses.map((warehouse) => (
-                      <Option key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name || warehouse.warehouseName}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
+                    {vinList.length === 0 && (
+                      <Alert
+                        message="Chưa có VIN nào"
+                        description="Vui lòng nhập và thêm ít nhất 1 VIN để tạo xe"
+                        type="warning"
+                        showIcon
+                        className="mt-2"
+                        icon={<InfoCircleOutlined />}
+                      />
+                    )}
+                  </Card>
+                </Col>
+              </Row>
 
-              <Col span={12}>
-                <Card
-                  className="h-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                    border: '2px solid #f59e0b'
-                  }}
-                >
-                  <Statistic
-                    title={
-                      <span className="text-sm font-medium text-gray-700">
-                        Số xe sẽ được tạo
+              <Row gutter={16} className="mb-4">
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className="flex items-center gap-2">
+                        <SafetyOutlined className="text-blue-600" />
+                        Chọn Kho
                       </span>
                     }
-                    value={vinList.length}
-                    suffix="xe"
-                    valueStyle={{ 
-                      color: '#d97706',
-                      fontSize: '32px',
-                      fontWeight: 'bold'
+                    name="warehouseId"
+                    rules={[{ required: true, message: "Vui lòng chọn kho!" }]}
+                  >
+                    <Select
+                      placeholder="Chọn kho..."
+                      showSearch
+                      size="large"
+                      optionFilterProp="children"
+                    >
+                      {warehouses.map((warehouse) => (
+                        <Option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.warehouseName || warehouse.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+
+                <Col span={12}>
+                  <Card
+                    className="h-full"
+                    style={{
+                      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                      border: '2px solid #f59e0b'
                     }}
-                    prefix={<CarOutlined />}
-                  />
-                </Card>
-              </Col>
-            </Row>
+                  >
+                    <Statistic
+                      title={
+                        <span className="text-sm font-medium text-gray-700">
+                          Số xe sẽ được tạo
+                        </span>
+                      }
+                      value={vinList.length}
+                      suffix="xe"
+                      valueStyle={{
+                        color: '#d97706',
+                        fontSize: '32px',
+                        fontWeight: 'bold'
+                      }}
+                      prefix={<CarOutlined />}
+                    />
+                  </Card>
+                </Col>
+              </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label={
-                    <span className="flex items-center gap-2">
-                      <CheckCircleOutlined className="text-green-600" />
-                      Trạng thái
-                    </span>
-                  }
-                  name="status"
-                  initialValue={1}
-                  rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-                  tooltip="Trạng thái ban đầu của xe khi tạo mới"
-                >
-                  <Select placeholder="Chọn trạng thái..." size="large">
-                    <Option value={1}><span className="mr-2">✅</span>Khả dụng</Option>
-                    <Option value={2}><span className="mr-2">⏳</span>Đang chờ</Option>
-                    <Option value={3}><span className="mr-2">📦</span>Đã đặt</Option>
-                    <Option value={4}><span className="mr-2">🚚</span>Đang vận chuyển</Option>
-                    <Option value={5}><span className="mr-2">💰</span>Đã bán</Option>
-                    <Option value={6}><span className="mr-2">🏢</span>Tại đại lý</Option>
-                    <Option value={7}><span className="mr-2">🔧</span>Bảo trì</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className="flex items-center gap-2">
+                        <CheckCircleOutlined className="text-green-600" />
+                        Trạng thái
+                      </span>
+                    }
+                    name="status"
+                    initialValue={1}
+                    rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
+                    tooltip="Trạng thái ban đầu của xe khi tạo mới"
+                  >
+                    <Select placeholder="Chọn trạng thái..." size="large">
+                      <Option value={1}><span className="mr-2">✅</span>Khả dụng</Option>
+                      <Option value={2}><span className="mr-2">⏳</span>Đang chờ</Option>
+                      <Option value={3}><span className="mr-2">📦</span>Đã đặt</Option>
+                      <Option value={4}><span className="mr-2">🚚</span>Đang vận chuyển</Option>
+                      <Option value={5}><span className="mr-2">💰</span>Đã bán</Option>
+                      <Option value={6}><span className="mr-2">🏢</span>Tại đại lý</Option>
+                      <Option value={7}><span className="mr-2">🔧</span>Bảo trì</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
 
-              <Col span={12}>
-                <Form.Item
-                  label={
-                    <span className="flex items-center gap-2">
-                      <CalendarOutlined className="text-blue-600" />
-                      Ngày sản xuất
-                    </span>
-                  }
-                  name="manufactureDate"
-                  rules={[{ required: true, message: "Vui lòng chọn ngày sản xuất!" }]}
-                >
-                  <Input 
-                    type="date" 
-                    placeholder="Chọn ngày sản xuất" 
-                    size="large"
-                    className="w-full"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className="flex items-center gap-2">
+                        <CalendarOutlined className="text-blue-600" />
+                        Ngày sản xuất
+                      </span>
+                    }
+                    name="manufactureDate"
+                    rules={[{ required: true, message: "Vui lòng chọn ngày sản xuất!" }]}
+                  >
+                    <Input
+                      type="date"
+                      placeholder="Chọn ngày sản xuất"
+                      size="large"
+                      className="w-full"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
 
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  label={
-                    <span className="flex items-center gap-2">
-                      <CalendarOutlined className="text-green-600" />
-                      Ngày nhập kho
-                    </span>
-                  }
-                  name="importDate"
-                  rules={[{ required: true, message: "Vui lòng chọn ngày nhập kho!" }]}
-                >
-                  <Input 
-                    type="date" 
-                    placeholder="Chọn ngày nhập kho" 
-                    size="large"
-                    className="w-full"
-                  />
-                </Form.Item>
-              </Col>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className="flex items-center gap-2">
+                        <CalendarOutlined className="text-green-600" />
+                        Ngày nhập kho
+                      </span>
+                    }
+                    name="importDate"
+                    rules={[{ required: true, message: "Vui lòng chọn ngày nhập kho!" }]}
+                  >
+                    <Input
+                      type="date"
+                      placeholder="Chọn ngày nhập kho"
+                      size="large"
+                      className="w-full"
+                    />
+                  </Form.Item>
+                </Col>
 
-              <Col span={12}>
-                <Form.Item
-                  label={
-                    <span className="flex items-center gap-2">
-                      <SafetyOutlined className="text-orange-600" />
-                      Hạn bảo hành
-                    </span>
-                  }
-                  name="warrantyExpiryDate"
-                  rules={[{ required: true, message: "Vui lòng chọn hạn bảo hành!" }]}
-                >
-                  <Input 
-                    type="date" 
-                    placeholder="Chọn hạn bảo hành" 
-                    size="large"
-                    className="w-full"
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
+                <Col span={12}>
+                  <Form.Item
+                    label={
+                      <span className="flex items-center gap-2">
+                        <SafetyOutlined className="text-orange-600" />
+                        Hạn bảo hành
+                      </span>
+                    }
+                    name="warrantyExpiryDate"
+                    rules={[{ required: true, message: "Vui lòng chọn hạn bảo hành!" }]}
+                  >
+                    <Input
+                      type="date"
+                      placeholder="Chọn hạn bảo hành"
+                      size="large"
+                      className="w-full"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
             </Card>
 
             <Divider />
 
             <Row justify="end" gutter={16} className="mt-6">
               <Col>
-                <Button 
+                <Button
                   onClick={() => {
                     // ✅ Destroy tất cả loading messages khi hủy
                     message.destroy();
