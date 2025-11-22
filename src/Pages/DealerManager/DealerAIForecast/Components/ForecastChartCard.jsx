@@ -57,8 +57,7 @@ function ForecastChartCard({ allVehiclesData, forecastByVehicle }) {
     colorMap[vehicleName] = colors[index % colors.length];
 
     console.log(
-      `Vehicle ${index}: ${vehicleName} -> Color: ${
-        colors[index % colors.length]
+      `Vehicle ${index}: ${vehicleName} -> Color: ${colors[index % colors.length]
       }`
     );
   });
@@ -81,7 +80,6 @@ function ForecastChartCard({ allVehiclesData, forecastByVehicle }) {
       );
     });
     const vehicleName = parts.join(" - ");
-
     forecastData.forEach((item) => {
       const date = new Date(item.targetDate);
       const day = date.getUTCDate();
@@ -130,6 +128,7 @@ function ForecastChartCard({ allVehiclesData, forecastByVehicle }) {
     smooth: true,
     // Sử dụng array màu để map theo uniqueVehicles
     color: colorArray,
+
     point: {
       size: 4,
       shape: "circle",
@@ -173,17 +172,6 @@ function ForecastChartCard({ allVehiclesData, forecastByVehicle }) {
       },
     },
 
-    tooltip: {
-      formatter: (datum) => {
-        return {
-          name: datum.vehicle,
-          value: `${datum.forecast.toFixed(2)} xe`,
-        };
-      },
-      title: (title, datum) => {
-        return datum?.dateLabel || title;
-      },
-    },
     lineStyle: {
       lineWidth: 2,
     },

@@ -75,6 +75,7 @@ import GetAllContractManager from "./Pages/DealerStaff/ViewAllOrderContract/GetA
 import ConfirmEcontractOrder from "./Pages/ConfirmEcontractOrder/ConfirmEcontractOrder";
 import GetDealerDebt from "./Pages/DealerManager/DealerDebt/GetDealerDebt";
 import DealerAIForecast from './Pages/DealerManager/DealerAIForecast/DealerAIForecast';
+import GetAllEVTransactionPage from "./Pages/DealerManager/GetAllEVTransaction/GetAllEVTransaction";
 function App() {
   return (
     <BrowserRouter>
@@ -211,6 +212,7 @@ function App() {
                 <Route path="settings/deposit-settings" element={<DepositSettings />} />
                 <Route path="settings/dealer-debt" element={<GetDealerDebt />} />
                 <Route path="settings/dealer-ai-forecast" element={<DealerAIForecast />} />
+                <Route path="settings/dealer-ev-transactions" element={<GetAllEVTransactionPage />} />
                 <Route
                   path="staff/create-dealer-staff-account"
                   element={<CreateDealerAccount />}
