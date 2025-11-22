@@ -83,12 +83,12 @@ function DealerStaff() {
                         />
                     </Col>
 
-                    <Col xs={24} lg={12}>
+                    {/* <Col xs={24} lg={12}>
                         <RecentActivity
                             dashboardData={dashboardData}
                             loading={loading}
                         />
-                    </Col>
+                    </Col> */}
                 </Row>
             </PageContainer>
         </DealerStaffLayout>

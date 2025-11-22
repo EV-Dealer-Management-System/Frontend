@@ -187,7 +187,7 @@ const Appointment = () => {
             <Space>
               <ScheduleOutlined style={{ color: '#1890ff' }} />
               <span style={{ fontWeight: 600, fontSize: 18 }}>
-                Tạo Appointment Setting
+                Tạo Cài Đặt Lịch Hẹn
               </span>
             </Space>
           }

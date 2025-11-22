@@ -9,7 +9,7 @@ export async function fetchDepositSetting(force = false) {
     return _cache;
   }
 
-  const res = await api.get("/DepositSetting/get-deposit-setting");
+  const res = await api.get("/DealerConfiguration/get-current");
   const data = res?.data?.data ?? null;
 
   _cache = data;
