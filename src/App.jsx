@@ -75,6 +75,7 @@ import GetAllContractManager from "./Pages/DealerStaff/ViewAllOrderContract/GetA
 import ConfirmEcontractOrder from "./Pages/ConfirmEcontractOrder/ConfirmEcontractOrder";
 import GetDealerDebt from "./Pages/DealerManager/DealerDebt/GetDealerDebt";
 import DealerAIForecast from './Pages/DealerManager/DealerAIForecast/DealerAIForecast';
+import GetAllEVOrder from "./Pages/DealerManager/GetAllEvOrder/GetAllEVOrder";
 import GetAllEVTransactionPage from "./Pages/DealerManager/GetAllEVTransaction/GetAllEVTransaction";
 function App() {
   return (
@@ -227,7 +228,7 @@ function App() {
                   path="/orders-and-contracts/get-all-contracts"
                   element={<GetAllContract />}
                 />
-                <Route path="orders-and-contracts/view-all-contracts" element={<GetAllContract />} />
+                <Route path="orders-and-contracts/view-all-orders" element={<GetAllEVOrder />} />
                 {/* Bắt mọi đường dẫn không hợp lệ và chuyển về trang chủ dealer manager */}
                 <Route
                   path="*"

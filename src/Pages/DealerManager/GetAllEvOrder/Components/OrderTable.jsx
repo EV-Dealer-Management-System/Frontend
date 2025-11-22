@@ -1,11 +1,11 @@
 import React from 'react';
-import { Table, Tag, Space, Button, Popconfirm, Typography } from 'antd';
+import { Table, Tag, Space, Button, Typography } from 'antd';
 import {
     ClockCircleOutlined,
     CheckCircleOutlined,
     StopOutlined,
     LoadingOutlined,
-    DollarOutlined
+    EyeOutlined
 } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -51,16 +51,7 @@ const calcQuoteTotal = (order) => {
     return list.reduce((sum, qd) => sum + (qd?.totalPrice || 0), 0);
 };
 
-function OrderTable({
-    orders,
-    pagination,
-    loading,
-    rowLoadingId,
-    onPageChange,
-    onViewDetail,
-    onCancelOrder,
-    onOpenPayModal
-}) {
+function OrderTable({ orders, pagination, loading, onPageChange, onViewDetail }) {
     const columns = [
         {
             title: "Mã đơn",
@@ -138,66 +129,13 @@ function OrderTable({
             title: "Hành động",
             key: "actions",
             align: "center",
-            width: 230,
+            width: 130,
             render: (_, record) => {
-                const actionBtns = [];
-
-                actionBtns.push(
-                    <Button key="detail" size="small" onClick={() => onViewDetail(record)}>
+                return (
+                    <Button size="small" onClick={() => onViewDetail(record)}>
                         Chi tiết
                     </Button>
                 );
-
-                // Hiển thị nút hủy đơn cho tất cả trạng thái NGOẠI TRỪ: Đang cọc (4), Hoàn tất (5), Đã hủy (6), Đã từ chối (7)
-                if (![4, 5, 6, 7].includes(record.status)) {
-                    actionBtns.push(
-                        <Popconfirm
-                            key="cancel"
-                            title="Hủy đơn hàng?"
-                            description="Bạn chắc chắn muốn hủy đơn này?"
-                            onConfirm={() => onCancelOrder(record)}
-                            okText="Hủy đơn"
-                            okButtonProps={{ danger: true }}
-                            cancelText="Không"
-                        >
-                            <Button danger size="small" loading={rowLoadingId === record.id}>
-                                Hủy đơn
-                            </Button>
-                        </Popconfirm>
-                    );
-                }
-
-                // Hiển thị nút "Gửi xác nhận" cho trạng thái đang cọc (4)
-                if (record.status === 4 || record.status === 8) {
-                    actionBtns.push(
-                        <Button
-                            key="confirm"
-                            type="default"
-                            size="small"
-                            icon={<CheckCircleOutlined />}
-                            onClick={() => onOpenPayModal(record)}
-                        >
-                            Gửi xác nhận
-                        </Button>
-                    );
-                }
-                
-                // Hiển thị nút thanh toán cho các trạng thái: chờ thanh toán toàn phần (0), đã xác nhận (3), và chờ thanh toán phần còn lại (9)
-                if (record.status === 0 || record.status === 3 || record.status === 9) {
-                    actionBtns.push(
-                        <Button
-                            key="pay"
-                            type="primary"
-                            size="small"
-                            icon={<DollarOutlined />}
-                            onClick={() => onOpenPayModal(record)}
-                        >
-                            Thanh toán
-                        </Button>
-                    );
-                }
-
-                return <Space>{actionBtns}</Space>;
             },
         },
     ];
@@ -214,6 +152,9 @@ function OrderTable({
                 total: pagination.total,
                 onChange: onPageChange,
                 showTotal: (total) => `Tổng ${total} đơn hàng`,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                pageSizeOptions: ['5', '10', '20', '50'],
             }}
             bordered
             className="shadow-sm rounded-lg overflow-hidden"

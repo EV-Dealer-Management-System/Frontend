@@ -194,10 +194,11 @@ function OrderDetailDrawer({ open, order, onClose }) {
                         {order.quoteDetails.map((detail, index) => (
                             <div
                                 key={detail.id || index}
-                                className={`${index < order.quoteDetails.length - 1
+                                className={`${
+                                    index < order.quoteDetails.length - 1
                                         ? "mb-3 pb-3 border-b border-dashed border-gray-300"
                                         : ""
-                                    }`}
+                                }`}
                             >
                                 <div className="flex justify-between items-start mb-1">
                                     <Text strong className="text-xs">

@@ -10,11 +10,48 @@ const formatVnd = (n = 0) =>
         ? n.toLocaleString("vi-VN", { maximumFractionDigits: 0 }) + " ₫"
         : "0 ₫";
 
-// Tính tổng báo giá từ quoteDetails
+// Tính tổng báo giá từ nhiều nguồn dữ liệu khác nhau
 const calcQuoteTotal = (order) => {
     if (!order) return 0;
-    const list = order.quoteDetails || [];
-    return list.reduce((sum, qd) => sum + (qd?.totalPrice || 0), 0);
+    
+    // Thử các trường dữ liệu khác nhau
+    // 1. Kiểm tra totalAmount trước
+    if (order.totalAmount && order.totalAmount > 0) {
+        return order.totalAmount;
+    }
+    
+    // 2. Tính từ quoteDetails
+    const quoteDetails = order.quoteDetails || [];
+    if (quoteDetails.length > 0) {
+        const total = quoteDetails.reduce((sum, qd) => sum + (qd?.totalPrice || 0), 0);
+        if (total > 0) return total;
+    }
+    
+    // 3. Tính từ orderDetails (nếu có)
+    const orderDetails = order.orderDetails || [];
+    if (orderDetails.length > 0) {
+        const total = orderDetails.reduce((sum, od) => sum + (od?.price || od?.totalPrice || 0), 0);
+        if (total > 0) return total;
+    }
+    
+    // 4. Tính từ quote nếu có
+    if (order.quote) {
+        const quote = order.quote;
+        if (quote.totalAmount && quote.totalAmount > 0) {
+            return quote.totalAmount;
+        }
+        
+        // Tính từ quote.quoteDetails
+        const quoteDetailsFromQuote = quote.quoteDetails || [];
+        if (quoteDetailsFromQuote.length > 0) {
+            const total = quoteDetailsFromQuote.reduce((sum, qd) => sum + (qd?.totalPrice || 0), 0);
+            if (total > 0) return total;
+        }
+    }
+    
+    // 5. Fallback - có thể là giá từ vehicle
+    console.warn("Không tìm thấy giá trị totalAmount trong order:", order);
+    return 0;
 };
 
 function PaymentModal({
@@ -27,25 +64,40 @@ function PaymentModal({
     onConfirm
 }) {
     if (!order) return null;
+    
+    // Xử lý click chọn phương thức thanh toán
+    const handleMethodSelect = (method) => {
+        if (setSelectedMethod) {
+            setSelectedMethod(method);
+        }
+    };
 
-    const quoteTotalFromDetails = calcQuoteTotal(order);
-    const quoteTotal =
-        order?.totalAmount && order.totalAmount > 0
-            ? order.totalAmount
-            : quoteTotalFromDetails;
-
+    // Tính tổng giá báo giá
+    const quoteTotal = calcQuoteTotal(order);
     const deposited = order?.depositAmount || 0;
     
+    console.log("PaymentModal - Order data:", {
+        order,
+        quoteTotal,
+        deposited,
+        status: order?.status
+    });
+    
     // Xác định loại thanh toán dựa trên status
-    const isDepositPayment = order.status === 4; // Đang cọc
-    const isFullPayment = order.status === 0;    // Chờ thanh toán toàn phần  
+    const isConfirmationSend = order.status === 4 || order.status === 8; // Đang cọc - gửi xác nhận (status 4, 8)
+    const isRemainingPayment = order.status === 9;  // Chờ thanh toán phần còn lại (có thể chọn payment method)
+    const isFullPayment = order.status === 0;       // Chờ thanh toán toàn phần  
     const isNewDepositPayment = order.status === 1; // Chờ cọc
     
     // Tính số tiền cần thanh toán
     let amountToPay = 0;
     let paymentType = "";
     
-    if (isDepositPayment) {
+    if (isConfirmationSend) {
+        // Gửi xác nhận cho khách hàng (status 4, 8)
+        amountToPay = 0; // Không cần hiển thị số tiền
+        paymentType = order.status === 4 ? "Gửi xác nhận thanh toán" : "Gửi xác nhận thanh toán phần còn lại";
+    } else if (isRemainingPayment) {
         // Thanh toán phần còn lại sau khi đã cọc
         amountToPay = Math.max(quoteTotal - deposited, 0);
         paymentType = "Thanh toán phần còn lại";
@@ -54,12 +106,29 @@ function PaymentModal({
         amountToPay = quoteTotal;
         paymentType = "Thanh toán toàn bộ";
     } else if (isNewDepositPayment) {
-        // Thanh toán cọc mới (thường là một phần của tổng)
-        amountToPay = quoteTotal * 0.3; // Giả sử cọc 30%, có thể điều chỉnh
+        // Thanh toán cọc mới
+        // Lấy từ depositAmount nếu có, nếu không thì tính 30% tổng
+        amountToPay = deposited > 0 ? deposited : (quoteTotal * 0.3);
         paymentType = "Thanh toán cọc";
+    } else {
+        // Trường hợp khác - mặc định là toàn bộ
+        amountToPay = quoteTotal;
+        paymentType = "Thanh toán";
     }
     
     const remain = amountToPay;
+    
+    console.log("Payment calculation:", {
+        status: order?.status,
+        isConfirmationSend,
+        isRemainingPayment,
+        isFullPayment,
+        isNewDepositPayment,
+        quoteTotal,
+        deposited,
+        amountToPay,
+        paymentType
+    });
 
     return (
         <Modal
@@ -73,13 +142,13 @@ function PaymentModal({
                     <span>Chọn phương thức thanh toán</span>
                 </Space>
             }
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" style={{ width: "100%" }} size={14}>
                 <Card
                     size="small"
                     style={{ background: "#f6ffed", borderColor: "#b7eb8f" }}
-                    bordered
+                    variant="outlined"
                 >
                     <Space direction="vertical" style={{ width: "100%" }} size={4}>
                         <Text type="secondary" style={{ fontSize: 12 }}>
@@ -96,10 +165,12 @@ function PaymentModal({
                             <Text type="secondary" style={{ fontSize: 12 }}>
                                 Tổng báo giá
                             </Text>
-                            <Text strong>{formatVnd(quoteTotal)}</Text>
+                            <Text strong style={{ color: quoteTotal > 0 ? 'inherit' : '#ff4d4f' }}>
+                                {quoteTotal > 0 ? formatVnd(quoteTotal) : "Chưa có giá"}
+                            </Text>
                         </Space>
 
-                        {isDepositPayment && (
+                        {(isRemainingPayment || isConfirmationSend) && (
                             <Space align="baseline" wrap>
                                 <Text type="secondary" style={{ fontSize: 12 }}>
                                     Đã thu (cọc)
@@ -113,7 +184,8 @@ function PaymentModal({
                                 Loại thanh toán
                             </Text>
                             <Tag color={
-                                isDepositPayment ? "geekblue" : 
+                                isConfirmationSend ? "orange" :
+                                isRemainingPayment ? "geekblue" : 
                                 isFullPayment ? "blue" : 
                                 "gold"
                             }>
@@ -121,24 +193,37 @@ function PaymentModal({
                             </Tag>
                         </Space>
 
-                        <Space
-                            align="baseline"
-                            wrap
-                            style={{ justifyContent: "space-between", width: "100%" }}
-                        >
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                Số tiền thanh toán
-                            </Text>
-                            <Text
-                                strong
-                                style={{
-                                    fontSize: 18,
-                                    color: remain > 0 ? "#1677ff" : "#52c41a",
-                                }}
+                        {!isConfirmationSend && (
+                            <Space
+                                align="baseline"
+                                wrap
+                                style={{ justifyContent: "space-between", width: "100%" }}
                             >
-                                {formatVnd(remain)}
-                            </Text>
-                        </Space>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Số tiền thanh toán
+                                </Text>
+                                <Text
+                                    strong
+                                    style={{
+                                        fontSize: 18,
+                                        color: remain > 0 ? "#1677ff" : (remain === 0 && quoteTotal > 0 ? "#52c41a" : "#ff4d4f"),
+                                    }}
+                                >
+                                    {remain > 0 ? formatVnd(remain) : (quoteTotal > 0 ? "Đã thanh toán đủ" : "Chưa có giá")}
+                                </Text>
+                            </Space>
+                        )}
+                        
+                        {isConfirmationSend && (
+                            <Space align="baseline" wrap>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    Hành động
+                                </Text>
+                                <Text strong style={{ color: "#fa8c16" }}>
+                                    Gửi email xác nhận cho khách hàng
+                                </Text>
+                            </Space>
+                        )}
 
                         {remain === 0 && (
                             <Tag color="green" style={{ marginTop: 4 }}>
@@ -148,23 +233,24 @@ function PaymentModal({
                     </Space>
                 </Card>
 
-                {/* 2 option thanh toán */}
+                {/* 2 option thanh toán - ẩn khi gửi xác nhận */}
+                {!isConfirmationSend && (
                 <Space style={{ width: "100%" }} size={12}>
                     {/* VNPay */}
                     <Card
                         hoverable
-                        onClick={() => setSelectedMethod("vnpay")}
+                        onClick={() => handleMethodSelect("vnpay")}
                         style={{
                             flex: 1,
-                            cursor: remain === 0 ? "not-allowed" : "pointer",
-                            opacity: remain === 0 ? 0.4 : 1,
+                            cursor: (remain === 0 || quoteTotal === 0) ? "not-allowed" : "pointer",
+                            opacity: (remain === 0 || quoteTotal === 0) ? 0.4 : 1,
                             borderWidth: selectedMethod === "vnpay" ? 2 : 1,
                             borderColor: selectedMethod === "vnpay" ? "#1677ff" : "var(--ant-color-border)",
                             background: selectedMethod === "vnpay" ? "rgba(22,119,255,0.04)" : "#fff",
                             boxShadow: selectedMethod === "vnpay" ? "0 0 0 2px rgba(22,119,255,0.12)" : "none",
                             transform: selectedMethod === "vnpay" ? "translateY(-2px)" : "none",
                             transition: "all .15s ease-in-out",
-                            pointerEvents: remain === 0 ? "none" : "auto",
+                            pointerEvents: (remain === 0 || quoteTotal === 0) ? "none" : "auto",
                         }}
                     >
                         <Space direction="vertical" size={4}>
@@ -183,18 +269,18 @@ function PaymentModal({
                     {/* Tiền mặt */}
                     <Card
                         hoverable
-                        onClick={() => setSelectedMethod("cash")}
+                        onClick={() => handleMethodSelect("cash")}
                         style={{
                             flex: 1,
-                            cursor: remain === 0 ? "not-allowed" : "pointer",
-                            opacity: remain === 0 ? 0.4 : 1,
+                            cursor: (remain === 0 || quoteTotal === 0) ? "not-allowed" : "pointer",
+                            opacity: (remain === 0 || quoteTotal === 0) ? 0.4 : 1,
                             borderWidth: selectedMethod === "cash" ? 2 : 1,
                             borderColor: selectedMethod === "cash" ? "#52c41a" : "var(--ant-color-border)",
                             background: selectedMethod === "cash" ? "rgba(82,196,26,0.04)" : "#fff",
                             boxShadow: selectedMethod === "cash" ? "0 0 0 2px rgba(82,196,26,0.12)" : "none",
                             transform: selectedMethod === "cash" ? "translateY(-2px)" : "none",
                             transition: "all .15s ease-in-out",
-                            pointerEvents: remain === 0 ? "none" : "auto",
+                            pointerEvents: (remain === 0 || quoteTotal === 0) ? "none" : "auto",
                         }}
                     >
                         <Space direction="vertical" size={4}>
@@ -210,32 +296,50 @@ function PaymentModal({
                         </Space>
                     </Card>
                 </Space>
+                )}
 
                 <Divider style={{ margin: "10px 0 0" }} />
 
                 {/* Footer modal */}
                 <Space style={{ width: "100%", justifyContent: "flex-end" }} size={8}>
                     <Button onClick={onClose}>Đóng</Button>
-                    <Popconfirm
-                        title="Xác nhận thanh toán"
-                        description={
-                            selectedMethod === "cash"
-                                ? `Xác nhận khách đã ${paymentType.toLowerCase()} bằng tiền mặt?`
-                                : `Tạo yêu cầu thanh toán VNPay cho ${paymentType.toLowerCase()}?`
-                        }
-                        okText="Xác nhận"
-                        cancelText="Hủy"
-                        onConfirm={() => onConfirm(selectedMethod)}
-                        disabled={!selectedMethod || remain === 0}
-                    >
-                        <Button
-                            type="primary"
-                            disabled={!selectedMethod || remain === 0}
-                            loading={loading}
+                    {isConfirmationSend ? (
+                        <Popconfirm
+                            title="Gửi xác nhận"
+                            description="Gửi email xác nhận thanh toán cho khách hàng?"
+                            okText="Gửi"
+                            cancelText="Hủy"
+                            onConfirm={() => onConfirm("confirm")}
                         >
-                            Xác nhận thanh toán
-                        </Button>
-                    </Popconfirm>
+                            <Button
+                                type="primary"
+                                loading={loading}
+                            >
+                                Gửi xác nhận
+                            </Button>
+                        </Popconfirm>
+                    ) : (
+                        <Popconfirm
+                            title="Xác nhận thanh toán"
+                            description={
+                                selectedMethod === "cash"
+                                    ? `Xác nhận khách đã ${paymentType.toLowerCase()} bằng tiền mặt?`
+                                    : `Tạo yêu cầu thanh toán VNPay cho ${paymentType.toLowerCase()}?`
+                            }
+                            okText="Xác nhận"
+                            cancelText="Hủy"
+                            onConfirm={() => onConfirm(selectedMethod)}
+                            disabled={!selectedMethod || remain === 0 || quoteTotal === 0}
+                        >
+                            <Button
+                                type="primary"
+                                disabled={!selectedMethod || remain === 0 || quoteTotal === 0}
+                                loading={loading}
+                            >
+                                Xác nhận thanh toán
+                            </Button>
+                        </Popconfirm>
+                    )}
                 </Space>
             </Space>
         </Modal>

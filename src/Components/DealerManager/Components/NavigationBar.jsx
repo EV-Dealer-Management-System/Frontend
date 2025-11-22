@@ -75,6 +75,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             component: "./EVQuotes",
           },
           {
+            path: "/dealer-manager/orders-and-contracts/view-all-orders",
+            name: "Đơn hàng xe điện",
+            icon: <ShoppingCartOutlined />,
+            component: "./GetAllEvOrder/GetAllEVOrder",
+          },
+          {
             path: "/dealer-manager/orders-and-contracts/get-all-contracts",
             name: "Hợp đồng Đơn hàng",
             icon: <FileTextOutlined />,

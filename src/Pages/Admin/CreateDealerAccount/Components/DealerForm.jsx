@@ -276,18 +276,25 @@ const DealerForm = ({
           rules={[
             { required: true, message: 'Vui lòng nhập số điện thoại quản lý!' },
             {
-              pattern: /^0[1-9]{9,10}$/,
-              message: 'Số điện thoại phải bắt đầu bằng 0 và có đúng 10-11 chữ số!'
+              pattern: /^0[1-9][0-9]{8,9}$/,
+              message: 'Số điện thoại phải bắt đầu bằng 0, ký tự thứ 2 không được là 0 và có đúng 10-11 chữ số!'
             }
           ]}
            disabledAll={disabledAll}
         >
           <Input
-            placeholder="Nhập số điện thoại quản lý (bắt đầu bằng 0)"
+            placeholder="Nhập số điện thoại quản lý (VD: 0987654321)"
             className="rounded-lg"
             maxLength={11}
             onKeyPress={(e) => {
               if (!/[0-9]/.test(e.key)) e.preventDefault(); // Chỉ cho nhập số
+            }}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Nếu nhập "00" thì ngăn không cho nhập
+              if (value === "00") {
+                e.target.value = "0";
+              }
             }}
           />
         </FormField>

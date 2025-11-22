@@ -53,11 +53,19 @@ export const payCustomerOrder = async (customerOrderId, isPayFull, isCash) => {
 export const payDepositCustomerOrder = async (customerOrderId, isCash) => {
     try {
         console.log("Calling payDepositCustomerOrder:", { customerOrderId, isCash });
-        
-        const response = await api.put(
-            `/CustomerOrder/pay-deposit-customer-order/${customerOrderId}`, 
-            { isCash }
-        );
+        let response;
+        if (isCash === null) {
+            console.log("This is a confirmation send, no payment method selected.");
+            response = await api.put(
+                `/CustomerOrder/pay-deposit-customer-order/${customerOrderId}` 
+            );
+            console.log("Response from payDepositCustomerOrder (confirmation):", response.data);
+        }else {
+            response = await api.put(
+                `/CustomerOrder/pay-deposit-customer-order/${customerOrderId}?isCash=${isCash}` 
+            );
+            console.log("Response from payDepositCustomerOrder (confirmation):", response.data);
+        }
         console.log("Response from payDepositCustomerOrder:", response.data);
         
         return {
