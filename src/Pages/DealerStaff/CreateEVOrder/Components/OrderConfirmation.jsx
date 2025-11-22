@@ -18,8 +18,6 @@ import {
   PhoneOutlined,
   MailOutlined,
   EnvironmentOutlined,
-  BankOutlined,
-  WalletOutlined,
 } from "@ant-design/icons";
 import api from "../../../../api/api";
 import {
@@ -41,7 +39,6 @@ export default function OrderConfirmation({
   customerId,
   quoteId,
   isPayFull,
-  paymentMethod,
 }) {
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
@@ -205,23 +202,6 @@ export default function OrderConfirmation({
                     : "Cọc —"}
                 </Tag>
               </Space>
-
-              {paymentMethod && (
-                <Space>
-                  <Text>Phương thức:</Text>
-                  <Tag color="processing">
-                    {paymentMethod === "vnpay" ? (
-                      <>
-                        <BankOutlined /> VNPay
-                      </>
-                    ) : (
-                      <>
-                        <WalletOutlined /> Tiền mặt
-                      </>
-                    )}
-                  </Tag>
-                </Space>
-              )}
 
               <Divider style={{ margin: "8px 0" }} />
 
