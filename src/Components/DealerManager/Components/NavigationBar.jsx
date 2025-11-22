@@ -182,12 +182,12 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
             icon: <DollarOutlined />,
             component: "./RevenueReport",
           },
-          // {
-          //   path: "/dealer/reports/inventory",
-          //   name: "Báo cáo tồn kho",
-          //   icon: <DatabaseOutlined />,
-          //   component: "./InventoryReport",
-          // },
+          {
+            path: "/dealer-manager/settings/dealer-ai-forecast",
+            name: "Dự Báo AI ",
+            icon: <DatabaseOutlined />,
+            component: "./InventoryReport",
+          },
         ],
       },
       {
@@ -217,19 +217,6 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         ],
       },
       {
-        path: "/dealer-manager/customer-feedback",
-        name: "Feedback Khách Hàng",
-        icon: <CommentOutlined />,
-        routes: [
-          {
-            path: "/dealer-manager/customer-feedback/all",
-            name: "Danh sách Feedback Khách ",
-            icon: <CommentOutlined />,
-            component: "./ManageCusFeedback/UpdateStatusCustomerFeedback",
-          },
-        ],
-      },
-      {
         path: "/dealer-manager/appointment",
         name: "Quản Lý Lịch Lái Xe",
         icon: <ScheduleOutlined />,
@@ -243,15 +230,21 @@ function NavigationBar({ collapsed: propCollapsed, onCollapse, isMobile }) {
         ],
       },
       {
-        path: "/dealer-manager/staff-feedback",
-        name: "Feedback Đại Lý ",
+        path: "/dealer-manager/feedback",
+        name: "Quản lý Feedback",
         icon: <CommentOutlined />,
         routes: [
           {
             path: "/dealer-manager/staff-feedback/all",
-            name: "Danh sách Feedback Đại lý",
+            name: "Feedback Đại Lý",
             icon: <CommentOutlined />,
             component: "./StaffFeedback/FeedbackDealerStaff",
+          },
+          {
+            path: "/dealer-manager/customer-feedback/all",
+            name: "Feedback Khách Hàng",
+            icon: <CommentOutlined />,
+            component: "./ManageCusFeedback/UpdateStatusCustomerFeedback",
           },
         ],
       },
