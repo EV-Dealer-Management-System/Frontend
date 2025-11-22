@@ -506,24 +506,6 @@ function BookingTable({
                 Hủy
               </Button>
             )}
-
-            {isSignedByAdmin && (
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => showCompleteModal(record)}
-                loading={isUpdating}
-                size="small"
-                style={{
-                  borderRadius: 6,
-                  fontSize: 12,
-                  backgroundColor: "#52c41a",
-                  borderColor: "#52c41a",
-                }}
-              >
-                Hoàn Thành
-              </Button>
-            )}
           </Space>
         );
       },
