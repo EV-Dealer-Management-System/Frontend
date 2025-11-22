@@ -1,19 +1,59 @@
-import React, { useState } from 'react';
-import { Modal, Table, Button, message, Tag, Input } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Modal, Table, Button, message, Tag, Input, Spin } from 'antd';
 import { ExclamationCircleOutlined, CheckCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { EVinspectAccident } from '../../../../App/EVMStaff/EVDelivery/EVDeliveryInspectAccident';
+import { getAllEVDelivery } from '../../../../App/EVMStaff/EVDelivery/GetAllEVDelivery';
 
 // Component modal kiểm tra xe bị sự cố
 function InspectAccidentModal({ visible, onClose, delivery, templateSummary = [], onSuccess, inspectedVehicles = [] }) {
     const [selectedVehicles, setSelectedVehicles] = useState(inspectedVehicles);
     const [loading, setLoading] = useState(false);
     const [searchText, setSearchText] = useState('');
+    
+    // State for handling isShow=true data
+    const [currentDelivery, setCurrentDelivery] = useState(delivery);
+    const [currentTemplateSummary, setCurrentTemplateSummary] = useState(templateSummary);
+    const [fetchingDetails, setFetchingDetails] = useState(false);
 
     if (!delivery) return null;
 
+    // Fetch delivery with isShow=true when modal opens
+    useEffect(() => {
+        if (visible && delivery) {
+            const fetchDetails = async () => {
+                setFetchingDetails(true);
+                try {
+                    // Fetch with isShow=true to get vehicles available for inspection
+                    // Using large page size to find the delivery
+                    const res = await getAllEVDelivery(1, 1000, delivery.status, true);
+                    if (res.isSuccess && res.result?.data) {
+                        const found = res.result.data.find(d => d.id === delivery.id);
+                        if (found) {
+                            setCurrentDelivery(found);
+                        }
+                        if (res.result.templateSummary) {
+                            setCurrentTemplateSummary(res.result.templateSummary);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching delivery details for inspection:", error);
+                    // Fallback to original delivery if fetch fails
+                    setCurrentDelivery(delivery);
+                } finally {
+                    setFetchingDetails(false);
+                }
+            };
+            fetchDetails();
+        } else {
+            // Reset to props when closed or changed
+            setCurrentDelivery(delivery);
+            setCurrentTemplateSummary(templateSummary);
+        }
+    }, [visible, delivery]);
+
     // Lọc templateSummary dựa trên VIN của delivery hiện tại
-    const deliveryVINs = delivery.vehicleDeliveryDetails?.map(v => v.vin) || [];
-    const filteredTemplateSummary = templateSummary
+    const deliveryVINs = currentDelivery?.vehicleDeliveryDetails?.map(v => v.vin) || [];
+    const filteredTemplateSummary = currentTemplateSummary
         .map(template => {
             const matchedVINs = template.vinList.filter(vin => deliveryVINs.includes(vin));
             if (matchedVINs.length > 0) {
@@ -28,7 +68,8 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
         .filter(template => template !== null);
 
     // Tạo danh sách xe từ vehicleDeliveryDetails
-    const vehicleList = delivery.vehicleDeliveryDetails?.map(detail => ({
+    const vehicleList = currentDelivery?.vehicleDeliveryDetails?.map(detail => ({
+        isShow: true,
         key: detail.electricVehicleId,
         electricVehicleId: detail.electricVehicleId,
         vin: detail.vin,
@@ -137,7 +178,7 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
             onCancel={onClose}
             width={800}
             footer={[
-                <Button key="cancel" onClick={onClose} disabled={loading}>
+                <Button key="cancel" onClick={onClose} disabled={loading || fetchingDetails}>
                     Hủy
                 </Button>,
                 <Button
@@ -147,7 +188,7 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
                     loading={loading}
                     onClick={handleInspect}
                     className="bg-red-600 hover:bg-red-700"
-                    disabled={selectedVehicles.length === 0}
+                    disabled={selectedVehicles.length === 0 || fetchingDetails}
                 >
                     Xác nhận xe hư hỏng ({selectedVehicles.length})
                 </Button>
@@ -168,39 +209,47 @@ function InspectAccidentModal({ visible, onClose, delivery, templateSummary = []
                     </div>
                 </div>
 
-                {/* Thanh tìm kiếm VIN */}
-                <Input
-                    placeholder="Tìm kiếm theo VIN, mẫu xe hoặc màu sắc..."
-                    prefix={<SearchOutlined className="text-gray-400" />}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    allowClear
-                    size="large"
-                    className="rounded-lg"
-                />
-
-                <Table
-                    rowSelection={rowSelection}
-                    columns={columns}
-                    dataSource={filteredVehicleList}
-                    pagination={false}
-                    scroll={{ y: 400 }}
-                    size="small"
-                    bordered
-                />
-
-                {selectedVehicles.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <div className="text-sm text-blue-800">
-                            <CheckCircleOutlined className="mr-2" />
-                            Đã chọn {selectedVehicles.length} xe để kiểm tra
-                            {inspectedVehicles.length > 0 && (
-                                <span className="ml-2 text-xs text-gray-600">
-                                    (Trong đó có {inspectedVehicles.length} xe đã kiểm tra trước đó)
-                                </span>
-                            )}
-                        </div>
+                {fetchingDetails ? (
+                    <div className="flex justify-center py-10">
+                        <Spin tip="Đang tải thông tin xe..." />
                     </div>
+                ) : (
+                    <>
+                        {/* Thanh tìm kiếm VIN */}
+                        <Input
+                            placeholder="Tìm kiếm theo VIN, mẫu xe hoặc màu sắc..."
+                            prefix={<SearchOutlined className="text-gray-400" />}
+                            value={searchText}
+                            onChange={(e) => setSearchText(e.target.value)}
+                            allowClear
+                            size="large"
+                            className="rounded-lg"
+                        />
+
+                        <Table
+                            rowSelection={rowSelection}
+                            columns={columns}
+                            dataSource={filteredVehicleList}
+                            pagination={false}
+                            scroll={{ y: 400 }}
+                            size="small"
+                            bordered
+                        />
+
+                        {selectedVehicles.length > 0 && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div className="text-sm text-blue-800">
+                                    <CheckCircleOutlined className="mr-2" />
+                                    Đã chọn {selectedVehicles.length} xe để kiểm tra
+                                    {inspectedVehicles.length > 0 && (
+                                        <span className="ml-2 text-xs text-gray-600">
+                                            (Trong đó có {inspectedVehicles.length} xe đã kiểm tra trước đó)
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </Modal>

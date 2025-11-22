@@ -29,7 +29,8 @@ function EVDelivery() {
     const fetchDeliveries = async (pageNumber = 1, pageSize = 10, status = null) => {
         setLoading(true);
         try {
-            const response = await getAllEVDelivery(pageNumber, pageSize, status);
+            // isShow = false cho danh sách đơn hàng
+            const response = await getAllEVDelivery(pageNumber, pageSize, status, false);
 
             if (response.isSuccess) {
                 setDeliveries(response.result.data);
@@ -84,7 +85,8 @@ function EVDelivery() {
 
         // Nếu đang mở modal chi tiết, cập nhật lại selectedDelivery
         if (selectedDelivery && detailVisible) {
-            const response = await getAllEVDelivery(pagination.current, pagination.pageSize, selectedStatus);
+            // isShow = false cho cập nhật đơn hàng đang chọn
+            const response = await getAllEVDelivery(pagination.current, pagination.pageSize, selectedStatus, false);
             if (response.isSuccess) {
                 const updatedDelivery = response.result.data.find(d => d.id === selectedDelivery.id);
                 if (updatedDelivery) {
