@@ -117,13 +117,13 @@ function DealerAIForecast() {
                         {/* Forecast Charts Section */}
                         {Object.keys(forecastByVehicle).length > 0 ? (
                             <div>
-                                <Alert
+                                {/* <Alert
                                     message="Kết quả dự báo AI"
                                     description={`Dự báo từ ${dateRange.from} đến ${dateRange.to}`}
                                     type="info"
                                     showIcon
                                     className="mb-4"
-                                />
+                                /> */}
                                 <ForecastChartCard
                                     allVehiclesData={inventoryData}
                                     forecastByVehicle={forecastByVehicle}
