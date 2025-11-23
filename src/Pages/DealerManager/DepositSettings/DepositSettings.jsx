@@ -7,6 +7,7 @@ import {
   getDepositSettings,
   createDepositSettings,
 } from "../../../App/DealerManager/DepositSettings/GetDepositSettings";
+import { DefaultConfiguration } from "../../../App/DealerManager/DefaultConfiguration/DefaultConfiguration";
 import DepositStatsCards from "./Components/DepositStatsCards";
 import DepositUpdateForm from "./Components/DepositUpdateForm";
 
@@ -16,6 +17,18 @@ function DepositSettings() {
   const [saving, setSaving] = useState(false);
   const [currentSettings, setCurrentSettings] = useState(null);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [depositLimits, setDepositLimits] = useState({ min: 0, max: 100 });
+
+  // Lấy giới hạn tỷ lệ đặt cọc từ cấu hình mặc định
+  const fetchDepositLimits = async () => {
+    try {
+      const limits = await DefaultConfiguration.getDepositLimits();
+      setDepositLimits(limits);
+    } catch (error) {
+      console.error("Lỗi khi lấy giới hạn đặt cọc:", error);
+      // Giữ giá trị mặc định
+    }
+  };
 
   // Fetch dữ liệu cài đặt hiện tại
   const fetchDepositSettings = async () => {
@@ -80,6 +93,7 @@ function DepositSettings() {
   // Load dữ liệu khi component mount
   useEffect(() => {
     const loadInitialData = async () => {
+      await fetchDepositLimits();
       await fetchDepositSettings();
     };
     loadInitialData();
@@ -133,6 +147,7 @@ function DepositSettings() {
               onUpdate={handleUpdateSettings}
               loading={saving}
               currentPercentage={displayPercentage}
+              depositLimits={depositLimits}
             />
           </div>
         )}

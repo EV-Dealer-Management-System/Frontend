@@ -20,7 +20,7 @@ import {
 
 const { Text, Title } = Typography;
 
-function DepositUpdateForm({ form, onUpdate, loading, currentPercentage }) {
+function DepositUpdateForm({ form, onUpdate, loading, currentPercentage, depositLimits = { min: 0, max: 100 } }) {
     const [confirmVisible, setConfirmVisible] = useState(false);
     const [formValues, setFormValues] = useState(null);
 
@@ -57,7 +57,7 @@ function DepositUpdateForm({ form, onUpdate, loading, currentPercentage }) {
             >
                 <Alert
                     message="Lưu ý quan trọng"
-                    description="Tỷ lệ này là MỨC TỐI ĐA mà bên đối tác có thể đặt cọc. Đối tác có thể chọn đặt cọc từ 0% đến mức tối đa này."
+                    description={`Tỷ lệ này là MỨC TỐI ĐA mà bên đối tác có thể đặt cọc. Đối tác có thể chọn đặt cọc từ 0% đến mức tối đa này. Giới hạn cho phép: ${depositLimits.min}% - ${depositLimits.max}%`}
                     type="info"
                     icon={<InfoCircleOutlined />}
                     className="mb-4"
@@ -77,15 +77,20 @@ function DepositUpdateForm({ form, onUpdate, loading, currentPercentage }) {
                                 name="depositPercentage"
                                 rules={[
                                     { required: true, message: 'Vui lòng nhập tỷ lệ đặt cọc!' },
-                                    { type: 'number', min: 0, max: 100, message: 'Tỷ lệ phải từ 0% đến 100%!' }
+                                    { 
+                                        type: 'number', 
+                                        min: depositLimits.min, 
+                                        max: depositLimits.max, 
+                                        message: `Tỷ lệ phải từ ${depositLimits.min}% đến ${depositLimits.max}%!` 
+                                    }
                                 ]}
                             >
                                 <InputNumber
                                     className="w-full"
-                                    placeholder="Nhập tỷ lệ (0-100)"
+                                    placeholder={`Nhập tỷ lệ (${depositLimits.min}-${depositLimits.max})`}
                                     suffix="%"
-                                    min={0}
-                                    max={100}
+                                    min={depositLimits.min}
+                                    max={depositLimits.max}
                                     precision={2}
                                     size="large"
                                 />
