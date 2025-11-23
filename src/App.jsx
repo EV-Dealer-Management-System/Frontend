@@ -89,14 +89,7 @@ function App() {
             </PublicRoute>
           }
         />
-        <Route
-          path="/Checkout"
-          element={
-            <PublicRoute>
-              <PaymentResponse />
-            </PublicRoute>
-          }
-        />
+       
         <Route path="/login-success" element={<LoginSuccess />} />
         <Route
           path="/register"
@@ -118,6 +111,12 @@ function App() {
         />
         <Route path="/EContract/View" element={<ContractViewer />} />
         <Route path="/confirm-econtract" element={<ConfirmEcontractOrder />} />
+         <Route
+          path="/Checkout"
+          element={
+              <PaymentResponse />
+          }
+        />
 
         {/* Admin Routes - với catch-all route */}
         <Route

@@ -76,6 +76,9 @@ function PaymentModal({
     const quoteTotal = calcQuoteTotal(order);
     const deposited = order?.depositAmount || 0;
     
+    // Lấy thông tin deposit requirement từ quote
+    const depositRequired = order?.quote?.depositAmount || order?.depositRequiredAmount || (quoteTotal * 0.2);
+    
     console.log("PaymentModal - Order data:", {
         order,
         quoteTotal,
@@ -83,11 +86,14 @@ function PaymentModal({
         status: order?.status
     });
     
-    // Xác định loại thanh toán dựa trên status
+    // Xác định loại thanh toán dựa trên status và depositAmount
     const isConfirmationSend = order.status === 4 || order.status === 8; // Đang cọc - gửi xác nhận (status 4, 8)
     const isRemainingPayment = order.status === 9;  // Chờ thanh toán phần còn lại (có thể chọn payment method)
-    const isFullPayment = order.status === 0;       // Chờ thanh toán toàn phần  
-    const isNewDepositPayment = order.status === 1; // Chờ cọc
+    
+    // Status 0: luôn là thanh toán toàn phần
+    // Status 3: phân biệt dựa trên depositAmount (0 = toàn phần, >0 = cọc)
+    const isFullPayment = order.status === 0 || (order.status === 3 && deposited === 0);       
+    const isNewDepositPayment = order.status === 1 || (order.status === 3 && deposited > 0); // Chờ cọc
     
     // Tính số tiền cần thanh toán
     let amountToPay = 0;
@@ -106,11 +112,17 @@ function PaymentModal({
         amountToPay = quoteTotal;
         paymentType = "Thanh toán toàn bộ";
     } else if (isNewDepositPayment) {
-        // Thanh toán cọc mới
-        // Lấy từ depositAmount nếu có, nếu không thì tính 30% tổng
-        amountToPay = deposited > 0 ? deposited : (quoteTotal * 0.3);
-        paymentType = "Thanh toán cọc";
-    } else {
+        // Thanh toán cọc mới - lấy từ cột "Đã cọc" trong table
+        if (order.status === 3 && deposited > 0) {
+            // Status 3 với depositAmount > 0 = thanh toán cọc
+            amountToPay = deposited;
+            paymentType = "Thanh toán cọc";
+        } else {
+            // Status 1 = chờ cọc
+            amountToPay = deposited > 0 ? deposited : depositRequired;
+            paymentType = "Thanh toán cọc";
+        }
+    } else {    
         // Trường hợp khác - mặc định là toàn bộ
         amountToPay = quoteTotal;
         paymentType = "Thanh toán";
@@ -120,14 +132,17 @@ function PaymentModal({
     
     console.log("Payment calculation:", {
         status: order?.status,
+        depositAmount: order?.depositAmount,
         isConfirmationSend,
         isRemainingPayment,
         isFullPayment,
         isNewDepositPayment,
         quoteTotal,
         deposited,
+        depositRequired,
         amountToPay,
-        paymentType
+        paymentType,
+        note: order?.status === 3 ? (deposited === 0 ? "Status 3 - Full Payment" : "Status 3 - Deposit Payment") : ""
     });
 
     return (
@@ -176,6 +191,18 @@ function PaymentModal({
                                     Đã thu (cọc)
                                 </Text>
                                 <Text>{formatVnd(deposited)}</Text>
+                            </Space>
+                        )}
+                        
+                        {isNewDepositPayment && (
+                            <Space align="baseline" wrap>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    {order.status === 3 ? "Số tiền cọc đã xác định" : 
+                                     (deposited > 0 ? "Số tiền cọc (từ đơn hàng)" : "Yêu cầu cọc tối thiểu")}
+                                </Text>
+                                <Text style={{ color: "#fa8c16" }}>
+                                    {formatVnd(order.status === 3 ? deposited : (deposited > 0 ? deposited : depositRequired))}
+                                </Text>
                             </Space>
                         )}
 

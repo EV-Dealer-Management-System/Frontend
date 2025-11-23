@@ -20,7 +20,7 @@ const formatVnd = (n = 0) =>
 const mapStatus = (status) => {
     switch (status) {
         case 0:
-            return { text: "Chờ thanh toán toàn phần", color: "blue", icon: <ClockCircleOutlined /> };
+            return { text: "Chờ thanh toán", color: "blue", icon: <ClockCircleOutlined /> };
         case 1:
             return { text: "Chờ cọc", color: "gold", icon: <ClockCircleOutlined /> };
         case 2:
@@ -36,9 +36,9 @@ const mapStatus = (status) => {
         case 7:
             return { text: "Đã từ chối", color: "red", icon: <StopOutlined /> };
         case 8:
-            return { text: "Chờ thanh toán phần còn lại", color: "purple", icon: <ClockCircleOutlined /> };
+            return { text: "Chờ thanh toán còn lại", color: "purple", icon: <ClockCircleOutlined /> };
         case 9:
-            return { text: "Đã xác nhận thanh toán phần còn lại", color: "lime", icon: <CheckCircleOutlined /> };
+            return { text: "Đã xác nhận thanh toán", color: "lime", icon: <CheckCircleOutlined /> };
         default:
             return { text: "Không xác định", color: "default", icon: <ClockCircleOutlined /> };
     }
@@ -114,11 +114,20 @@ function OrderTable({
             dataIndex: "status",
             key: "status",
             align: "center",
-            width: 180,
+            width: 450,
             render: (status) => {
                 const s = mapStatus(status);
                 return (
-                    <Tag color={s.color} icon={s.icon}>
+                    <Tag color={s.color} icon={s.icon}
+                    style={{
+                        whiteSpace: "normal",      // ⬅️ Cho phép xuống dòng
+                        display: "inline-block",   // ⬅️ Bắt buộc để wrap
+                        maxWidth: "100%",             // ⬅️ Giới hạn để bắt buộc xuống dòng
+                        textAlign: "center",
+                        lineHeight: "16px",
+                        padding: "4px 8px",
+                    }}
+                    >
                         {s.text}
                     </Tag>
                 );
