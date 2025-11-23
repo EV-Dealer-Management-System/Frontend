@@ -186,10 +186,23 @@ function OrderListStaffView() {
         console.log("API params:", { orderId: payingOrder.id, isCash });
         result = await payDepositCustomerOrder(payingOrder.id, isCash);
       } else if (payingOrder.status === 0 || payingOrder.status === 3) {
-        // Chờ thanh toán toàn phần (0) hoặc chờ cọc (1) - thanh toán mới
-        const isPayFull = payingOrder.status === 0; // true nếu thanh toán toàn phần, false nếu chỉ cọc
-        console.log("Calling payCustomerOrder for new payment (status 0 or 1)");
-        console.log("API params:", { orderId: payingOrder.id, isPayFull, isCash });
+        // Xác định isPayFull dựa trên status và depositAmount
+        // Status 0: luôn là thanh toán toàn phần
+        // Status 3: phân biệt dựa trên depositAmount (0 = toàn phần, >0 = cọc)
+        
+        console.log("=== DEBUG isPayFull calculation ===");
+        console.log("payingOrder.status:", payingOrder.status);
+        console.log("payingOrder.depositAmount:", payingOrder.depositAmount);
+        console.log("Condition 1 (status === 0):", payingOrder.status === 0);
+        console.log("Condition 2 (status === 3):", payingOrder.status === 3);
+        console.log("Condition 3 (depositAmount === 0):", payingOrder.depositAmount === 0);
+        console.log("Combined condition:", payingOrder.status === 0 || (payingOrder.status === 3 && payingOrder.depositAmount === 0));
+        
+        const isPayFull = payingOrder.status === 0 || (payingOrder.status === 3 && payingOrder.depositAmount === 0);
+        
+        console.log("FINAL isPayFull result:", isPayFull);
+        console.log("Calling payCustomerOrder for new payment (status 0 or 3)");
+        console.log("API params:", { orderId: payingOrder.id, isPayFull, isCash, depositAmount: payingOrder.depositAmount });
         result = await payCustomerOrder(payingOrder.id, isPayFull, isCash);
       }
       
