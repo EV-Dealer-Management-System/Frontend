@@ -6,7 +6,6 @@ import {
   ProFormText,
   ProFormCheckbox,
   ProCard,
-  PageContainer,
 } from "@ant-design/pro-components";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -18,33 +17,68 @@ const { Title, Text } = Typography;
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { message } = App.useApp();
   const API_BASE = import.meta.env.VITE_API_URL;
 
-  // Set background đen cho body khi component mount
-  // useEffect(() => {
-  //   document.documentElement.style.background = "rgba(95, 93, 93, 0.8)";
-  //   document.body.style.background = "rgba(95, 93, 93, 0.8)";
-  //   document.body.style.margin = "0";
-  //   document.body.style.padding = "0";
-  //   return () => {
-  //     document.documentElement.style.background = "";
-  //     document.body.style.background = "";
-  //     document.body.style.margin = "";
-  //     document.body.style.padding = "";
-  //   };
-  // }, []);
+  // 👉 Set nền thiên nhiên cho body & html
+  useEffect(() => {
+    const prevHtmlBg = document.documentElement.style.backgroundColor;
+    const prevBodyBg = document.body.style.backgroundColor;
 
-  // Đọc lỗi từ query string (?oauthError=...&fromOAuth=1)
+    document.documentElement.style.backgroundColor = "#e8f5e9";
+    document.body.style.backgroundColor = "#e8f5e9";
+
+    return () => {
+      document.documentElement.style.backgroundColor = prevHtmlBg;
+      document.body.style.backgroundColor = prevBodyBg;
+    };
+  }, []);
+
+  const testAccounts = [
+    {
+      note: "Bạn có thể dùng https://yopmail.com/en rồi điền email dưới để có thể xem những email được gửi về. Nếu bạn muốn test những luồng cần chữ ký SmartCA hoặc cần hỗ trợ vui lòng zalo: 0326336224 (Hiệu) để được hỗ trợ."
+
+    },
+    {
+      role: "Admin",
+      email: "Email: adminevsystem@yopmail.com",
+      password: "Mật Khẩu: 123456Admin@",
+    },
+    {
+      role: "DealerManager",
+      email: "Email: dealerevsystem@yopmail.com",
+      password: "Mật Khẩu: 123456@Admin",
+      note: "Đây là tài khoản đã dùng lâu có rất nhiều dữ liệu, tuy nhiên vì tài khoản này dùng để test chính (thay đổi dữ liệu database) nên có nhiều dữ liệu sai dẫn đến có thể có một vài chức năng không hoạt động",
+    },
+    {
+      role: "DealerManager",
+      email: "Email: vigeilaleippo-5096@yopmail.com",
+      password: "Mật Khẩu: Dealer@f33dc9",
+      note: "Tài khoản mới ít dữ liệu",
+    },
+    {
+      role: "DealerStaff",
+      email: "Email: gresacreinoffu-9429@yopmail.com",
+      password: "Mật Khẩu: 123456Admin@",
+      note: "Tài khoản nhân viên của đại lý có nhiều dữ liệu có thể một vài chức năng không hoạt động",
+    },
+    {
+      role: "EVMStaff",
+      email: "Email: pupoureuwuhe-2339@yopmail.com",
+      password: "Mật Khẩu: Staff@88A0AF",
+      note: "Tài khoản nhân viên của đại lý ít dữ liệu",
+    },
+  ];
+
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
     const from = sp.get("fromOAuth");
     const err = sp.get("oauthError");
     if (from && err) {
       setLoginError(err);
-      // dọn URL cho sạch (không mất alert)
       const url = new URL(window.location.href);
       url.searchParams.delete("oauthError");
       url.searchParams.delete("fromOAuth");
@@ -52,14 +86,12 @@ export default function LoginPage() {
     }
   }, [location.search]);
 
-  // Đăng nhập email/password
   const handleLogin = async (values) => {
     const { email, password, autoLogin } = values || {};
     if (!email || !password) {
       message.error("Vui lòng nhập đầy đủ thông tin!");
       return;
     }
-    // Trim email và password
     const cleanedEmail = String(email).trim();
     const cleanedPassword = String(password).trim();
     try {
@@ -72,11 +104,16 @@ export default function LoginPage() {
 
       localStorage.setItem("jwt_token", tokenStr);
       if (refresh) localStorage.setItem("refresh_token", refresh);
-      localStorage.setItem("userFullName", res?.result?.userData?.fullName || "");
+      localStorage.setItem(
+        "userFullName",
+        res?.result?.userData?.fullName || ""
+      );
 
       const decoded = jwtDecode(tokenStr);
       const role =
-        decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ||
+        decoded[
+          "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        ] ||
         decoded.role ||
         (Array.isArray(decoded.roles) ? decoded.roles[0] : undefined);
 
@@ -106,10 +143,11 @@ export default function LoginPage() {
     }
   };
 
-  // Google login -> BE -> /login-success?ticket=... | ?error=...
   const handleGoogleLogin = () => {
     const returnUrl = `${window.location.origin}/login-success`;
-    window.location.href = `${API_BASE}/Auth/signin-google?returnUrl=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `${API_BASE}/Auth/signin-google?returnUrl=${encodeURIComponent(
+      returnUrl
+    )}`;
   };
 
   return (
@@ -138,7 +176,11 @@ export default function LoginPage() {
               submitButtonProps: { size: "large", loading },
             }}
             initialValues={{ autoLogin: true }}
-            message={loginError ? <Alert message={loginError} type="error" showIcon /> : null}
+            message={
+              loginError ? (
+                <Alert message={loginError} type="error" showIcon />
+              ) : null
+            }
           >
             <ProFormText
               name="email"
@@ -173,12 +215,100 @@ export default function LoginPage() {
           <Divider plain>Hoặc</Divider>
 
           <Space direction="vertical" style={{ width: "100%" }}>
-            <Button block size="large" icon={<GoogleOutlined />} onClick={handleGoogleLogin}>
+            <Button
+              block
+              size="large"
+              icon={<GoogleOutlined />}
+              onClick={handleGoogleLogin}
+            >
               Đăng nhập với Google
             </Button>
           </Space>
 
           <Divider />
+
+          <div style={{ textAlign: "center", marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              Hệ thống chỉ dành cho nội bộ.
+            </Text>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <Button
+              type="text"
+              onClick={() => setShowTestAccounts((prev) => !prev)}
+              style={{
+                fontSize: 22,
+                fontWeight: 600,
+                color: "#1677ff",
+                padding: "8px 0",
+              }}
+            >
+              {showTestAccounts
+                ? "Ẩn danh sách tài khoản test"
+                : "Xem danh sách tài khoản test"}
+            </Button>
+
+            {showTestAccounts && (
+              <div
+                style={{
+                  marginTop: 8,
+                  textAlign: "left",
+                  borderRadius: 8,
+                  padding: 12,
+                  backgroundColor: "#fafafa",
+                  border: "1px solid #f0f0f0",
+                }}
+              >
+                <Text strong style={{ fontSize: 13 }}>
+                  Tài khoản dùng thử:
+                </Text>
+                <div style={{ marginTop: 8 }}>
+                  {testAccounts.map((acc) => (
+                    <div
+                      key={acc.email}
+                      style={{
+                        padding: "10px 0",
+                        borderBottom: "1px solid #eaeaea",
+                      }}
+                    >
+                      <Text strong style={{ fontSize: 14 }}>
+                        {acc.role}
+                      </Text>
+
+                      <br />
+
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        {acc.email}
+                      </Text>
+
+                      <br />
+
+                      <Text type="secondary" style={{ fontSize: 13 }}>
+                        {acc.password}
+                      </Text>
+
+                      {acc.note && (
+                        <div
+                          style={{
+                            marginTop: 6,
+                            padding: "6px 10px",
+                            background: "#f6f9ff",
+                            border: "1px solid #d6e4ff",
+                            borderRadius: 6,
+                          }}
+                        >
+                          <Text style={{ fontSize: 12, color: "#1d39c4" }}>
+                            📝 {acc.note}
+                          </Text>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </ProCard>
       </div>
     </div>
