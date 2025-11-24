@@ -39,8 +39,7 @@ export default function LoginPage() {
 
   const testAccounts = [
     {
-      note: "Bạn có thể dùng https://yopmail.com/en rồi điền email dưới để có thể xem những email được gửi về. Nếu bạn muốn test những luồng cần chữ ký SmartCA hoặc cần hỗ trợ vui lòng zalo: 0326336224 (Hiệu) để được hỗ trợ."
-
+      note: "Bạn có thể dùng https://yopmail.com/en rồi điền email dưới để có thể xem những email được gửi về. Nếu bạn muốn test những luồng cần chữ ký SmartCA hoặc cần hỗ trợ vui lòng zalo: 0326336224 (Hiệu) để được hỗ trợ.",
     },
     {
       role: "Admin",
@@ -48,10 +47,21 @@ export default function LoginPage() {
       password: "Mật Khẩu: 123456Admin@",
     },
     {
+      role: "EVMStaff",
+      email: "Email: preullulluppeiza-5629@yopmail.com",
+      password: "Mật Khẩu: EVMStaff@E34F44",
+    },
+    {
       role: "DealerManager",
       email: "Email: dealerevsystem@yopmail.com",
       password: "Mật Khẩu: 123456@Admin",
       note: "Đây là tài khoản đã dùng lâu có rất nhiều dữ liệu, tuy nhiên vì tài khoản này dùng để test chính (thay đổi dữ liệu database) nên có nhiều dữ liệu sai dẫn đến có thể có một vài chức năng không hoạt động",
+    },
+    {
+      role: "DealerStaff",
+      email: "Email: gresacreinoffu-9429@yopmail.com",
+      password: "Mật Khẩu: 123456Admin@",
+      note: "Tài khoản nhân viên của đại lý có nhiều dữ liệu có thể một vài chức năng không hoạt động",
     },
     {
       role: "DealerManager",
@@ -61,12 +71,6 @@ export default function LoginPage() {
     },
     {
       role: "DealerStaff",
-      email: "Email: gresacreinoffu-9429@yopmail.com",
-      password: "Mật Khẩu: 123456Admin@",
-      note: "Tài khoản nhân viên của đại lý có nhiều dữ liệu có thể một vài chức năng không hoạt động",
-    },
-    {
-      role: "EVMStaff",
       email: "Email: pupoureuwuhe-2339@yopmail.com",
       password: "Mật Khẩu: Staff@88A0AF",
       note: "Tài khoản nhân viên của đại lý ít dữ liệu",
